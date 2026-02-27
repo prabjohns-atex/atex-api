@@ -20,11 +20,16 @@ All paths are relative to this project's parent directory (`../`).
 | Gong | `../gong/desk`           | Submodule containing the DESK specific functionality                     |
 | ADM Content Service | `../adm-content-service` | Content API definition used by newer clients to read the database        |
 | ADM Starterkit | `../adm-starterkit`      | Project framework / starter template — top of the dependency tree        |
+| OneCMS Lib | `../onecms-lib`          | Shared JS/Java library — core OneCMS content API client services and UI widgets |
+| OneCMS Widgets | `../onecms-widgets`      | Additional UI widgets — reference for service APIs they consume                  |
+| Reporter Tool | `../reporter-tool`       | Atex Contributor Tool (ACT) — legacy AngularJS editorial SPA                    |
 
 ### Dependency order (bottom → top)
 ```
 polopoly → gong → adm-starterkit
                 → adm-content-service
+onecms-lib (shared library used by reporter-tool / desk UI)
+reporter-tool (legacy editorial UI)
 ```
 
 ## Porting Strategy
