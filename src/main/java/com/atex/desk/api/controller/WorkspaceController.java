@@ -18,6 +18,12 @@ import com.atex.onecms.content.Subject;
 import com.atex.onecms.content.WorkspaceResult;
 import com.atex.onecms.content.aspects.Aspect;
 import com.atex.desk.api.onecms.LocalContentManager;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +49,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/content/workspace")
+@Tag(name = "Workspace")
 public class WorkspaceController {
 
     private final LocalContentManager contentManager;
@@ -58,9 +65,16 @@ public class WorkspaceController {
      * Get draft content from a workspace. Falls through to real content if no draft exists.
      */
     @GetMapping("/{wsId}/contentid/{id}")
-    public ResponseEntity<?> getDraft(@PathVariable String wsId,
-                                       @PathVariable String id,
-                                       HttpServletRequest request) {
+    @Operation(summary = "Read a content from a workspace",
+               description = "Get draft content from a workspace. Falls through to real content if no draft exists.")
+    @ApiResponse(responseCode = "200", description = "Draft content found",
+                 content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
+    @ApiResponse(responseCode = "404", description = "Draft not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getDraft(
+        @Parameter(description = "Workspace ID") @PathVariable String wsId,
+        @Parameter(description = "Content ID") @PathVariable String id,
+        HttpServletRequest request) {
         try {
             Subject subject = resolveSubject(request);
             ContentId contentId = IdUtil.fromString(id);
@@ -87,9 +101,14 @@ public class WorkspaceController {
      * Create a draft in a workspace.
      */
     @PostMapping("/{wsId}")
-    public ResponseEntity<?> createDraft(@PathVariable String wsId,
-                                          @RequestBody ContentWriteDto write,
-                                          HttpServletRequest request) {
+    @Operation(summary = "Create a content in a workspace",
+               description = "Create a new draft content in a workspace")
+    @ApiResponse(responseCode = "201", description = "Draft created",
+                 content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
+    public ResponseEntity<?> createDraft(
+        @Parameter(description = "Workspace ID") @PathVariable String wsId,
+        @RequestBody ContentWriteDto write,
+        HttpServletRequest request) {
         try {
             Subject subject = resolveSubject(request);
             ContentWrite<Object> contentWrite = dtoToContentWrite(write);
@@ -111,10 +130,15 @@ public class WorkspaceController {
      * Update a draft in a workspace.
      */
     @PutMapping("/{wsId}/contentid/{id}")
-    public ResponseEntity<?> updateDraft(@PathVariable String wsId,
-                                          @PathVariable String id,
-                                          @RequestBody ContentWriteDto write,
-                                          HttpServletRequest request) {
+    @Operation(summary = "Update a content in a workspace",
+               description = "Update an existing draft in a workspace")
+    @ApiResponse(responseCode = "200", description = "Draft updated",
+                 content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
+    public ResponseEntity<?> updateDraft(
+        @Parameter(description = "Workspace ID") @PathVariable String wsId,
+        @Parameter(description = "Content ID") @PathVariable String id,
+        @RequestBody ContentWriteDto write,
+        HttpServletRequest request) {
         try {
             Subject subject = resolveSubject(request);
             ContentId contentId = IdUtil.fromString(id);
@@ -139,9 +163,15 @@ public class WorkspaceController {
      * Remove a single draft from a workspace.
      */
     @DeleteMapping("/{wsId}/contentid/{id}")
-    public ResponseEntity<?> deleteDraft(@PathVariable String wsId,
-                                          @PathVariable String id,
-                                          HttpServletRequest request) {
+    @Operation(summary = "Remove a draft from a workspace",
+               description = "Remove a single draft content from a workspace")
+    @ApiResponse(responseCode = "204", description = "Draft removed")
+    @ApiResponse(responseCode = "404", description = "Draft not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> deleteDraft(
+        @Parameter(description = "Workspace ID") @PathVariable String wsId,
+        @Parameter(description = "Content ID") @PathVariable String id,
+        HttpServletRequest request) {
         try {
             Subject subject = resolveSubject(request);
             ContentId contentId = IdUtil.fromString(id);
@@ -165,8 +195,12 @@ public class WorkspaceController {
      * Clear all drafts in a workspace.
      */
     @DeleteMapping("/{wsId}")
-    public ResponseEntity<?> clearWorkspace(@PathVariable String wsId,
-                                             HttpServletRequest request) {
+    @Operation(summary = "Clear all drafts in a workspace",
+               description = "Remove all draft content from a workspace")
+    @ApiResponse(responseCode = "204", description = "Workspace cleared")
+    public ResponseEntity<?> clearWorkspace(
+        @Parameter(description = "Workspace ID") @PathVariable String wsId,
+        HttpServletRequest request) {
         try {
             Subject subject = resolveSubject(request);
             contentManager.clearWorkspace(wsId, subject);
@@ -182,7 +216,14 @@ public class WorkspaceController {
      * Get workspace info (draft count, creation time).
      */
     @GetMapping("/{wsId}")
-    public ResponseEntity<?> getWorkspaceInfo(@PathVariable String wsId) {
+    @Operation(summary = "Get the workspace information",
+               description = "Returns workspace metadata including draft count and creation time")
+    @ApiResponse(responseCode = "200", description = "Workspace info",
+                 content = @Content(schema = @Schema(implementation = WorkspaceInfoDto.class)))
+    @ApiResponse(responseCode = "404", description = "Workspace not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getWorkspaceInfo(
+        @Parameter(description = "Workspace ID") @PathVariable String wsId) {
         WorkspaceInfoDto info = workspaceStorage.getWorkspaceInfo(wsId);
         if (info == null) {
             return notFound("Workspace not found: " + wsId);
@@ -195,8 +236,14 @@ public class WorkspaceController {
      * Promote all drafts in a workspace to real content.
      */
     @PostMapping("/{wsId}/promote")
-    public ResponseEntity<?> promote(@PathVariable String wsId,
-                                      HttpServletRequest request) {
+    @Operation(summary = "Promote all drafts to real content",
+               description = "Persists all drafts in the workspace as real content and removes the workspace")
+    @ApiResponse(responseCode = "200", description = "List of promoted content IDs")
+    @ApiResponse(responseCode = "404", description = "Workspace not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> promote(
+        @Parameter(description = "Workspace ID") @PathVariable String wsId,
+        HttpServletRequest request) {
         try {
             Subject subject = resolveSubject(request);
             Collection<WorkspaceStorage.DraftEntry> drafts = workspaceStorage.getAllDrafts(wsId);

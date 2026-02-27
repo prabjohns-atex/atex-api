@@ -41,6 +41,13 @@ dependencies {
     implementation 'org.apache.solr:solr-solrj:9.8.0'
     implementation 'org.jsoup:jsoup:1.18.3'
 
+    // Actuator for health checks and metrics
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // SpringDoc OpenAPI (auto-generates spec from annotations, bundles Swagger UI)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1'
+    implementation 'org.springframework.boot:spring-boot-jackson2'
+
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
     runtimeOnly 'com.mysql:mysql-connector-j'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'

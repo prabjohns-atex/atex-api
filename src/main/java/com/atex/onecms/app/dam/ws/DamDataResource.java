@@ -143,6 +143,8 @@ import com.atex.onecms.lockservice.LockServiceUtil;
 import com.atex.onecms.search.solr.SolrCoreMapper;
 import com.atex.onecms.search.solr.SolrCoreMapperFactory;
 import com.atex.onecms.ws.service.ErrorResponseException;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.google.common.base.Strings;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -168,6 +170,7 @@ import com.polopoly.util.StringUtil;
  */
 @RestController
 @RequestMapping("/dam/content")
+@Tag(name = "DAM", description = "DAM content operations, search, publishing and configuration")
 public class DamDataResource {
 
     private static final Logger LOGGER = Logger.getLogger(DamDataResource.class.getName());
@@ -673,6 +676,7 @@ public class DamDataResource {
         return ResponseEntity.ok(GSON.toJson(json));
     }
 
+    @Hidden
     @PostMapping("create-page")
     public ResponseEntity<String> createPage(HttpServletRequest request,
                                               @RequestBody String body) {
@@ -684,6 +688,7 @@ public class DamDataResource {
         throw ContentApiException.error("Page creation not yet implemented", NOT_IMPLEMENTED, 501);
     }
 
+    @Hidden
     @PutMapping("sendcontent")
     public ResponseEntity<Void> sendContent(HttpServletRequest request,
                                              @RequestBody String body) {
@@ -694,6 +699,7 @@ public class DamDataResource {
         return ResponseEntity.ok().build();
     }
 
+    @Hidden
     @PostMapping("assigncontent")
     public ResponseEntity<Void> assignContent(HttpServletRequest request,
                                                @RequestBody String body) {
@@ -1367,6 +1373,7 @@ public class DamDataResource {
 
     // ======== Preview / Gallery ========
 
+    @Hidden
     @PostMapping(value = "collectionpreview", produces = MediaType.TEXT_PLAIN_VALUE)
     public String getCollectionPreview(HttpServletRequest request,
                                        @RequestBody String body) {
@@ -1645,6 +1652,7 @@ public class DamDataResource {
 
     // ======== PDF merge ========
 
+    @Hidden
     @PostMapping(value = "mergeMultiplePdf", produces = MediaType.TEXT_PLAIN_VALUE)
     public String mergeMultiplePdf(@RequestBody String body) {
         // PDF merge stub

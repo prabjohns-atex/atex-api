@@ -1069,3 +1069,151 @@ desk.config.flavor=
 | `DemoApplication.java` | Add `ConfigProperties.class` to `@EnableConfigurationProperties` |
 | `AuthConfig.java` | Add `/admin/*` to auth filter URL patterns |
 | `application.properties` | Add `desk.config.enabled=true`, `desk.config.flavor=` |
+
+## Increment 7.1 — SpringDoc OpenAPI Generation
+
+Replaces the hand-authored `static/openapi.yaml` (1830 lines) and manually-configured Swagger UI WebJar with SpringDoc-generated OpenAPI from annotations. The Polopoly Swagger 2 annotations (`@ApiOperation`, `@ApiModelProperty`) are mapped to OpenAPI 3 equivalents (`@Operation`, `@Schema`).
+
+### Architecture
+
+```
+SpringDoc OpenAPI 3.0.1
+  ├─ Auto-generates /v3/api-docs JSON from controller annotations
+  ├─ Bundles Swagger UI at /swagger-ui.html (no manual WebJar config)
+  └─ spring-boot-jackson2 bridge (swagger-core needs Jackson 2)
+
+Annotation mapping (Polopoly → desk-api):
+  @Api(tags)                → @Tag(name) on class
+  @ApiOperation(value)      → @Operation(summary)
+  @ApiParam("desc")         → @Parameter(description)
+  @ApiResponse(code, ...)   → @ApiResponse(responseCode, ...)
+  @ApiModel(description)    → @Schema(description) on class
+  @ApiModelProperty("desc") → @Schema(description) on field
+  @ApiImplicitParam(X-Auth) → Global security scheme in OpenApiConfig
+```
+
+### Dependencies
+
+**Removed:**
+- `org.webjars:swagger-ui:5.21.0`
+- `org.webjars:webjars-locator-core:0.59`
+
+**Added:**
+- `org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1` — auto-generates spec, bundles Swagger UI
+- `org.springframework.boot:spring-boot-jackson2` — bridge for swagger-core's Jackson 2 dependency
+
+### Configuration (`application.properties`)
+
+```properties
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.persist-authorization=true
+springdoc.swagger-ui.deep-linking=true
+springdoc.swagger-ui.operations-sorter=alpha
+springdoc.swagger-ui.tags-sorter=alpha
+springdoc.packages-to-scan=com.atex.desk.api.controller,com.atex.onecms.app.dam.ws
+```
+
+No auth config changes needed — `/v3/*` and `/swagger-ui/**` are outside the AuthFilter URL patterns.
+
+### OpenApiConfig
+
+`com.atex.desk.api.config.OpenApiConfig` — `@Configuration` providing an `OpenAPI` bean:
+- **Info**: title "Desk API", version "0.0.1-SNAPSHOT"
+- **Server**: `http://localhost:8081`
+- **Security scheme**: `authToken` — apiKey in header `X-Auth-Token`
+- **Global security requirement**: `authToken` applied to all endpoints by default
+- **Tag definitions** (7 tags with descriptions):
+
+| Tag | Description |
+|-----|-------------|
+| Authentication | Acquire, validate and manage authentication tokens |
+| Content | Create, get, update and delete content |
+| Workspace | Create, get, update and delete content in workspaces |
+| Principals | User and group management |
+| Configuration | Resource-based configuration admin |
+| Dashboard | System status and endpoint listing |
+| DAM | DAM content operations, search, publishing and configuration |
+
+### DTO Annotations
+
+All DTOs annotated with `@Schema` (class-level description + field-level descriptions):
+
+| DTO | Schema description |
+|-----|-------------------|
+| `ContentResultDto` | The content model when fetching a content |
+| `ContentWriteDto` | The content model used for create and update operations |
+| `AspectDto` | An aspect, the data field contains a _type field with the aspect type |
+| `MetaDto` | Metadata information about a content |
+| `ContentHistoryDto` | Content version history |
+| `ContentVersionInfoDto` | Content version info |
+| `ErrorResponseDto` | Error response with status code and message |
+| `CredentialsDto` | Login credentials |
+| `TokenResponseDto` | Authentication token response |
+| `PrincipalDto` | User principal info |
+| `WorkspaceInfoDto` | Workspace information |
+
+### Controller Annotations
+
+| Controller | Tag | Annotations |
+|------------|-----|-------------|
+| `SecurityController` | Authentication | `@Operation` + `@ApiResponse` on both methods; `@SecurityRequirements` (no auth) on login |
+| `ContentController` | Content | `@Operation` + `@ApiResponse` + `@Parameter` on all 9 methods |
+| `WorkspaceController` | Workspace | `@Operation` + `@ApiResponse` + `@Parameter` on all 7 methods |
+| `PrincipalsController` | Principals | `@Operation` on all 4 methods |
+| `ConfigurationController` | Configuration | `@Operation` + `@Parameter` on all 7 methods |
+| `DashboardController` | Dashboard | `@Operation` + `@SecurityRequirements` (no auth) on both methods |
+| `DamDataResource` | DAM | `@Tag` on class; `@Hidden` on 5 stub endpoints |
+
+**Unauthenticated endpoints** use `@SecurityRequirements` (standalone annotation, not `@Operation(security = {})` which SpringDoc 3.0.1 ignores) to override the global security requirement.
+
+**DamDataResource hidden endpoints** (501 NOT_IMPLEMENTED stubs):
+- `createPage`, `sendContent`, `assignContent`, `collectionPreview`, `mergeMultiplePdf`
+
+**Note**: DamDataResource endpoints only appear in the spec when all its runtime dependencies are satisfied (PolicyCMServer, CmClient, DamPublisherFactory, etc.).
+
+### WebConfig Changes
+
+- **Removed** `addResourceHandlers` override (SpringDoc serves its own Swagger UI)
+- **Updated** swagger-ui redirect: `/swagger-ui` → `/swagger-ui.html` (SpringDoc's canonical entry point)
+- **Kept** `/dashboard` → `/dashboard.html` redirect
+
+### DashboardController Fix
+
+Added `@Qualifier("requestMappingHandlerMapping")` to disambiguate between Spring MVC's `requestMappingHandlerMapping` and actuator's `controllerEndpointHandlerMapping` (exposed by SpringDoc's additional web MVC configuration).
+
+### Dashboard Links
+
+Updated `static/dashboard.html` header links:
+- Swagger UI: `/swagger-ui/index.html` → `/swagger-ui.html`
+- OpenAPI Spec: `/openapi.yaml` → `/v3/api-docs`
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `config/OpenApiConfig.java` | `OpenAPI` bean with security scheme, tags, API info |
+
+### Deleted Files
+
+| File | Reason |
+|------|--------|
+| `static/openapi.yaml` | Replaced by auto-generation from annotations |
+| `static/swagger-ui/index.html` | Replaced by SpringDoc's built-in Swagger UI |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `build.gradle` | Replace webjar deps with `springdoc-openapi-starter-webmvc-ui` + `spring-boot-jackson2` |
+| `application.properties` | Add SpringDoc config properties |
+| `config/WebConfig.java` | Remove resource handler, update redirect to `/swagger-ui.html` |
+| `controller/SecurityController.java` | `@Tag`, `@Operation`, `@ApiResponse`, `@SecurityRequirements` |
+| `controller/ContentController.java` | `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter` |
+| `controller/WorkspaceController.java` | `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter` |
+| `controller/PrincipalsController.java` | `@Tag`, `@Operation` |
+| `controller/ConfigurationController.java` | `@Tag`, `@Operation`, `@Parameter` |
+| `controller/DashboardController.java` | `@Tag`, `@Operation`, `@SecurityRequirements`, `@Qualifier` |
+| `DamDataResource.java` | `@Tag(name = "DAM")`, `@Hidden` on 5 stubs |
+| `dto/*.java` (11 files) | `@Schema` annotations on classes and fields |
+| `static/dashboard.html` | Update swagger/api-docs links |

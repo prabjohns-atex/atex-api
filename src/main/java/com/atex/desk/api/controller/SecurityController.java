@@ -8,6 +8,12 @@ import com.atex.desk.api.dto.ErrorResponseDto;
 import com.atex.desk.api.dto.TokenResponseDto;
 import com.atex.desk.api.entity.AppUser;
 import com.atex.desk.api.repository.AppUserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +31,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/security")
+@Tag(name = "Authentication")
 public class SecurityController
 {
     private static final String AUTH_HEADER = "X-Auth-Token";
@@ -44,6 +51,13 @@ public class SecurityController
      * Accepts {username, password} and returns a JWT token.
      */
     @PostMapping("/token")
+    @SecurityRequirements
+    @Operation(summary = "Acquire authentication token",
+               description = "Authenticate with username and password to receive a JWT token")
+    @ApiResponse(responseCode = "200", description = "Authentication successful",
+                 content = @Content(schema = @Schema(implementation = TokenResponseDto.class)))
+    @ApiResponse(responseCode = "401", description = "Authentication failed",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> acquireToken(@RequestBody CredentialsDto credentials)
     {
         if (credentials.getUsername() == null || credentials.getUsername().isBlank())
@@ -94,6 +108,12 @@ public class SecurityController
      * GET /security/token — Check if a token is still valid.
      */
     @GetMapping("/token")
+    @Operation(summary = "Validate authentication token",
+               description = "Check if the provided X-Auth-Token is still valid")
+    @ApiResponse(responseCode = "200", description = "Token is valid",
+                 content = @Content(schema = @Schema(implementation = TokenResponseDto.class)))
+    @ApiResponse(responseCode = "401", description = "Token is invalid or expired",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> getToken(@RequestHeader(value = AUTH_HEADER, required = false) String authToken)
     {
         if (authToken == null || authToken.isBlank())

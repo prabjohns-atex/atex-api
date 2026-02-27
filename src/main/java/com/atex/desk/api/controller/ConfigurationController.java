@@ -8,6 +8,9 @@ import com.atex.desk.api.service.ContentService;
 import com.atex.onecms.app.dam.ws.DamUserContext;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -27,6 +30,7 @@ import java.util.TreeMap;
 
 @RestController
 @RequestMapping("/admin/config")
+@Tag(name = "Configuration")
 public class ConfigurationController
 {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -45,6 +49,8 @@ public class ConfigurationController
      * GET /admin/config — List all known config IDs with source tier.
      */
     @GetMapping
+    @Operation(summary = "List all configuration IDs",
+               description = "Returns all known config IDs with their effective source tier")
     public ResponseEntity<?> listConfigs()
     {
         Map<String, Object> result = new TreeMap<>();
@@ -61,7 +67,10 @@ public class ConfigurationController
      * GET /admin/config/{externalId} — Get effective config JSON.
      */
     @GetMapping("/{externalId}")
-    public ResponseEntity<?> getConfig(@PathVariable String externalId)
+    @Operation(summary = "Get effective configuration",
+               description = "Returns the effective configuration JSON for the given external ID, merging all tiers")
+    public ResponseEntity<?> getConfig(
+        @Parameter(description = "Configuration external ID") @PathVariable String externalId)
     {
         // Check for live (DB) override first
         Optional<Map<String, Object>> liveData = getLiveConfig(externalId);
@@ -82,7 +91,10 @@ public class ConfigurationController
      * GET /admin/config/{externalId}/sources — Get all tiers separately for diff/audit.
      */
     @GetMapping("/{externalId}/sources")
-    public ResponseEntity<?> getConfigSources(@PathVariable String externalId)
+    @Operation(summary = "Get configuration sources by tier",
+               description = "Returns the configuration value from each tier separately for diff and audit")
+    public ResponseEntity<?> getConfigSources(
+        @Parameter(description = "Configuration external ID") @PathVariable String externalId)
     {
         Map<String, Object> sources = new LinkedHashMap<>();
 
@@ -109,10 +121,13 @@ public class ConfigurationController
      * PUT /admin/config/{externalId} — Save live override to DB.
      */
     @PutMapping("/{externalId}")
+    @Operation(summary = "Save live configuration override",
+               description = "Saves a live (DB) override for the given configuration")
     @SuppressWarnings("unchecked")
-    public ResponseEntity<?> saveConfig(@PathVariable String externalId,
-                                         @RequestBody Map<String, Object> data,
-                                         HttpServletRequest request)
+    public ResponseEntity<?> saveConfig(
+        @Parameter(description = "Configuration external ID") @PathVariable String externalId,
+        @RequestBody Map<String, Object> data,
+        HttpServletRequest request)
     {
         DamUserContext userContext = DamUserContext.from(request);
         if (!userContext.isLoggedIn())
@@ -157,8 +172,11 @@ public class ConfigurationController
      * DELETE /admin/config/{externalId} — Delete live override, revert to resource defaults.
      */
     @DeleteMapping("/{externalId}")
-    public ResponseEntity<?> deleteConfig(@PathVariable String externalId,
-                                            HttpServletRequest request)
+    @Operation(summary = "Delete live configuration override",
+               description = "Removes the live (DB) override, reverting to resource defaults")
+    public ResponseEntity<?> deleteConfig(
+        @Parameter(description = "Configuration external ID") @PathVariable String externalId,
+        HttpServletRequest request)
     {
         DamUserContext userContext = DamUserContext.from(request);
         if (!userContext.isLoggedIn())
@@ -187,6 +205,8 @@ public class ConfigurationController
      * GET /admin/config/export — Export all live (DB) overrides as a JSON bundle.
      */
     @GetMapping("/export")
+    @Operation(summary = "Export all live configuration overrides",
+               description = "Returns all live (DB) overrides as a single JSON bundle")
     public ResponseEntity<?> exportConfigs()
     {
         Map<String, Object> bundle = new TreeMap<>();
@@ -204,6 +224,8 @@ public class ConfigurationController
      * GET /admin/config/patch — Unified diff of DB overrides against resource defaults.
      */
     @GetMapping(value = "/patch", produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(summary = "Get unified diff of live overrides",
+               description = "Returns a unified diff of all DB overrides against their resource defaults")
     public ResponseEntity<String> patchConfigs()
     {
         StringBuilder patch = new StringBuilder();

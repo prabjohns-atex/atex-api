@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desk API - Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; }
+        .header { background: #1a1a2e; color: #fff; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { font-size: 1.4rem; font-weight: 600; }
+        .header-links a { color: #a0c4ff; text-decoration: none; margin-left: 1.5rem; font-size: 0.9rem; }
+        .header-links a:hover { color: #fff; }
+        .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.2rem; margin-bottom: 1.2rem; }
+        .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.2rem; }
+        .card h2 { font-size: 1rem; color: #555; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .stat { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
+        .stat:last-child { border-bottom: none; }
+        .stat-label { color: #777; }
+        .stat-value { font-weight: 500; word-break: break-all; max-width: 60%; text-align: right; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .badge-up { background: #d4edda; color: #155724; }
+        .badge-down { background: #f8d7da; color: #721c24; }
+        .badge-unknown { background: #e2e3e5; color: #383d41; }
+        .badge-get { background: #61affe; color: #fff; }
+        .badge-post { background: #49cc90; color: #fff; }
+        .badge-put { background: #fca130; color: #fff; }
+        .badge-delete { background: #f93e3e; color: #fff; }
+        .badge-patch { background: #50e3c2; color: #fff; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; padding: 0.6rem 0.5rem; border-bottom: 2px solid #e0e0e0; color: #555; font-weight: 600; }
+        td { padding: 0.5rem; border-bottom: 1px solid #f0f0f0; }
+        td.path { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.82rem; }
+        tr:hover { background: #f8f9fa; }
+        .loading { color: #999; font-style: italic; }
+        .refresh-note { text-align: center; color: #999; font-size: 0.8rem; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Desk API Dashboard</h1>
+        <div class="header-links">
+            <a href="/swagger-ui.html">Swagger UI</a>
+            <a href="/v3/api-docs">OpenAPI Spec</a>
+            <a href="/actuator/health">Health</a>
+            <a href="/actuator/metrics">Metrics</a>
+        </div>
+    </div>
+    <div class="container">
+        <div class="grid">
+            <div class="card" id="system-card">
+                <h2>System Info</h2>
+                <div class="loading">Loading...</div>
+            </div>
+            <div class="card" id="health-card">
+                <h2>Health</h2>
+                <div class="loading">Loading...</div>
+            </div>
+            <div class="card" id="config-card">
+                <h2>Configuration</h2>
+                <div class="loading">Loading...</div>
+            </div>
+            <div class="card" id="metrics-card">
+                <h2>Request Metrics</h2>
+                <div class="loading">Loading...</div>
+            </div>
+            <div class="card" id="jvm-card">
+                <h2>JVM</h2>
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>API Endpoints</h2>
+            <div id="endpoints-table">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+        <div class="refresh-note">Auto-refreshes every 30 seconds</div>
+    </div>
+    <script>
+        function stat(label, value) {
+            return '<div class="stat"><span class="stat-label">' + escHtml(label) + '</span><span class="stat-value">' + value + '</span></div>';
+        }
+
+        function badge(cls, text) {
+            return '<span class="badge badge-' + cls + '">' + escHtml(text) + '</span>';
+        }
+
+        function escHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        function healthBadge(status) {
+            if (status === 'UP') return badge('up', 'UP');
+            if (status === 'DOWN') return badge('down', 'DOWN');
+            return badge('unknown', status || 'UNKNOWN');
+        }
+
+        function methodBadge(m) {
+            return badge(m.toLowerCase(), m);
+        }
+
+        async function fetchJson(url) {
+            try {
+                const r = await fetch(url);
+                if (!r.ok) return null;
+                return await r.json();
+            } catch { return null; }
+        }
+
+        async function loadStatus() {
+            const data = await fetchJson('/api/status');
+            if (!data) { document.getElementById('system-card').innerHTML = '<h2>System Info</h2><div class="loading">Unavailable</div>'; return; }
+
+            let html = '<h2>System Info</h2>';
+            html += stat('Java', data.system.javaVersion);
+            html += stat('Vendor', data.system.javaVendor);
+            html += stat('Spring Boot', data.system.springBootVersion);
+            html += stat('Uptime', data.system.uptime);
+            html += stat('Start Time', new Date(data.system.startTime).toLocaleString());
+            html += stat('Endpoints', data.endpointCount);
+            document.getElementById('system-card').innerHTML = html;
+
+            let cfgHtml = '<h2>Configuration</h2>';
+            cfgHtml += stat('Total Configs', data.config.totalConfigs);
+            cfgHtml += stat('Flavor', data.config.flavor || '(none)');
+            cfgHtml += stat('Auth', data.config.authEnabled ? badge('up', 'Enabled') : badge('unknown', 'Disabled'));
+            cfgHtml += stat('Instance ID', data.config.instanceId);
+            cfgHtml += stat('Plugins', data.config.pluginsEnabled ? badge('up', 'Enabled') : badge('unknown', 'Disabled'));
+            cfgHtml += stat('Solr URL', escHtml(data.config.solrUrl) || '(not set)');
+            cfgHtml += stat('Solr Core', escHtml(data.config.solrCore));
+            document.getElementById('config-card').innerHTML = cfgHtml;
+        }
+
+        async function loadHealth() {
+            const data = await fetchJson('/actuator/health');
+            let html = '<h2>Health</h2>';
+            if (!data) { html += '<div class="loading">Unavailable</div>'; document.getElementById('health-card').innerHTML = html; return; }
+
+            html += stat('Overall', healthBadge(data.status));
+            if (data.components) {
+                for (const [name, comp] of Object.entries(data.components)) {
+                    let detail = '';
+                    if (comp.details) {
+                        const d = comp.details;
+                        if (d.error) detail = ' - ' + escHtml(d.error);
+                        else if (d.url) detail = ' - ' + escHtml(d.url);
+                        else if (d.database) detail = ' - ' + escHtml(d.database);
+                    }
+                    html += stat(name, healthBadge(comp.status) + '<span style="font-size:0.8rem;color:#777">' + detail + '</span>');
+                }
+            }
+            document.getElementById('health-card').innerHTML = html;
+        }
+
+        async function loadMetrics() {
+            const data = await fetchJson('/actuator/metrics/http.server.requests');
+            let html = '<h2>Request Metrics</h2>';
+            if (!data) { html += stat('Status', badge('unknown', 'No data yet')); document.getElementById('metrics-card').innerHTML = html; return; }
+
+            for (const m of data.measurements || []) {
+                if (m.statistic === 'COUNT') html += stat('Total Requests', Math.round(m.value));
+                if (m.statistic === 'TOTAL_TIME') html += stat('Total Time', m.value.toFixed(2) + 's');
+                if (m.statistic === 'MAX') html += stat('Max Latency', (m.value * 1000).toFixed(0) + 'ms');
+            }
+            document.getElementById('metrics-card').innerHTML = html;
+        }
+
+        async function loadJvm() {
+            const mem = await fetchJson('/actuator/metrics/jvm.memory.used');
+            const threads = await fetchJson('/actuator/metrics/jvm.threads.live');
+            let html = '<h2>JVM</h2>';
+
+            if (mem && mem.measurements) {
+                for (const m of mem.measurements) {
+                    if (m.statistic === 'VALUE') html += stat('Heap Used', (m.value / 1048576).toFixed(0) + ' MB');
+                }
+            }
+            if (threads && threads.measurements) {
+                for (const m of threads.measurements) {
+                    if (m.statistic === 'VALUE') html += stat('Live Threads', Math.round(m.value));
+                }
+            }
+
+            if (html === '<h2>JVM</h2>') html += stat('Status', badge('unknown', 'No data yet'));
+            document.getElementById('jvm-card').innerHTML = html;
+        }
+
+        async function loadEndpoints() {
+            const data = await fetchJson('/api/endpoints');
+            if (!data) { document.getElementById('endpoints-table').innerHTML = '<div class="loading">Unavailable</div>'; return; }
+
+            let html = '<table><thead><tr><th style="width:100px">Method</th><th>Path</th><th>Controller</th><th>Handler</th></tr></thead><tbody>';
+            for (const ep of data) {
+                const methods = (ep.methods || []).map(methodBadge).join(' ');
+                html += '<tr><td>' + methods + '</td><td class="path">' + escHtml(ep.pattern) + '</td><td>' + escHtml(ep.controller) + '</td><td>' + escHtml(ep.handler) + '</td></tr>';
+            }
+            html += '</tbody></table>';
+            document.getElementById('endpoints-table').innerHTML = html;
+        }
+
+        async function refresh() {
+            await Promise.all([loadStatus(), loadHealth(), loadMetrics(), loadJvm(), loadEndpoints()]);
+        }
+
+        refresh();
+        setInterval(refresh, 30000);
+    </script>
+</body>
+</html>

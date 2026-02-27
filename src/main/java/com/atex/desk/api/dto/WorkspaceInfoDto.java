@@ -1,14 +1,22 @@
 package com.atex.desk.api.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.time.Instant;
 
 /**
  * Workspace info response DTO.
  */
+@Schema(description = "Workspace information")
 public class WorkspaceInfoDto {
 
+    @Schema(description = "The workspace id")
     private String workspaceId;
+
+    @Schema(description = "Number of drafts in the workspace")
     private int draftCount;
+
+    @Schema(description = "Workspace creation time")
     private Instant createdAt;
 
     public WorkspaceInfoDto() {}

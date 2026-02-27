@@ -5,6 +5,12 @@ import com.atex.desk.api.dto.ErrorResponseDto;
 import com.atex.desk.api.dto.PrincipalDto;
 import com.atex.desk.api.entity.AppUser;
 import com.atex.desk.api.repository.AppUserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +23,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/principals")
+@Tag(name = "Principals")
 public class PrincipalsController
 {
     private final AppUserRepository userRepository;
@@ -27,6 +34,11 @@ public class PrincipalsController
     }
 
     @GetMapping("/users/me")
+    @Operation(summary = "Get current authenticated user")
+    @ApiResponse(responseCode = "200", description = "Current user info",
+                 content = @Content(schema = @Schema(implementation = PrincipalDto.class)))
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request)
     {
         String userId = resolveUserId(request);
@@ -53,6 +65,7 @@ public class PrincipalsController
     }
 
     @GetMapping("/users")
+    @Operation(summary = "List all users")
     public List<PrincipalDto> getUsers()
     {
         return userRepository.findAll().stream()
@@ -61,7 +74,13 @@ public class PrincipalsController
     }
 
     @GetMapping("/users/{userId}")
-    public ResponseEntity<?> getUser(@PathVariable Integer userId)
+    @Operation(summary = "Get user by ID")
+    @ApiResponse(responseCode = "200", description = "User found",
+                 content = @Content(schema = @Schema(implementation = PrincipalDto.class)))
+    @ApiResponse(responseCode = "404", description = "User not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getUser(
+        @Parameter(description = "User ID") @PathVariable Integer userId)
     {
         return userRepository.findById(userId)
             .<ResponseEntity<?>>map(user -> ResponseEntity.ok(toDto(user)))
@@ -69,6 +88,7 @@ public class PrincipalsController
     }
 
     @GetMapping("/groups")
+    @Operation(summary = "List all groups")
     public List<?> getGroups()
     {
         return List.of();

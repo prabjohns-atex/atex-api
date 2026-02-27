@@ -1,11 +1,17 @@
 package com.atex.desk.api.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Matches the OneCMS ErrorResponse JSON structure.
  */
+@Schema(description = "Error response with status code and message")
 public class ErrorResponseDto
 {
+    @Schema(description = "The internal status code", example = "40400")
     private String detailCode;
+
+    @Schema(description = "The error message")
     private String name;
 
     public ErrorResponseDto() {}

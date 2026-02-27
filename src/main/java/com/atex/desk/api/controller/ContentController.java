@@ -6,6 +6,13 @@ import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ContentWriteDto;
 import com.atex.desk.api.dto.ErrorResponseDto;
 import com.atex.desk.api.service.ContentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +33,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/content")
+@Tag(name = "Content")
 public class ContentController
 {
     private static final String DEFAULT_USER = "system";
@@ -46,7 +54,17 @@ public class ContentController
      * If versioned → 200 with content.
      */
     @GetMapping("/contentid/{id}")
-    public ResponseEntity<?> getContent(@PathVariable String id)
+    @Operation(summary = "Read a content",
+               description = "Versioned ID returns 200 with content and ETag. Unversioned ID returns 302 redirect to versioned URL.")
+    @ApiResponse(responseCode = "200", description = "Content found (versioned ID)",
+                 headers = @Header(name = "ETag", description = "The versioned content ID"),
+                 content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
+    @ApiResponse(responseCode = "302", description = "Redirect to versioned URL (unversioned ID)")
+    @ApiResponse(responseCode = "404", description = "Content not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getContent(
+        @Parameter(description = "Content ID (versioned or unversioned)", example = "onecms:abc123")
+        @PathVariable String id)
     {
         if (contentService.isVersionedId(id))
         {
@@ -74,7 +92,17 @@ public class ContentController
      * GET /content/contentid/{id}/history
      */
     @GetMapping("/contentid/{id}/history")
-    public ResponseEntity<?> getHistory(@PathVariable String id)
+    @Operation(summary = "Read a content history",
+               description = "Returns version history for an unversioned content ID")
+    @ApiResponse(responseCode = "200", description = "History found",
+                 content = @Content(schema = @Schema(implementation = ContentHistoryDto.class)))
+    @ApiResponse(responseCode = "400", description = "Versioned ID not allowed",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    @ApiResponse(responseCode = "404", description = "Content not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getHistory(
+        @Parameter(description = "Unversioned content ID", example = "onecms:abc123")
+        @PathVariable String id)
     {
         if (contentService.isVersionedId(id))
         {
@@ -94,7 +122,15 @@ public class ContentController
      * Resolves external ID and redirects to versioned content URL.
      */
     @GetMapping("/externalid/{id}")
-    public ResponseEntity<?> getContentByExternalId(@PathVariable String id)
+    @Operation(summary = "Resolve an externalId and redirect",
+               description = "Resolves an external ID to a content ID and redirects to the versioned content URL")
+    @ApiResponse(responseCode = "200", description = "Configuration content found (for config external IDs)",
+                 content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
+    @ApiResponse(responseCode = "302", description = "Redirect to versioned content URL")
+    @ApiResponse(responseCode = "404", description = "External ID not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getContentByExternalId(
+        @Parameter(description = "External content ID") @PathVariable String id)
     {
         Optional<String> contentId = contentService.resolveExternalId(id);
         if (contentId.isEmpty())
@@ -126,7 +162,13 @@ public class ContentController
      * GET /content/externalid/{id}/history
      */
     @GetMapping("/externalid/{id}/history")
-    public ResponseEntity<?> getHistoryByExternalId(@PathVariable String id)
+    @Operation(summary = "Read a content history by external ID",
+               description = "Resolves the external ID and redirects to the content history endpoint")
+    @ApiResponse(responseCode = "302", description = "Redirect to content history URL")
+    @ApiResponse(responseCode = "404", description = "External ID not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getHistoryByExternalId(
+        @Parameter(description = "External content ID") @PathVariable String id)
     {
         Optional<String> contentId = contentService.resolveExternalId(id);
         if (contentId.isEmpty())
@@ -144,8 +186,16 @@ public class ContentController
      * Resolve content ID in a specific view and redirect to versioned URL.
      */
     @GetMapping("/view/{view}/contentid/{id}")
-    public ResponseEntity<?> getContentFromView(@PathVariable String view,
-                                                 @PathVariable String id)
+    @Operation(summary = "Read a content from a view",
+               description = "Resolve a content ID in a specific view and redirect to the versioned URL")
+    @ApiResponse(responseCode = "302", description = "Redirect to versioned content URL")
+    @ApiResponse(responseCode = "400", description = "Versioned ID not allowed",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    @ApiResponse(responseCode = "404", description = "Content not found in view",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getContentFromView(
+        @Parameter(description = "View name", example = "p.latest") @PathVariable String view,
+        @Parameter(description = "Unversioned content ID") @PathVariable String id)
     {
         if (contentService.isVersionedId(id))
         {
@@ -166,8 +216,14 @@ public class ContentController
      * GET /content/view/{view}/externalid/{id}
      */
     @GetMapping("/view/{view}/externalid/{id}")
-    public ResponseEntity<?> getContentFromViewByExternalId(@PathVariable String view,
-                                                             @PathVariable String id)
+    @Operation(summary = "Read a content from a view by external ID",
+               description = "Resolve an external ID in a specific view and redirect to the versioned URL")
+    @ApiResponse(responseCode = "302", description = "Redirect to versioned content URL")
+    @ApiResponse(responseCode = "404", description = "External ID or content not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getContentFromViewByExternalId(
+        @Parameter(description = "View name", example = "p.latest") @PathVariable String view,
+        @Parameter(description = "External content ID") @PathVariable String id)
     {
         Optional<String> contentId = contentService.resolveExternalId(id);
         if (contentId.isEmpty())
@@ -189,6 +245,14 @@ public class ContentController
      * Create new content.
      */
     @PostMapping
+    @Operation(summary = "Create a new content",
+               description = "Create a new content entry with the provided aspects")
+    @ApiResponse(responseCode = "201", description = "Content created",
+                 headers = {
+                     @Header(name = "Location", description = "URL of the created content"),
+                     @Header(name = "ETag", description = "The versioned content ID")
+                 },
+                 content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
     public ResponseEntity<?> createContent(@RequestBody ContentWriteDto write,
                                             HttpServletRequest request)
     {
@@ -204,10 +268,18 @@ public class ContentController
      * Update existing content. Requires unversioned ID.
      */
     @PutMapping("/contentid/{id}")
-    public ResponseEntity<?> updateContent(@PathVariable String id,
-                                            @RequestBody ContentWriteDto write,
-                                            HttpServletRequest request,
-                                            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch)
+    @Operation(summary = "Update a content",
+               description = "Update an existing content by creating a new version")
+    @ApiResponse(responseCode = "200", description = "Content updated",
+                 headers = @Header(name = "ETag", description = "The new versioned content ID"),
+                 content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
+    @ApiResponse(responseCode = "404", description = "Content not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> updateContent(
+        @Parameter(description = "Unversioned content ID") @PathVariable String id,
+        @RequestBody ContentWriteDto write,
+        HttpServletRequest request,
+        @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch)
     {
         if (contentService.isVersionedId(id))
         {
@@ -231,9 +303,15 @@ public class ContentController
      * DELETE /content/contentid/{id}
      */
     @DeleteMapping("/contentid/{id}")
-    public ResponseEntity<?> deleteContent(@PathVariable String id,
-                                            HttpServletRequest request,
-                                            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch)
+    @Operation(summary = "Delete a content",
+               description = "Soft delete a content by reassigning its view to p.deleted")
+    @ApiResponse(responseCode = "204", description = "Content deleted")
+    @ApiResponse(responseCode = "404", description = "Content not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> deleteContent(
+        @Parameter(description = "Unversioned content ID") @PathVariable String id,
+        HttpServletRequest request,
+        @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch)
     {
         if (contentService.isVersionedId(id))
         {
