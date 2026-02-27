@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(export JAVA_HOME=\"/c/Users/peter/.jdks/openjdk-25.0.2\" && cd /c/Users/peter/projects/desk-api && ./gradlew compileJava 2>&1)",
+      "Bash(head:*)",
+      "Bash(grep:*)",
+      "Bash(export JAVA_HOME=\"/c/Users/peter/.jdks/openjdk-25.0.2\" && cd /c/Users/peter/projects/desk-api && ./gradlew build -x test 2>&1)",
+      "Bash(docker compose up -d 2>&1)",
+      "Bash(docker compose down -v && docker compose up -d 2>&1)",
+      "Bash(export JAVA_HOME=\"/c/Users/peter/.jdks/openjdk-25.0.2\" && cd /c/Users/peter/projects/desk-api && ./gradlew bootRun 2>&1)",
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Bash(sleep:*)",
+      "Bash(taskkill:*)",
+      "Bash(cd /c/Users/peter/projects/desk-api && JAVA_HOME=\"/c/Users/peter/.jdks/openjdk-25.0.2\" ./gradlew bootRun 2>&1)",
+      "Bash(tail:*)",
+      "Bash(find:*)",
+      "Bash(git:*)",
+      "Bash(ls:*)",
+      "Bash(./gradlew *)",
+      "Bash(export JAVA_HOME=*)",
+      "Bash(cd /c/Users/peter/projects/desk-api)",
+      "Bash(python3:*)",
+      "Bash(sort:*)",
+      "Bash(# Search for act-nosql-image and custom locale files for extid in \"\"act-nosql-image\"\" \"\"atex.onecms.custom.locale\"\"; do echo \"\"=== Searching for: $extid ===\"\" grep -rl \"\"$extid\"\" /c/Users/peter/projects/gong/desk/content/src/main/content/)",
+      "Bash(done)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "WebFetch",
+      "WebFetch(domain:central.sonatype.com)",
+      "WebFetch(domain:github.com)"
+    ]
+  }
+}
