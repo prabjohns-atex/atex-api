@@ -1188,11 +1188,24 @@ Updated `static/dashboard.html` header links:
 - Swagger UI: `/swagger-ui/index.html` → `/swagger-ui.html`
 - OpenAPI Spec: `/openapi.yaml` → `/v3/api-docs`
 
+### Actuator Enhancements
+
+**`MetricsConfig`** (`com.atex.desk.api.config`) — `@Configuration` with a `MeterRegistryCustomizer<MeterRegistry>` bean that adds the common tag `application=desk-api` to all Micrometer metrics.
+
+**`SolrHealthIndicator`** (`com.atex.desk.api.config`) — `@Component` implementing `HealthIndicator` for Solr connectivity. Uses `SolrService.getLatestEventId()` as a lightweight ping. Returns:
+- `UP` with url, core, latestEventId if Solr responds
+- `DOWN` with url, core, error message on failure
+- `UNKNOWN` with reason if Solr is not configured (`@Nullable SolrService`)
+
+Visible at `/actuator/health` alongside the default DB health indicator.
+
 ### New Files
 
 | File | Description |
 |------|-------------|
 | `config/OpenApiConfig.java` | `OpenAPI` bean with security scheme, tags, API info |
+| `config/MetricsConfig.java` | Adds `application=desk-api` common tag to all Micrometer metrics |
+| `config/SolrHealthIndicator.java` | Actuator health indicator for Solr connectivity |
 
 ### Deleted Files
 
