@@ -1,0 +1,16 @@
+{
+	  "processors": [
+	    "processor.configuration.unzip.conf",
+	    "processor.configuration.json.conf",
+	    "processor.configuration.image.conf",
+	    "processor.configuration.xsl.conf",
+	    "processor.configuration.desk.folder.conf",
+	    "processor.configuration.rss.feed.conf",
+	    "processor.configuration.video.conf"
+	  ],
+	  "_type": "com.atex.onecms.app.dam.camel.configuration.DamProcessorsListBean",
+	  "objectType": "DamProcessorsList",
+	  "inputTemplate": "p.DamProcessorsList",
+	  "contentType": "parentDocument",
+	  "name": "Processors Configuration"  
+	}

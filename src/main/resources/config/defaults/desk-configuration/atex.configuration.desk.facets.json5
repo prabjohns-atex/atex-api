@@ -1,0 +1,40 @@
+{
+  "facets": [
+    {
+      "id": "default-facets-list",
+      "description": "Facets List - Default Configuration",
+
+       "config": {
+        "facet-list": {
+          "componentId": "desk-facet-list",
+          "facets": [
+            {"facetId":"atex_desk_objectType","visibility": true},
+            {"facetId":"source_atex_desk_facet","visibility": true},
+            {"facetId":"section_atex_desk_facet","visibility": true},
+            {"facetId":"tag_dimension.markas-colorcoding_ss","visibility": true},
+            {"facetId":"tag_dimension.markas-iconcoding_ss","visibility": true},
+            {"facetId":"tag_dimension.markas-multiiconcoding_ss","visibility": true},
+            {"facetId":"tag_dimension.Tag_ss","visibility": true},
+            {"facetId":"tag_dimension.EditorialTag_ss","visibility": true},
+            {"facetId":"tag_dimension.Person_ss","visibility": true},
+            {"facetId":"tag_dimension.Location_ss","visibility": true},
+            {"facetId":"tag_dimension.partition_ss","visibility": true},
+            {"facetId":"tag_dimension.sendto.Users_ss","visibility": true},
+            {"facetId":"content_status_id_s","visibility": true},
+            {"facetId":"web_status_id_s","visibility": true},
+            {"facetId":"iptc_category_atex_desk_facet","visibility": true},
+            {"facetId":"iptc_source_atex_desk_facet","visibility": true},
+            {"facetId":"iptc_by-line_atex_desk_facet","visibility": true},
+            {"facetId":"content_status_attribute_ss","visibility": true},
+            {"facetId":"publication_atex_desk_ss","visibility": true},
+            {"facetId":"edition_atex_desk_ss","visibility": true},
+            {"facetId":"zone_atex_desk_ss","visibility": true},
+            {"facetId":"section_atex_desk_ss","visibility": true},
+            {"facetId":"pubdate_atex_desk_dts","visibility": true},
+            {"facetId":"creationdate_atex_desk_dt","visibility": true}
+          ]
+        }
+      }
+    }
+  ]
+}

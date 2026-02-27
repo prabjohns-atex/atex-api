@@ -1,0 +1,35 @@
+{
+  "disable-restrict-content-rules":[
+    {
+      "id":"default-disable-restrict-content-rules",
+      "description":"Enable Restrict Content Rules",
+      "config": {
+        "always": true
+      }
+    },
+    {
+      "id":"image-enable-restrict-content-rules",
+      "description":"Enable Restrict Content Rules",
+      "config": {
+        "rules":[
+          // disable for everything except images
+          {
+            "field": "aspects/contentData/data/objectType",
+            "!values": ["image"]
+          },
+          // disable for content in archive partition
+          {
+            "field": "dimension.partition",
+            "values": ["archive"]
+          },
+          // disable for published content
+          {
+            "field": "aspects/engagementAspect/data/engagementList",
+            "subField": "appType",
+            "values": ["atex.dm.polopoly"]
+          }
+        ]
+      }
+    }
+  ]
+}

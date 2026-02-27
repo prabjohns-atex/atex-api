@@ -1,0 +1,79 @@
+{
+  "id": "act.template.Image.edit",
+  "type": "com.atex.standard.image.ImageContentDataBean",
+  "label": "Image",
+  "hidden": "false",
+  "namePath": "contentData/title",
+  "aspects": {
+    "atex.Files": {},
+    "atex.ImageEditInfo": {},
+    "atex.Image": {},
+    "atex.Metadata": {}
+  },
+  "dataBindings": [
+    {
+      "label": "Image",
+      "widget": "pImageEditor",
+      "domainObjects": {
+        "files": "atex.Files",
+        "editInfo": "atex.ImageEditInfo",
+        "image": "atex.Image"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Leave empty to use name from the image file"
+      },
+      "domainObjects": {
+        "data": "contentData/title"
+      }
+    },
+    {
+      "label": "Caption",
+      "widget": "pTextArea",
+      "config": {
+        "placeholder": "Caption of image goes here..."
+      },
+      "domainObjects": {
+        "data": "contentData/caption"
+      }
+    },
+    {
+      "label": "Byline",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Byline of image goes here..."
+      },
+      "domainObjects": {
+        "data": "contentData/byline"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "pTextArea",
+      "config": {
+        "placeholder": "Description of image goes here..."
+      },
+      "domainObjects": {
+        "data": "contentData/description"
+      }
+    },
+    {
+      "label": "Associated Sites",
+      "widget": "pAssociatedSites",
+      "domainObjects": {
+        "associatedSites": "p.InsertionInfo/associatedSites",
+        "taxonomyIds": "atex.Metadata/taxonomyIds"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    }
+  ]
+}

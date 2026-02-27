@@ -1,0 +1,25 @@
+{
+	  "field": "multi-icon-coding",
+	  "icons": [ 
+	  	{
+	  		"id"   :"0",
+	  		"icon":"fa fa-minus",
+       	  	"label":"No Selection"
+    	},
+	  	{
+	  		"id"   :"1",
+	  		"icon":"fa fa-usd",
+       	  	"label":"Premium"
+    	},
+    	{
+	  		"id"   :"2",
+	  		"icon":"fa fa-thumbs-up",
+       	  	"label":"Free"
+    	}
+    	],
+	  "_type": "com.atex.onecms.app.dam.markas.multiicon.DamMultiIconCodingBean",
+	  "objectType": "MultiIconCoding",
+	  "inputTemplate": "p.DamMultiIconCoding",
+	  "contentType": "parentDocument",
+	  "name": "multiiconcoding_conf"  
+	}

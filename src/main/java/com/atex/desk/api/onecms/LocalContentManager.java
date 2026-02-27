@@ -1,5 +1,6 @@
 package com.atex.desk.api.onecms;
 
+import com.atex.desk.api.config.ConfigurationService;
 import com.atex.desk.api.dto.AspectDto;
 import com.atex.desk.api.dto.ContentHistoryDto;
 import com.atex.desk.api.dto.ContentResultDto;
@@ -69,6 +70,7 @@ public class LocalContentManager implements ContentManager {
     private final IdGenerator idGenerator;
     private final FileService fileService;
     private final ContentIndexer contentIndexer;
+    private final ConfigurationService configurationService;
 
     /**
      * Registry of pre-store hooks keyed by content type name.
@@ -80,13 +82,15 @@ public class LocalContentManager implements ContentManager {
     public LocalContentManager(ContentService contentService, ObjectMapper objectMapper,
                                 WorkspaceStorage workspaceStorage, IdGenerator idGenerator,
                                 @Nullable FileService fileService,
-                                @Nullable ContentIndexer contentIndexer) {
+                                @Nullable ContentIndexer contentIndexer,
+                                @Nullable ConfigurationService configurationService) {
         this.contentService = contentService;
         this.objectMapper = objectMapper;
         this.workspaceStorage = workspaceStorage;
         this.idGenerator = idGenerator;
         this.fileService = fileService;
         this.contentIndexer = contentIndexer;
+        this.configurationService = configurationService;
     }
 
     // --- Pre-store hook registration ---
@@ -125,12 +129,20 @@ public class LocalContentManager implements ContentManager {
     public ContentVersionId resolve(String externalId, String view, Subject subject)
             throws StorageException {
         try {
+            // Try DB resolution first
             Optional<String> contentIdStr = contentService.resolveExternalId(externalId);
-            if (contentIdStr.isEmpty()) return null;
+            if (contentIdStr.isPresent()) {
+                ContentId cid = IdUtil.fromString(contentIdStr.get());
+                String viewName = (view != null) ? view : SYSTEM_VIEW_LATEST;
+                return resolve(cid, viewName, subject);
+            }
 
-            ContentId cid = IdUtil.fromString(contentIdStr.get());
-            String viewName = (view != null) ? view : SYSTEM_VIEW_LATEST;
-            return resolve(cid, viewName, subject);
+            // Fall back to resource-based configuration
+            if (configurationService != null && configurationService.isConfigId(externalId)) {
+                return configurationService.syntheticVersionId(externalId);
+            }
+
+            return null;
         } catch (Exception e) {
             throw new StorageException("Failed to resolve external ID: " + externalId, e);
         }
@@ -145,6 +157,11 @@ public class LocalContentManager implements ContentManager {
                                      Subject subject, GetOption... options)
             throws ClassCastException, StorageException {
         try {
+            // Intercept synthetic config IDs
+            if (configurationService != null && configurationService.isSyntheticId(contentId)) {
+                return configurationService.toContentResult(contentId.getKey());
+            }
+
             Optional<ContentResultDto> dto = contentService.getContent(
                 contentId.getDelegationId(), contentId.getKey(), contentId.getVersion());
 

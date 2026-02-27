@@ -1,0 +1,815 @@
+{
+  "id": "atex.dam.standard.Job",
+  "type": "atex.dam.standard.Job",
+  "label": "Job",
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Job",
+      "data": {
+        "inputTemplate": "p.DamJob"
+      }
+    },
+    "atex.Metadata": {},
+    "p.InsertionInfo": {},
+    "atex.WFContentStatus": {}
+  },
+
+  "layout": {
+    "views": [{
+      "label": "Job",
+      "fields": ["deskList", "name", "budgetHeadline", "description", "tvHeadline", "tvDescription", "relevanceList", "digitalDeadline", "deadline", "tvPubDate", "status", "editorialNotes", "insertParent", "pdfLink", "tag", "location", "source"]
+    },
+      {
+        "label": "Task list",
+        "fields": ["editor", "reporter", "tasks"]
+      },
+      {
+        "label": "More budget info",
+        "fields": ["isTvJob", "specialAttention", "enterpriseBudget", "pendingJob", "storyGroup", "advisory", "printSectionList", "sequenceList"]
+      }
+    ]
+  },
+
+  "dataBindings": [{
+    "name": "securityParent",
+    "label": "TEMPLATE.FIELD.SECURITYPARENT",
+    "widget": "damSecurityParent",
+    "config": {
+      "defaultSecurityParentId": "externalid/dam.assets.common.d"
+    },
+    "domainObjects": {
+      "securityParentId": "p.InsertionInfo/securityParentId",
+      "insertParentId": "p.InsertionInfo/insertParentId"
+    }
+  },
+    {
+      "name": "name",
+      "label": "Slug",
+      "widget": "pTextInput",
+      "config": {},
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "budgetHeadline",
+      "label": "Budget headline",
+      "widget": "pTextInput",
+      "config": {},
+      "domainObjects": {
+        "data": ["contentData", "budgetHeadline"]
+      }
+    },
+    {
+      "name": "tvHeadline",
+      "label": "TV Headline",
+      "widget": "pTextInput",
+      "config": {},
+      "domainObjects": {
+        "data": ["contentData", "tvHeadline"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "pTextAreaWithMax",
+      "config": {
+        "maxLength": 375,
+        "ckConfig": {
+          "height": 150,
+          "rows": 6
+        }
+      },
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "tvDescription",
+      "label": "TV description",
+      "widget": "pTextAreaWithMax",
+      "config": {
+        "maxLength": 375,
+        "ckConfig": {
+          "height": 150,
+          "rows": 6
+        }
+      },
+      "domainObjects": {
+        "data": ["contentData", "tvDescription"]
+      }
+    },
+    {
+      "name": "deadline",
+      "label": "Print Publication Date",
+      "widget": "pDateTimePicker",
+      "config": {
+        "placeholder": "No date selected",
+        "dtConfig": {
+          "locale": "en",
+          "format": "MM/DD/YYYY"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/deadline"
+      }
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "initialStatusID": "writing",
+        "commentPlaceholder": "Comment",
+        "showComment": true,
+        "useAttributes": false,
+        "checkUsers": false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "tasks",
+      "label": "Job's tasks",
+      "widget": "pDamJob",
+      "config": {
+        "editable": true,
+        "allowedTypes": ["article", "images", "video", "weblink", "animation", "socialmedia", "storygallery"],
+        "icons": {
+          "article": {
+            "icon": "fa fa-pencil"
+          },
+          "images": {
+            "icon": "fa fa-camera"
+          },
+          "video": {
+            "icon": "fa fa-video-camera"
+          },
+          "weblink": {
+            "icon": "fa fa-link"
+          },
+          "animation" : {
+            "icon": "fa fa-film"
+          },
+          "socialmedia" : {
+            "icon": "fa fa-group"
+          },
+          "storygallery": {
+            "icon": "fa fa-th-large"
+          }
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/tasks"
+      }
+    },
+    {
+      "label": "Category tags lookup link",
+      "name": "pdfLink",
+      "widget": "damUrlView",
+      "domainObjects": {
+        "data": "contentData/pdfLink"
+      },
+      "config": {
+        "type": "link"
+      }
+    },
+    {
+      "name": "tag",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle" : true,
+        "dimensions" : ["dimension.Tag"],
+        "extraDimensions": ["dimension.sendto.Users"],
+        "useInsertParent" : true,
+        "clearTagsOnParentChange": false,
+        "queryMinLen": 2,
+        "deep": 2
+      }
+    },
+    {
+      "name": "location",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle" : true,
+        "dimensions" : ["dimension.Location"],
+        "extraDimensions": ["dimension.sendto.Users"],
+        "useInsertParent" : true,
+        "clearTagsOnParentChange": false,
+        "queryMinLen": 2,
+        "deep": 2
+      }
+    },
+    {
+      "name": "source",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle" : true,
+        "dimensions" : ["dimension.Source"],
+        "extraDimensions": ["dimension.sendto.Users"],
+        "useInsertParent" : true,
+        "clearTagsOnParentChange": false,
+        "queryMinLen": 2,
+        "deep": 2
+      }
+    },
+    {
+      "label": "Desk",
+      "name": "deskList",
+      "widget": "pSelect",
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "desk"
+        ]
+      },
+      "validators": {
+        "required": {
+          "message": "Required"
+        }
+      },
+      "config": {
+        "options": [{
+          "label": "All",
+          "id": "All"
+        },
+          {
+            "label": "NewsdayTV",
+            "id": "NewsdayTV"
+          },
+          {
+            "label": "Long Island",
+            "id": "Long-Island"
+          },
+          {
+            "label": "Towns",
+            "id": "Towns"
+          },
+          {
+            "label": "Politics",
+            "id": "Politics"
+          },
+          {
+            "label": "NYC",
+            "id": "NYC"
+          },
+          {
+            "label": "Business",
+            "id": "Business"
+          },
+          {
+            "label": "NY-US-World",
+            "id": "NY-US-World"
+          },
+          {
+            "label": "Sports",
+            "id": "Sports"
+          },
+          {
+            "label": "HS-Sports",
+            "id": "HS-Sports"
+          },
+          {
+            "label": "Lifestyle",
+            "id": "Lifestyle"
+          },
+          {
+            "label": "FeedMe",
+            "id": "FeedMe"
+          },
+          {
+            "label": "Entertainment",
+            "id": "Entertainment"
+          },
+          {
+            "label": "Real Estate",
+            "id": "RealEstate"
+          },
+          {
+            "label": "LI Life-Act2",
+            "id": "LI-Life-Act2"
+          },
+          {
+            "label": "Funbook",
+            "id": "Funbook"
+          },
+          {
+            "label": "Opinion",
+            "id": "Opinion"
+          }
+        ]
+      }
+    },
+    {
+      "label": "Rating",
+      "name": "relevanceList",
+      "widget": "pSelect",
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "relevance"
+        ]
+      },
+      "config": {
+        "options": [{
+          "label": "6",
+          "id": "6"
+        }, {
+          "label": "5",
+          "id": "5"
+        },
+          {
+            "label": "4",
+            "id": "4"
+          },
+          {
+            "label": "3",
+            "id": "3"
+          },
+          {
+            "label": "2",
+            "id": "2"
+          },
+          {
+            "label": "1",
+            "id": "1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "digitalDeadline",
+      "label": "Digital deadline",
+      "widget": "pDateTimePicker",
+      "config": {
+        "disableBeforeToday": false,
+        "additionalCSS": "width:100% !important"
+      },
+      "domainObjects": {
+        "data": ["contentData", "digitalDeadline"]
+      }
+    },
+    {
+      "name": "tvPubDate",
+      "label": "TV publication date",
+      "widget": "pDateTimePicker",
+      "config": {
+        "disableBeforeToday": false,
+        "additionalCSS": "width:100% !important"
+      },
+      "domainObjects": {
+        "data": ["contentData", "tvPubDate"]
+      }
+    },
+    {
+      "name": "isTvJob",
+      "label": "Newsday TV",
+      "widget": "pCheckbox",
+      "config": {
+        "checkboxLabel": " "
+      },
+      "domainObjects": {
+        "data": ["contentData", "tvJob"]
+      }
+    },
+    {
+      "label": "Notes",
+      "name": "editorialNotes",
+      "widget": "pTextArea",
+      "config": {
+        "placeholder": ""
+      },
+      "domainObjects": {
+        "data": "contentData/editorialNotes"
+      }
+    },
+    {
+      "name": "specialAttention",
+      "label": "Special attention",
+      "widget": "pCheckbox",
+      "config": {
+        "placeholder": "Be aware - package has special attention"
+      },
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "specialAttention"
+        ]
+      }
+    },
+    {
+      "name": "enterpriseBudget",
+      "label": "Planning budget",
+      "widget": "pCheckbox",
+      "config": {
+        "placeholder": ""
+      },
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "enterpriseBudget"
+        ]
+      }
+    },
+    {
+      "name": "pendingJob",
+      "label": "Pending - No budget",
+      "widget": "pCheckbox",
+      "config": {
+        "placeholder": ""
+      },
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "pendingJob"
+        ]
+      }
+    },
+    {
+      "name": "storyGroup",
+      "label": "Story Group",
+      "widget": "pTextInput",
+      "config": {},
+      "domainObjects": {
+        "data": ["contentData", "storyGroup"]
+      }
+    },
+    {
+      "label": "Advisory",
+      "name": "advisory",
+      "widget": "damMultiselect",
+      "domainObjects": {
+        "data": ["contentData", "advisory"]
+      },
+      "config": {
+        "options": [{
+          "label": "NEWSCAST",
+          "id": "NEWSCAST"
+        },
+          {
+            "label": "COVER STORY",
+            "id": "COVER STORY"
+          },
+          {
+            "label": "BIG BOX",
+            "id": "BIG BOX"
+          },
+          {
+            "label": "WATCHDOG",
+            "id": "WATCHDOG"
+          },
+          {
+            "label": "DEVELOPING",
+            "id": "DEVELOPING"
+          },
+          {
+            "label": "WATCHING",
+            "id": "WATCHING"
+          },
+          {
+            "label": "EXCLUSIVE",
+            "id": "EXCLUSIVE"
+          },
+
+          {
+            "label": "ENTERPRISE",
+            "id": "ENTERPRISE"
+          },
+          {
+            "label": "MAJOR ENTERPRISE",
+            "id": "MAJOR ENTERPRISE"
+          },
+          {
+            "label": "BREAKING NEWS",
+            "id": "BREAKING NEWS"
+          },
+          {
+            "label": "ALTERNATIVE STORYTELLING",
+            "id": "ALTERNATIVE STORYTELLING"
+          },
+          {
+            "label": "LATE STORY",
+            "id": "LATE STORY"
+          },
+          {
+            "label": "GOOD FOR SOCIAL",
+            "id": "GOOD FOR SOCIAL"
+          }
+        ]
+      }
+    },
+    {
+      "label": "Print Section",
+      "name": "printSectionList",
+      "widget": "pSelect",
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "printSection"
+        ]
+      },
+      "config": {
+        "options": [{
+          "label": "",
+          "id": ""
+        },
+          {
+            "label": "NEWS",
+            "id": "NEWS"
+          },
+          {
+            "label": "LI LIFE",
+            "id": "LI LIFE"
+          },
+          {
+            "label": "LI HOME",
+            "id": "LI HOME"
+          },
+          {
+            "label": "EXPLORE LI",
+            "id": "EXPLORE LI"
+          },
+          {
+            "label": "FANFARE",
+            "id": "FANFARE"
+          },
+          {
+            "label": "SPORTS",
+            "id": "SPORTS"
+          },
+          {
+            "label": "DIGITAL",
+            "id": "DIGITAL"
+          }
+        ]
+      }
+    },
+    {
+      "label": "Print Sequence",
+      "name": "sequenceList",
+      "widget": "pSelect",
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "sequence"
+        ]
+      },
+      "config": {
+        "options": [{
+          "label": "",
+          "id": ""
+        },
+          {
+            "label": "TOP STORIES",
+            "id": "TOP STORIES"
+          },
+          {
+            "label": "LONG ISLAND",
+            "id": "LONG ISLAND"
+          },
+          {
+            "label": "TOWNS",
+            "id": "TOWNS"
+          },
+          {
+            "label": "CRIME-COURTS",
+            "id": "CRIME-COURTS"
+          },
+          {
+            "label": "HEALTH-SCIENCE",
+            "id": "HEALTH-SCIENCE"
+          },
+          {
+            "label": "NYC",
+            "id": "NYC"
+          },
+          {
+            "label": "STATE-REGION",
+            "id": "STATE-REGION"
+          },
+          {
+            "label": "NATION",
+            "id": "NATION"
+          },
+          {
+            "label": "WORLD",
+            "id": "WORLD"
+          },
+          {
+            "label": "OBITUARIES",
+            "id": "OBITUARIES"
+          },
+          {
+            "label": "CORRECTIONS",
+            "id": "CORRECTIONS"
+          },
+          {
+            "label": "LI BUSINESS",
+            "id": "LI BUSINESS"
+          },
+          {
+            "label": "FLASH",
+            "id": "FLASH"
+          },
+          {
+            "label": "OPINION",
+            "id": "OPINION"
+          },
+          {
+            "label": "-------------------",
+            "id": "-"
+          },
+          {
+            "label": "PRO SPORTS",
+            "id": "PRO SPORTS"
+          },
+          {
+            "label": "COLLEGES",
+            "id": "COLLEGES"
+          },
+          {
+            "label": "TEMPLATE.TAB.GENERAL",
+            "id": "GENERAL"
+          },
+          {
+            "label": "HIGH SCHOOLS",
+            "id": "HIGH SCHOOLS"
+          },
+          {
+            "label": "-------------------",
+            "id": "-"
+          },
+          {
+            "label": "ACT 2",
+            "id": "ACT 2"
+          },
+          {
+            "label": "ADVICE",
+            "id": "ADVICE"
+          },
+          {
+            "label": "B2-3",
+            "id": "B2-3"
+          },
+          {
+            "label": "BOOKS",
+            "id": "BOOKS"
+          },
+          {
+            "label": "COVER STORY",
+            "id": "COVER STORY"
+          },
+          {
+            "label": "ENTERTAINMENT",
+            "id": "ENTERTAINMENT"
+          },
+          {
+            "label": "FAMILY",
+            "id": "FAMILY"
+          },
+          {
+            "label": "FAST CHAT",
+            "id": "FAST CHAT"
+          },
+          {
+            "label": "FEATURE",
+            "id": "FEATURE"
+          },
+          {
+            "label": "FEATURES",
+            "id": "FEATURES"
+          },
+          {
+            "label": "FOOD",
+            "id": "FOOD"
+          },
+          {
+            "label": "HEALTH",
+            "id": "HEALTH"
+          },
+          {
+            "label": "HOT STUFF",
+            "id": "HOT STUFF"
+          },
+          {
+            "label": "INSIDE",
+            "id": "INSIDE"
+          },
+          {
+            "label": "LI ARTS",
+            "id": "LI ARTS"
+          },
+          {
+            "label": "MOVIES",
+            "id": "MOVIES"
+          },
+          {
+            "label": "MUSIC",
+            "id": "MUSIC"
+          },
+          {
+            "label": "NYC PICKS",
+            "id": "NYC PICKS"
+          },
+          {
+            "label": "RESTAURANTS",
+            "id": "RESTAURANTS"
+          },
+          {
+            "label": "STYLE",
+            "id": "STYLE"
+          },
+          {
+            "label": "TECH",
+            "id": "TECH"
+          },
+          {
+            "label": "THE BUZZ",
+            "id": "THE BUZZ"
+          },
+          {
+            "label": "THE MIX",
+            "id": "THE MIX"
+          },
+          {
+            "label": "THEATER",
+            "id": "THEATER"
+          },
+          {
+            "label": "TRAVEL",
+            "id": "TRAVEL"
+          },
+          {
+            "label": "TV",
+            "id": "TV"
+          }
+        ]
+      }
+    },
+    {
+      "label": "Reporter",
+      "name": "reporter",
+      "widget": "damAuthor",
+      "config": {
+        "maxRows": 20,
+        "filterAuthorsList": false,
+        "mappings": [{
+          "source": "fullName",
+          "target": "byline"
+        },
+          {
+            "source": "description",
+            "target": "authorBio"
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": "contentData/authors",
+        "byline": "contentData/byline",
+        "authorBio": "contentData/authorBio"
+      }
+    },
+    {
+      "label": "Editor",
+      "name": "editor",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": ""
+      },
+      "domainObjects": {
+        "data": "contentData/editor"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.WEBSECTION",
+      "name": "insertParent",
+      "widget": "pSiteSelect",
+      "config": {
+        "editable": true,
+        "exclude": ["dam.d", "PolopolyPost.d", "dam.assets.d", "dam.system.d", "dam.assetssecolo.d", "dam.assets.incoming.d", "dam.assets.common.d"],
+        "storage-id": "7597",
+        "modal": {
+          "title": "TEMPLATE.FIELD.WEBSECTION",
+          "placeholder": "SITE_SELECT_WIDGET.MODAL.PLACEHOLDER"
+        }
+      },
+
+      "domainObject": "p.InsertionInfo/insertParentId"
+    }
+  ]
+}

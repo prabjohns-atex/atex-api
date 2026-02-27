@@ -1,0 +1,483 @@
+{
+  "smart-folder-filters":[
+    {
+      "id":"default-smart-folder-filters",
+      "description":"Smart Folder Forms - Default Configuration",
+      "config":{
+        "disableUpload": false,
+        "smart-folder":{
+          "componentId":"desk-smart-folder",
+          "sections":[
+            {
+              "fields":[
+                {
+                  "title":{
+                    "value":"_TYPE_"
+                  },
+                  "value":{
+                    "type":"select",
+                    "placeholder":"_TYPE_",
+                    "multiple":true,
+                    "model":{
+                      "attribute":"atex_desk_objectType",
+                      "type":"LIST"
+                    }
+                  },
+                  "configuration":{
+                    "use-lookup-values":false,
+                    "field-configuration":{
+                      "name":"type",
+                      "id":"desk-type"
+                    }
+                  }
+                },
+                 {
+                  "title": {
+                    "value": "__PARTITION__"
+                  },
+                  "value": {
+                    "type": "select",
+                    "placeholder": "__PARTITION__",
+                    "operator": true,
+                    "multiple": true,
+                    "model": {
+                      "attribute": "tag_dimension.partition_ss",
+                      "type": "LIST"
+                    }
+                  },
+                  "configuration": {
+                    "use-lookup-values": false,
+                    "field-configuration": {
+                      "name": "partition",
+                      "id": "desk-partition"
+                    }
+                  }
+                },
+                 {
+                  "title": {
+                    "value": "__CREATED_BY__"
+                  },
+                  "value": {
+                    "type": "users-list",
+                    "placeholder": "__CREATED_BY__",
+                    "operator": true,
+                    "current-user": true,
+                    "use-id": true,
+                    "model": {
+                      "attribute": "createdBy_s",
+                      "type": "LIST"
+                    }
+                  }
+                },
+                {
+                  "title": {
+                    "value": "__MODIFIED_BY__"
+                  },
+                  "value": {
+                    "type": "users-list",
+                    "placeholder": "__MODIFIED_BY__",
+                    "operator": true,
+                    "current-user": true,
+                    "use-id": true,
+                    "model": {
+                      "attribute": "modifiedBy_s",
+                      "type": "LIST"
+                    }
+                  }
+                },
+                {
+                  "title": {
+                    "value": "_ASSIGNEES_"
+                  },
+                  "value": {
+                    "type": "users-list",
+                    "placeholder": "_ASSIGNEES_",
+                    "operator": true,
+                    "current-user": true,
+                    "model": {
+                      "attribute": "tag_dimension.sendto.Users_ss",
+                      "type": "LIST"
+                    }
+                  }
+                },
+                {
+                  "title":{
+                    "value":"_SOURCE_"
+                  },
+                  "value":{
+                    "type":"autocomplete",
+                    "placeholder":"_SOURCE_",
+                    "model":{
+                      "attribute":"source_atex_desk_s",
+                      "type":"LIST"
+                    }
+                  }
+                },
+                {
+                  "title":{
+                    "value":"iptc_category_atex_desk_facet"
+                  },
+                  "value":{
+                    "type":"autocomplete",
+                    "placeholder":"iptc_category_atex_desk_facet",
+                    "model":{
+                      "attribute":"iptc_category_atex_desk_facet",
+                      "type":"LIST"
+                    }
+                  }
+                },
+                {
+                  "title":{
+                    "value":"_PUBLICATIONS_"
+                  },
+                  "value":{
+                    "type":"select",
+                    "placeholder":"_PUBLICATIONS_",
+                    "multiple":true,
+                    "model":{
+                      "attribute":"publication_atex_desk_ss",
+                      "type":"LIST",
+                      "sub-query":true
+                    }
+                  },
+                  "configuration":{
+                    "use-lookup-values":true,
+                    "ordering-enabled": true
+                  }
+                },
+                {
+                  "title":{
+                    "value":"_EDITIONS_"
+                  },
+                  "value":{
+                    "type":"select",
+                    "placeholder":"_EDITIONS_",
+                    "multiple":true,
+                    "model":{
+                      "attribute":"edition_atex_desk_ss",
+                      "type":"LIST",
+                      "sub-query":true
+                    }
+                  },
+                  "configuration":{
+                    "use-lookup-values":true,
+                    "ordering-enabled": true
+                  }
+                },
+                {
+                  "title":{
+                    "value":"_PAGES_"
+                  },
+                  "value":{
+                    "type":"text",
+                    "placeholder":"_PAGES_",
+                    "model":{
+                      "attribute":"page_atex_desk_ss",
+                      "type":"STRING",
+                      "sub-query":true
+                    }
+                  }
+                },
+                {
+                  "title":{
+                    "value":"_CREATION_DATE_"
+                  },
+                  "value":{
+                    "type":"date-range",
+                    "placeholder":"_CREATION_DATE_",
+                    "timestamp":true,
+                    "hidecustom":true,
+                    "model":{
+                      "attribute":"creationdate_atex_desk_dt",
+                      "type":"DATE"
+                    }
+                  },
+                  "configuration":{
+                    "use-configured-values":true,
+                    "model-configuration":{
+                      "name":"creation-date",
+                      "id":"desk-creation-date"
+                    }
+                  }
+                },
+                {
+                  "title":{
+                    "value":"_WF_STATUS_LABEL_"
+                  },
+                  "value":{
+                    "type":"select",
+                    "placeholder":"_WF_STATUS_LABEL_",
+                    "multiple":true,
+                    "model":{
+                      "attribute":"content_status_id_s",
+                      "type":"LIST"
+                    }
+                  },
+                  "configuration": {
+                    "use-configured-values": false,
+                    "use-lookup-values": true,
+                    "cfg-ext-id": "atex.WFStatusList",
+                    "cfg-list-path": "data/aspects/contentData/data/status",
+                    "cfg-key": "statusID",
+                    "cfg-collapse-field": "label",
+                    "cfg-values-map": {
+                      "color": "color",
+                      "label": "name"
+                    }
+                  }
+                },
+                {
+                  "title":{
+                    "value":"_WEB_STATUS_LABEL_"
+                  },
+                  "value":{
+                    "type":"select",
+                    "placeholder":"_WEB_STATUS_LABEL_",
+                    "multiple":true,
+                    "model":{
+                      "attribute":"web_status_id_s",
+                      "type":"LIST"
+                    }
+                  },
+                  "configuration": {
+                    "use-configured-values": false,
+                    "use-lookup-values": true,
+                    "cfg-ext-id": "atex.WebStatusList",
+                    "cfg-list-path": "data/aspects/contentData/data/status",
+                    "cfg-key": "statusID",
+                    "cfg-values-map": {
+                      "color": "color",
+                      "label": "name"
+                    }
+                  }
+                },
+               {
+                "value": {
+                  "type": "select",
+                  "placeholder": "__ATTRIBUTES__",
+                  "operator": true,
+                  "multiple": true,
+                  "model": {
+                    "attribute": "content_status_attribute_ss",
+                    "type": "LIST"
+                  }
+                },
+                "configuration": {
+                  "use-configured-values": true,
+                  "cfg-ext-id": "atex.WFStatusAttributeList",
+                  "cfg-list-path": "data/aspects/contentData/data/attributes",
+                  "cfg-key": "attributeID",
+                  "cfg-values-map": {
+                    "icon": "icon",
+                    "label": "name"
+                  }
+                }
+              },
+                {
+                  "title":{
+                    "value":"_COLOR_CODING_LABEL_"
+                  },
+                  "value":{
+                    "type":"select",
+                    "placeholder":"_COLOR_CODING_LABEL_",
+                    "multiple":true,
+                    "model":{
+                      "attribute":"tag_dimension.markas-colorcoding_ss",
+                      "type":"LIST"
+                    }
+                  },
+                  "configuration":{
+                    "use-configured-values":true,
+                    "field-configuration":{
+                      "name":"color-categorization",
+                      "id":"desk-color-categorization",
+                      "ignore-id":['0']
+                    }
+                  }
+                },
+                {
+                  "value": {
+                    "type": "select",
+                    "placeholder": "__PLAN_STATUS__",
+                    "multiple": true,
+                    "model": {
+                      "attribute": "plan_status_atex_desk_ss",
+                      "type": "LIST",
+                      "sub-query": true
+                    }
+                  },
+                  "configuration": {
+                    "use-configured-values": true,
+                    "field-configuration": {
+                      "name": "planstatus",
+                      "id": "desk-plan-status"
+                    }
+                  }
+                },
+                {
+                  "value": {
+                    "type": "select",
+                    "placeholder": "__PLACED__",
+                    "multiple": true,
+                    "model": {
+                      "attribute": "placed_atex_desk_ss",
+                      "type": "LIST",
+                      "sub-query": true
+                    }
+                  },
+                  "configuration": {
+                    "use-configured-values": true,
+                    "field-configuration": {
+                      "name": "placed",
+                      "id": "desk-placed"
+                    }
+                  }
+                },
+/* Uncomment for prestige
+                {
+                  "value": {
+                    "type": "select",
+                    "placeholder": "__EDITIONED_CONTENT__",
+                    "multiple": true,
+                    "operator": false,
+                    "model": {
+                      "attribute": "child_atex_desk_ss",
+                      "type": "LIST",
+                      "sub-query": true
+                    }
+                  },
+                  "configuration": {
+                    "use-configured-values": true,
+                    "field-configuration": {
+                      "name": "childstatus",
+                      "id": "desk-child-status"
+                    }
+                  }
+                },
+*/
+                {
+                  "title":{
+                    "value":"__POSITION__"
+                  },
+                  "value":{
+                    "type":"select",
+                    "placeholder":"__POSITION__",
+                    "multiple":true,
+                    "model":{
+                      "attribute":"position_atex_desk_ss",
+                      "type":"LIST",
+                      "sub-query":true
+                    }
+                  },
+                  "configuration":{
+                    "use-lookup-values":true
+                  }
+                },
+                {
+                  "title":{
+                    "value":"_MICON_CODING_LABEL_"
+                  },
+                  "value":{
+                    "type":"select",
+                    "placeholder":"_MICON_CODING_LABEL_",
+                    "multiple":true,
+                    "model":{
+                      "attribute":"tag_dimension.markas-multiiconcoding_ss",
+                      "type":"LIST"
+                    }
+                  },
+                  "configuration":{
+                    "use-configured-values":true,
+                    "field-configuration":{
+                      "name":"icon-categorization",
+                      "id":"desk-icon-categorization",
+                      "ignore-id":['0']
+                    }
+                  }
+                },
+
+                {
+                  "title":{
+                    "value":"__IMAGE_VARIANT__"
+                  },
+                  "value": {
+                    "type": "select",
+                    "placeholder": "__IMAGE_VARIANT__",
+                    "operator": true,
+                    "multiple": false,
+                    "model": {
+                      "attribute": "print_only_atex_desk_b",
+                      "type": "STRING"
+                    }
+                  },
+                  "configuration": {
+                    "use-configured-values": true,
+                    "field-configuration": {
+                      "name": "print-variant",
+                      "id": "desk-print-variant"
+                    }
+                  }
+                },
+
+                {
+                  "value":{
+                    "type":"rating",
+                    "placeholder":"_ICON_CODING_LABEL_",
+                    "model":{
+                      "attribute":"tag_dimension.markas-iconcoding_ss",
+                      "type":"LIST"
+                    }
+                  },
+                  "configuration":{
+                    "use-configured-values":true,
+                    "model-configuration":{
+                      "name":"rating",
+                      "id":"desk-rating"
+                    }
+                  }
+                },
+                {
+                  "value":{
+                    "type":"sort-widget",
+                    "placeholder":"__SORT_LABEL__"
+                  }
+                },
+                {
+                  "title":{
+                    "value":"__FOLDERS_VIEW_MODE_LABEL__"
+                  },
+                  "value":{
+                    "type":"select-view"
+                  },
+                  "configuration":{
+                    "use-configured-values":true,
+                    "field-configuration":{
+                      "name":"views",
+                      "id":"desk-views"
+                    }
+                  }
+                },
+                {
+                  "html":"<hr style='margin:5px'>"
+                },
+                {
+                  "title":{
+                    "value":"__TRASH_LABEL__"
+                  },
+                  "value":{
+                    "type":"checkbox",
+                    "model":{
+                      "attribute":"includeTrash",
+                      "system-field":true,
+                      "type":"BOOLEAN"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

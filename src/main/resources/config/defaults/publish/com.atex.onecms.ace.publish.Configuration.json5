@@ -1,0 +1,131 @@
+{
+  "dimensionsMap": {
+  // This maps the Dimensions in Desk to those in ACE
+  // Only the dimensions defined in here will be exported
+  //
+  // NOTE: The tree dimensions (i.e Categories) are currently not supported by the integration
+  // DO NOT CONFIGURE
+  /* usage:
+    desk-dimension-id : {
+      //Publish config
+      "id":         The id of dimension is ACE to map to,
+                    Required
+      "name":       The name of ACE dimension,
+                    Required
+      "enumerable": Specifies whether the ACE dimension is enumerable (ie a tree)
+                    Optional, default: false
+                    NOTE: we do not publish to tree dimensions so this should be left false
+      "limit":      Limit the number of levels when mapping from a tree dimension to a flat one
+                    Optional, default: -1 (no limit)
+      "publish":    Map this dimension when publishing
+                    Optional, default: true
+
+       //Import Configuration
+       "deskName": Name of desk dimension
+                   Optional, default: same as ACE
+       "import":   Map this dimension when importing
+                    Optional, default: true
+    }
+  */
+
+    "dimension.Organisation": {
+      "id": "dimension.organizations",
+      "name": "Organizations"
+    },
+    "dimension.Location": {
+      "id": "dimension.locations",
+      "name": "Locations"
+    },
+    "dimension.Person": {
+      "id": "dimension.persons",
+      "name": "Persons"
+    },
+    "dimension.Tag": {
+      "id": "dimension.tags",
+      "name": "Tags"
+    },
+    "dimension.EditorialTag": {
+      "id": "dimension.editorialtags",
+      "name": "Editorial Tags"
+    }
+  },
+  "contentConfig": {
+    "imageGalleryContent": {
+      "mapCaptionDescriptions": true
+    },
+    "articleContent": {
+      "useFirstImageAsTeaser": false
+    }
+  },
+
+  "mappers": {
+  // This allows projects to alter the configuration the ACE converters and mappers.
+  // By default the system adds a number of converters and handlers that should always be preset.
+  // With this configuration a project can replace the default mapper with a mapper derived from the
+  // standard mapper or a completely new one. In addition can add there own mapper to handle project
+  // specific types
+
+    "converters": {
+    // Converters provide special processing to convert the desk bean in to the target Ace bean.
+    // Converters use dozer to create the target Ace bean and perform the configured field mappings, then
+    // The converter adds any special processing.
+    //
+    // Custom converters should either extend an existing converter or implement the
+    // com.atex.onecms.app.dam.mapping.BeanConverter interface. Converters MUST have a constructor that
+    // accepts a single parameter of type com.atex.onecms.content.ContentManager.
+
+      "overrides": {
+      // Overrides: this allows a project to replace a standard converter with there own. her are the standard
+      // converters:
+      //     "video": "com.atex.onecms.ace.mapping.converters.AceVideoServicecBeanConverter"
+      //     "audio": "com.atex.onecms.ace.mapping.converters.AceAudioBeanConverter"
+      //     "author": "com.atex.onecms.ace.mapping.converters.AceAuthorBeanConverter"
+      //     "image": "com.atex.onecms.app.dam.mapping.converters.ImageBeanConverter"
+      //
+      // In order to override add the appropriate entry here. For example to override the image converter:
+      //   "overrides": {
+      //     "video": "com.your.project.CustomImageConverter"
+      //   }
+
+      },
+      "addons": [
+      // Addins: this is an array of strings containing the class name of the new custom converts
+      // you wish to add. For example:
+      //   "addons": [
+      //     "com.your.project.CustomConverterOne",
+      //     "com.your.project.CustomConverterTwo"
+      //   ]
+
+      ]
+    },
+
+    "handlers": {
+    // Handlers provide additional mapping of beans that can not be down using Dozer.
+    // E.g. publishing linked content and replacing the Desk ContentId with the corresponding
+    // ACE content alias. The Handler configuration is the same as that for Converters.
+    //
+    // Custom handlers should either extend an existing handlers or extend the
+    // com.atex.onecms.ace.mapping.handlers.AceBaseResouceHandler class. The AceBaseResouceHandler contains
+    // several helper functional from publishing linked content and lists of linked content
+    //
+    // Handlers MUST have a constructor that accepts a single parameter of type
+    // com.atex.onecms.content.ContentManager.
+
+      "overrides": {
+      // The list of standard handlers is as follows:
+      //         "collection": "com.atex.onecms.ace.mapping.handlers.AceCollectionBaseBeanHandler"
+      //         "article": "com.atex.onecms.ace.mapping.handlers.AceArticleBaseBeanResourceHandler"
+      //         "liveblog": "com.atex.onecms.ace.mapping.handlers.AceLiveBlogBaseBeanResourceHandler"
+      //         "liveblogevent": "com.atex.onecms.ace.mapping.handlers.AceLiveBlogEventBaseBeanResourceHandler"
+      //         "video": "com.atex.onecms.ace.mapping.handlers.AceVideoBaseBeanHandler"
+      //         "audio": "com.atex.onecms.ace.mapping.handlers.AceAudioBaseBeanResourceHandler"
+
+      },
+      "addons": [
+
+      ]
+    }
+  },
+   "enableLoggingPayloads": false
+
+}

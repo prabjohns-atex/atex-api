@@ -1,0 +1,17 @@
+{
+  "id": "act.template.PermissionConfiguration.view",
+  "type": "com.atex.gong.configuration.PermissionConfigurationBean",
+  "label": "Permission Configuration",
+
+  "dataBindings": [
+    {
+      "label": "Permissions",
+      "widget": "g.PermissionConfiguration",
+
+      "domainObjects": {
+        "data": "contentData"
+      }
+    }
+  ]
+
+}

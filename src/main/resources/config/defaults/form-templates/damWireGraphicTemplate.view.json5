@@ -1,0 +1,72 @@
+{
+  "id": "com.atex.onecms.app.dam.wire.DamWireGraphicBean.dam.preview",
+  "type": "com.atex.onecms.app.dam.wire.DamWireGraphicBean",
+  "label": "Dam Wire Graphic",
+  "namePath": ["contentData", "headline"],
+  "aspects": {
+    "atex.Files": {
+    },
+    "atex.Metadata": {
+    }
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["imgView", "name", "source", "section"]
+      },
+  
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "imgView",
+      "widget": "damImgView",
+      "domainObjects": {
+        "files": ["atex.Files"]
+      }
+    },
+    {
+      "name": "name",
+      "label": "Name",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "source",
+      "label": "Source",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "source"]
+      }
+    },
+    {
+      "name": "section",
+      "label": "Section",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "section"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

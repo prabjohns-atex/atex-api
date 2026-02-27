@@ -1,0 +1,1187 @@
+{
+  "id": "atex.onecms.article.print",
+
+  "type": "atex.onecms.article",
+  "webPreviewEnabled" : false,
+
+  "label": "Article",
+  "namePath": "contentData/headline/text",
+
+  "group": {
+    "type": "Article",
+    "default": 1
+  },
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.article",
+      "data": {
+        "inputTemplate": "p.NosqlArticle"
+      }
+    },
+    "atex.Metadata": {},
+    "atex.SocialPosting": {},
+    "atex.PrintVariants": {},
+    "atex.ReconcileAttributes": {},
+    "atex.WFContentStatus": {},
+    "atex.WebContentStatus": {},
+    "atex.PrintOperations": {}
+  },
+
+  "copyfitOptions": {
+    "usePrint": true,
+    "editAllAspects": false
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.CONTENT",
+        "fields": [
+          "name",
+          "seoKeyPhrase",
+          "copyfitControllerPrint",
+          "status",
+          "webstatus",
+          "preview"
+        ],
+        "intents": ["Print","Web"]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": [
+          "insertParent",
+          "relatedSection",
+          "metadata",
+          "tag",
+          "author",
+          "authorProfile",
+          "showAuthorOnWeb",
+          "timeStateOnTime",
+          "timeStateOffTime",
+          "publishingTimeOverride",
+          "publishingUpdatedTimeOverride",
+          "minorChange",
+          "premiumType",
+          "commentStatus",
+          "webArticleType",
+          "locations"
+        ],
+        "intents": ["Print","Web"]
+      },
+      {
+        "label": "TEMPLATE.TAB.SEO_SOCIAL",
+        "fields": [
+          "aceSlugInfo",
+          "teaserHeadline",
+          "teaserSummary",
+          "teaserImage",
+          "socialTitle",
+          "socialDescription",
+          "socialImage",
+          "seoTitle",
+          "seoDescription",
+          "noIndex",
+          "pushNotification"
+        ],
+        "intents": ["Print","Web"]
+      },
+      {
+        "label": "TEMPLATE.TAB.MEDIA",
+        "fields": [
+          "images",
+          "resources",
+          "audioArticle",
+          "topElement",
+          "topMediaCaption",
+          "topMediaAltText",
+          "related",
+          "sponsorLogo"
+        ],
+        "intents": ["Print","Web"]
+      },
+      {
+        "label": "TEMPLATE.TAB.SOCIALPOSTING",
+        "fields": [
+          "socialPosting"
+        ],
+        "intents": ["Print","Web"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "preview",
+      "widget": "xLayoutPreview",
+
+      "config": {
+        "intents": ["Print", "Web"],
+        "webPreviewEmbedded": true,
+        "visibleSet": "default",
+        "liveSlots": true
+      },
+
+      "domainObjects": {
+        "data": "contentData",
+        "printData": "atex.PrintVariants",
+        "associatedSites": "p.InsertionInfo/associatedSites",
+        "images": "contentData/images",
+        "insertionInfo": "p.InsertionInfo",
+        "printOperations": "atex.PrintOperations"
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.ARTICLE.NAME_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/name"
+      }
+    },
+    {
+      "name": "byline",
+      "label": "TEMPLATE.FIELD.BYLINE",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.BYLINE_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/byline"
+      },
+
+      "default" : {
+        "expression" : "currentUser.fullName"
+      }
+    },
+    {
+      "name": "status",
+      "label": "TEMPLATE.FIELD.PRINTSTATUS",
+      "widget": "pContentStatus",
+      "config": {
+        "editable" : true,
+        "initialStatus": "atex.WFInitialStatus",
+        "statusList": "atex.WFStatusList",
+        "commentPlaceholder" : "TEMPLATE.FIELD.STATUS_COMMENT_PH",
+        "showComment" : true,
+        "useAttributes" : false,
+        "checkUsers" : false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "webstatus",
+      "label": "TEMPLATE.FIELD.WEBSTATUS",
+      "widget": "pContentStatus",
+      "config": {
+        "editable" : true,
+        "initialStatus": "atex.WebInitialStatus",
+        "statusList":"atex.WebStatusList",
+        "commentPlaceholder" : "TEMPLATE.FIELD.STATUS_COMMENT_PH",
+        "showComment" : true,
+        "useAttributes" : false,
+        "checkUsers" : false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WebContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "teaserHeadline",
+      "label": "TEMPLATE.FIELD.TEASERHEADLINE",
+      "widget": "pTextInput",
+
+      "config": {
+        "showCharCount": true,
+        "showWordCount": true,
+        "placeholder": "TEMPLATE.FIELD.ARTICLE.TEASERHEADLINE_PH",
+        "copyButton": {
+          "enabled": true,
+          "plain": true
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/teaserHeadline",
+        "source": "contentData/headline"
+      }
+    },
+    {
+      "name": "source",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle": true,
+        "dimensions": ["dimension.Source"],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": false,
+        "queryMinLen": 2,
+        "deep": 2
+      }
+    },
+    {
+      "name": "seoKeyPhrase",
+      "label": "TEMPLATE.FIELD.SEO_FOCUS_WORDS",
+      "widget": "pTextInput",
+
+      "config": {
+        "showCharCount": true,
+        "showWordCount": true,
+        "placeholder": "TEMPLATE.FIELD.SEO_FOCUS_WORDS_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/keyPhrase"
+      }
+    },
+    {
+      "name": "copyfitController",
+      "widget": "xAttributeController",
+
+      "domainObjects": {
+        "SuperTitle": "contentData/overTitle",
+        "Headline": "contentData/headline",
+        "printData": "atex.PrintVariants",
+        "reconcileData": "atex.ReconcileAttributes",
+        "images": "contentData/images"
+      },
+      "config": {
+        "copyfit": {
+          "ckConfigSet": "default",
+          "defaultChannels" : { "channels": ["Print"], "height": 50 },
+          "defaultStylesSet" : "Set2",
+          "AutoAddPrintElements": true,
+          "showPrintOnlyInWeb": false,
+          "elements": [
+            { "label": "Overtitle", "name": "SuperTitle", "element": "SuperTitle", "stylesSet": "HeadlineSet", "channels": ["Web", "Print"], "showPrintOnlyInWeb": false, "height": 50},
+            { "label": "Title", "name": "Headline", "element": "Headline", "stylesSet": "HeadlineSet", "channels": ["Web", "Print"], "showPrintOnlyInWeb": false, "height": 90}
+          ]
+        }
+      },
+      "validators" : [
+        {
+          "required": {
+            "message": "Please, insert a Title",
+            "attribute": "Headline",
+            "filter": "htmlToText"
+          }
+        }
+      ]
+    },
+    {
+      "label": "TEMPLATE.FIELD.ARTICLE.SLUG",
+      "name": "aceSlugInfo",
+      "widget": "aceSlugEditor",
+
+      "domainObjects": {
+        "data": "contentData/aceSlugInfo",
+        "slugBase": "contentData/headline"
+      },
+      "validators": {
+        "pattern": {
+          "value": "/^[a-z0-9-]*$/",
+          "message": "Must be a lowercase character, digit or hyphen",
+          "expression": "data.getData().customText",
+          "trigger": "data.getData().custom"
+        }
+      }
+    },
+    {
+      "name": "copyfitControllerPrint",
+      "widget": "xAttributeController",
+      "domainObjects": {
+        "Headline": "contentData/headline",
+        "Lead": "contentData/lead",
+        "Text": "contentData/body",
+        "Caption": "contentData/caption",
+        "Byline": "contentData/byline",
+        "printData": "atex.PrintVariants",
+        "reconcileData": "atex.ReconcileAttributes",
+        "images": "contentData/images"
+      },
+      "config": {
+        "copyfit": {
+          "ckConfigSet": "default",
+          "defaultChannels" : { "channels": ["Print"], "height": 50 },
+          "defaultStylesSet" : "Set2",
+          "AutoAddPrintElements": true,
+          "showPrintOnlyInWeb": false,
+          "elements": [
+            { "label": "Title", "name": "Headline", "element": "Headline", "stylesSet": "HeadlineSet", "channels": ["Web", "Print"], "showPrintOnlyInWeb": false, "height": 90},
+            { "label": "Lead", "name": "Lead", "channels": ["Web", "Print"], "height": 50},
+            { "label": "Byline", "name": "Byline",  "channels": ["Web", "Print"],  "height": 50},
+            { "label": "Body", "name": "Text", "channels": ["Web", "Print"], "height": 400,
+              "visibleSet": "default", "stylesSet": "Set3", "ckExcludeSet": "default", "ckConfigSet": "default", "floatingToolbar": "default"},
+            { "label": "Caption(Print)", "name": "Caption", "element": "Caption", "stylesSet": "HeadlineSet", "channels": ["Print"], "showPrintOnlyInWeb": false, "height": 50}
+          ],
+          "meters" : [
+            { "intent": "Web", "elements": ["Headline"], "meter": "characters", "max": 75 },
+            { "intent": "Print", "elements": ["Headline"], "meter": "characters", "max": 75 }
+          ]
+        }
+      },
+      "validators" : [
+        {
+          "required": {
+            "message": "Please, insert a Title",
+            "attribute": "Headline",
+            "filter": "htmlToText"
+          }
+        }
+      ]
+    },
+    {
+      "label": "TEMPLATE.FIELD.WEBSECTION",
+      "name": "insertParent",
+      "widget": "pSiteSelect",
+
+      "config": {
+        "editable": true,
+        "exclude": ["dam.d", "dam.assets.d", "dam.system.d"],
+        "default": "",
+        "storage-id": "7597",
+        "modal": {
+          "title": "TEMPLATE.FIELD.WEBSECTION",
+          "placeholder": "TEMPLATE.FIELD.WEBSECTION_VIEW_PH"
+        }
+      },
+      "validators": {
+        "required": {
+          "message": "Required"
+        }
+      },
+
+      "domainObject": "p.InsertionInfo/insertParentId"
+    },
+    {
+      "label": "Level",
+      "name": "hermesLevel",
+      "widget": "pSelect",
+
+      "domainObject": "contentData/levelId",
+
+      "config": {
+        "contentFetch": {
+          "id": "com.atex.onecms.hseries.default.Levels",
+          "path": "levels"
+        }
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.RELATEDSECTIONS",
+      "name": "relatedSection",
+      "widget": "pSiteSelect",
+
+      "config": {
+        "doNotCloseOnselection": true,
+        "editable": true,
+        "exclude": ["dam.d"],
+        "default": "",
+        "storage-id": "17598",
+        "multiple": true,
+        "modal": {
+          "title": "TEMPLATE.FIELD.RELATEDSECTIONS",
+          "placeholder": "TEMPLATE.FIELD.RELATEDSECTIONS_PH"
+        }
+      },
+
+      "domainObject": "contentData/relatedSections"
+    },
+
+    {
+      "name": "tag",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle": true,
+        "dimensions": ["dimension.Tag"],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo",
+        "title": "contentData/headline",
+        "lead": "contentData/lead",
+        "body": "contentData/body"
+      },
+      "config": {
+        "toggle": true,
+        "annotation": true,
+        "dimensions": [
+          "dimension.Organisation",
+          "dimension.Location",
+          "dimension.Person",
+          "dimension.EditorialTag"
+        ],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2,
+        "annotationConfig": {
+          "textsToAnnotate": [
+            "title",
+            "lead",
+            "body"
+          ],
+          "mapping": {
+            "dimension.Organisation": "dimension.Organisation",
+            "dimension.Person": "dimension.Person",
+            "dimension.Company": "dimension.Organisation",
+            "dimension.Location": "dimension.Location",
+            "dimension.EditorialTag": "dimension.EditorialTag"
+          },
+          "customNameFormatter": "function(entity) { return entity.id && entity.id !== entity.name ? entity.name + '_' + (entity.id.startsWith('1-') ? entity.id.substring(2) : entity.id): entity.name; }"
+        }
+      }
+    },
+    {
+      "name": "topic",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle": true,
+        "dimensions": ["dimension.Topic"],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2
+      }
+    },
+    {
+      "name": "act-editors",
+      "label": "TEMPLATE.FIELD.ACTEDITORS",
+      "widget": "pUsersList",
+      "config": {
+        "editable": true,
+        "placeholder": "TEMPLATE.FIELD.ACTEDITORS_PH",
+        "dimension": "dimension.sendto.Users",
+        "showGroups": true,
+        "showUsers": true,
+        "showUsersInSameGroups": true
+      },
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "contentAccess": "p.ContentAccess"
+      }
+    },
+    {
+      "name": "authorProfile",
+      "label": "TEMPLATE.FIELD.AUTHORBIO",
+      "widget": "damAuthor",
+      "config": {
+        "maxRows": 20,
+        "filterAuthorsList": false,
+        "mappings": [
+          {
+            "source": "fullName",
+            "target": "byline"
+          },
+          {
+            "source": "description",
+            "target": "authorBio"
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": "contentData/authors",
+        "byline" : "contentData/byline",
+        "authorBio" : "contentData/authorBio"
+      }
+    },
+    {
+      "name": "showAuthorOnWeb",
+      "label": "TEMPLATE.FIELD.SHOWAUTHORONWEB",
+      "widget": "pCheckbox",
+      "config": {
+        "defaultValue": true
+      },
+      "domainObjects": {
+        "data": "contentData/showAuthorOnWeb"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.ONTIME",
+      "name": "timeStateOnTime",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.ONTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/timeState/ontime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.OFFTIME",
+      "name": "timeStateOffTime",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.OFFTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/timeState/offtime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.PUBLISHINGTIME",
+      "name": "publishingTimeOverride",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.PUBLISHINGTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/publishingTime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.PUBLISHINGUPDATEDTIME",
+      "name": "publishingUpdatedTimeOverride",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.PUBLISHINGUPDATEDTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/publishingUpdateTime"
+      }
+    },
+    {
+      "name": "minorChange",
+      "label": "TEMPLATE.FIELD.MINORCHANGE",
+      "widget": "pCheckbox",
+      "config": {
+        "checkboxLabel": " ",
+        "defaultValue": false
+      },
+      "domainObjects": {
+        "data": "contentData/minorChange"
+      }
+    },
+    {
+      "name": "premiumContent",
+      "label": "TEMPLATE.FIELD.PREMIUMCONTENT",
+      "widget": "pCheckbox",
+      "config": {
+      },
+      "domainObjects": {
+        "data": "contentData/premiumContent"
+      }
+    },
+    {
+      "name": "premiumType",
+      "label": "TEMPLATE.FIELD.PREMIUMCONTENT",
+      "widget": "pSelect",
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "premiumType"
+        ]
+      },
+      "config": {
+        "defaultValue" : "inherit",
+        "options" :
+        [
+          {
+            "label" : "Inherit from section",
+            "id" : "inherit"
+          },
+          {
+            "label" : "Free",
+            "id" : "free"
+          },
+          {
+            "label" : "Premium",
+            "id" : "premium"
+          },
+          {
+            "label": "Registered Premium",
+            "id": "premiumRegistered"
+          }
+        ]
+      }
+    },
+    {
+      "name": "commentStatus",
+      "label": "TEMPLATE.FIELD.COMMENTSTATUS",
+      "widget": "pSelect",
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "allowComments"
+        ]
+      },
+      "config": {
+        "defaultValue" : "inherit",
+        "options" :
+        [
+          {
+            "label" : "Inherit from section",
+            "id" : "inherit"
+          },
+          {
+            "label" : "Open",
+            "id" : "open"
+          },
+          {
+            "label" : "Closed",
+            "id" : "closed"
+          }
+        ]
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.WEBARTICLETYPE",
+      "name": "webArticleType",
+      "widget": "pSelect",
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "webArticleType"
+        ]
+      },
+      "config": {
+        "defaultValue" : "news",
+        "options" :
+        [
+          {
+            "label" : "News",
+            "id" : "news"
+          },
+          {
+            "label" : "Opinions",
+            "id" : "opinion"
+          },
+          {
+            "label" : "LongForm",
+            "id" : "longForm"
+          },
+          {
+            "label" : "Sponsored",
+            "id" : "sponsored"
+          },
+          {
+            "label" : "Press Release",
+            "id" : "pressRelease"
+          }
+        ]
+      }
+    },
+    {
+      "name": "locations",
+      "label": "TEMPLATE.FIELD.LOCATIONS",
+      "widget": "pGoogleMaps",
+
+      "config": {
+        "height": "550px",
+        "editable": true,
+
+        "gmConfig": {
+          "center": {
+            "lat": 52.633872,
+            "lng": 1.294744
+          }
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/locations"
+      }
+    },
+    {
+      "name": "teaserSummary",
+      "label": "TEMPLATE.FIELD.TEASERSUMMARY",
+      "widget": "pTextInput",
+
+      "config": {
+        "showCharCount": true,
+        "showWordCount": true,
+        "placeholder": "TEMPLATE.FIELD.TEASERSUMMARY_PH",
+        "copyButton": {
+          "enabled": true,
+          "plain": true,
+          "text": "Copy the article lead"
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/teaserText",
+        "source": "contentData/lead"
+      }
+    },
+    {
+      "name": "teaserImage",
+      "label": "TEMPLATE.FIELD.TEASERIMAGE",
+      "widget": "slmSelectElement",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {
+            "type": "atex.onecms.image",
+            "inputTemplate": "p.NosqlImage"
+          },
+          "video/*": "com.atex.onecms.app.dam.standard.aspects.DamVideoAspectBean"
+        },
+        "allowedContent": [
+          "image",
+          "animation"
+        ]
+      },
+      "domainObjects": {
+        "data": "contentData/images",
+        "data2": "contentData/resources",
+        "imageContentId": "contentData/teaserImage"
+      }
+    },
+
+    {
+      "label": "TEMPLATE.FIELD.SOCIALTITLE",
+      "name": "socialTitle",
+      "widget": "pTextInput",
+
+      "config": {
+        "showCharCount": true,
+        "showWordCount": true,
+        "copyButton": {
+          "enabled": true,
+          "plain": true
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/socialTitle",
+        "source": "contentData/headline"
+      }
+
+    },
+    {
+      "label": "TEMPLATE.FIELD.SOCIALDESCRIPTION",
+      "name": "socialDescription",
+      "widget": "pTextInput",
+      "config": {
+        "showCharCount": true,
+        "showWordCount": true,
+        "copyButton": {
+          "enabled": true,
+          "plain": true,
+          "text": "Copy the article lead"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/socialDescription",
+        "source": "contentData/lead"
+      }
+    },
+
+    {
+      "name": "socialImage",
+      "label": "TEMPLATE.FIELD.SOCIALIMAGE",
+      "widget": "slmSelectElement",
+      "config": {
+        "useContentList": true,
+        "mimeTypeMap": {
+          "image/*": {
+            "type": "atex.onecms.image",
+            "inputTemplate": "p.NosqlImage"
+          },
+          "video/*": "com.atex.onecms.app.dam.standard.aspects.DamVideoAspectBean"
+        },
+        "allowedContent": [
+          "image"
+        ],
+        "iconConfig": [
+          {
+            "types": [
+              "com.atex.nosql.image.ImageContentDataBean",
+              "atex.onecms.image",
+              "atex.dam.standard.Image"
+            ],
+            "path": "/img/image-x-generic.png",
+            "content": "image"
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": "contentData/images",
+        "data2": "contentData/resources",
+        "imageContentId": "contentData/ogImages"
+      }
+    },
+    {
+      "name": "socialPosting",
+      "widget": "damSocialPosting",
+
+      "config": {
+      },
+
+      "domainObjects": {
+        "socialPosting": "atex.SocialPosting",
+        "socialTitle": "contentData/socialTitle",
+        "socialDescription": "contentData/socialDescription",
+        "socialImage": "contentData/ogImages",
+        "images1": "contentData/images",
+        "images2": "contentData/resources"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.SEOTITLE",
+      "name": "seoTitle",
+      "widget": "pTextInput",
+
+      "config": {
+        "showCharCount": true,
+        "showWordCount": true,
+        "copyButton": {
+          "enabled": true,
+          "plain": true
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/seoTitle",
+        "source": "contentData/headline"
+      },
+      "validators": {
+        "maxLength": {
+          "number": 75,
+          "watch": [
+            "seoTitle"
+          ],
+          "message": "Must be fewer than 75 characters"
+        }
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.SEODESCRIPTION",
+      "name": "seoDescription",
+      "widget": "pTextInput",
+
+      "config": {
+        "showCharCount": true,
+        "showWordCount": true,
+        "copyButton": {
+          "enabled": true,
+          "plain": true,
+          "text": "Copy the article lead"
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/seoDescription",
+        "source": "contentData/lead"
+      },
+      "validators": {
+        "maxLength": {
+          "number": 155,
+          "watch": [
+            "seoDescription"
+          ],
+          "message": "Must be fewer than 155 characters"
+        }
+      }
+    },
+    {
+      "name": "noIndex",
+      "label": "TEMPLATE.FIELD.NOINDEXING",
+      "widget": "pCheckbox",
+      "domainObjects": {
+        "data": "contentData/noIndex"
+      }
+    },
+    {
+      "name": "pushNotification",
+      "label": "TEMPLATE.FIELD.PUSHNOTIFICATION",
+      "widget": "pCheckbox",
+      "config": {
+        "checkboxLabel": " ",
+        "defaultValue": false
+      },
+      "domainObjects": {
+        "data": "contentData/pushNotification"
+      }
+    },
+    {
+      "name": "images",
+      "label": "TEMPLATE.FIELD.IMAGES",
+      "widget": "pResourceArea",
+      "config": {
+        "allowCreateImageVariant": true,
+        "channelIconsVisible": true,
+        "include-embed": true,
+        "save-on-upload": true,
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        },
+        "imageMetadata": {
+          "atex.onecms.image": {
+            "extraction": true,
+            "fieldMappings": [
+              {
+                "source": "title",
+                "target": "contentData/title"
+              },
+              {
+                "source": "tags/EXIF/Copyright",
+                "target": "contentData/description"
+              },
+              {
+                "source": "byline",
+                "target": "contentData/byline"
+              }
+            ]
+          }
+        },
+        "allowedTypes": [
+          "atex.dam.standard.Image",
+          "atex.dam.standard.WireImage",
+          "com.atex.nosql.image.ImageContentDataBean",
+          "atex.onecms.image"
+        ],
+        "iconMap": {
+          "atex.dam.standard.Collection": "image-x-generic.png"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/images"
+      }
+    },
+    {
+      "name": "resources",
+      "label": "TEMPLATE.FIELD.RESOURCES",
+      "widget": "pResourceArea",
+      "config": {
+        "include-embed": true,
+        "save-on-upload": true,
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"},
+          "video/*": "atex.dam.standard.Video",
+          "audio/*": "atex.dam.standard.Audio",
+          "application/pdf": "atex.dam.standard.Graphic"
+        },
+        "imageMetadata": {
+          "atex.onecms.image": {
+            "extraction": true,
+            "fieldMappings": [
+              {
+                "source": "title",
+                "target": "contentData/title"
+              },
+              {
+                "source": "tags/EXIF/Copyright",
+                "target": "contentData/description"
+              },
+              {
+                "source": "byline",
+                "target": "contentData/byline"
+              }
+            ]
+          }
+        },
+        "allowedTypes": [
+          "atex.dam.standard.Image",
+          "atex.dam.standard.WireImage",
+          "com.atex.nosql.image.ImageContentDataBean",
+          "atex.onecms.image",
+          "atex.dam.standard.Video",
+          "com.atex.onecms.app.dam.standard.aspects.DamVideoAspectBean",
+          "atex.dam.standard.Collection",
+          "video",
+          "atex.dam.standard.Audio",
+          "atex.dam.standard.Graphic",
+          "atex.dam.standard.Embed",
+          "atex.dam.standard.Document"
+        ],
+        "iconMap": {
+          "atex.dam.standard.Collection": "image-x-generic.png",
+          "atex.dam.standard.Video": "video-x-generic.png",
+          "atex.dam.standard.Audio": "audio-x-generic.png"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/resources"
+      },"validators" : {
+      "requiredChildren": {
+        "message": "You must enter a Name",
+        "attributePath": [
+          "data/aspects/contentData/data/name"
+        ]
+      }
+    }
+    },
+    {
+      "name": "topElement",
+      "label": "TEMPLATE.FIELD.TOPELEMENT",
+      "widget": "slmSelectElement",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"},
+          "video/*": "com.atex.onecms.app.dam.standard.aspects.DamVideoAspectBean"
+        },
+        "autoSelectWhenEmpty": true,
+        "allowedContent": [
+          "image",
+          "collection",
+          "video",
+          "gallery"
+        ]
+      },
+      "domainObjects": {
+        "data": "contentData/resources",
+        "data2": "contentData/images",
+        "imageContentId": "contentData/topElement"
+      }
+    },
+    {
+      "name": "topMediaCaption",
+      "label": "TEMPLATE.FIELD.TOPMEDIACAPTION",
+      "widget": "gongCKEditor",
+      "config": {
+        "ckConfig" : {
+          "height": "200",
+          "hideToolbar": true,
+          "contentsLangDirection" : "auto",
+          "extraPlugins": "wordcount,notification",
+          "wordcount": { "showParagraphs": false, "showWordCount": true, "showCharCount": true ,"maxCharCount" :  300, "warnOnLimitOnly":  true},
+          "coreStyles_italic" : { "element": "i", "overrides": "em" },
+          "removeButtons" : "PasteFromWord,Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript,Image",
+          "removePlugins" : "docopyfit, smartembed, selectmedia, smartpaste"
+        },
+        "cssClass": "cke_content_Headline"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "topMediaCaption"]
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.TOPMEDIAALTTEXT",
+      "name": "topMediaAltText",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.TOPMEDIAALTTEXT_PH"
+      },
+      "domainObjects": {
+        "data": "contentData/topMediaAltText"
+      }
+    },
+    {
+      "name": "related",
+      "label": "TEMPLATE.FIELD.RELATED",
+      "widget": "pResourceArea",
+      "config": {
+        "include-embed": true,
+        "save-on-upload": true,
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        },
+        "allowedTypes": ["atex.onecms.article"],
+        "iconMap": {
+          "atex.onecms.article": "text-x-generic.png",
+          "atex.dam.standard.Collection": "image-x-generic.png",
+          "atex.dam.standard.Video": "video-x-generic.png",
+          "atex.dam.standard.Audio": "audio-x-generic.png"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/relatedArticles"
+      }
+    },
+    {
+      "name": "sponsorLogo",
+      "label": "TEMPLATE.FIELD.SPONSORLOGO",
+      "widget": "slmSelectElement",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        },
+        "allowedContent": [
+          "image"
+        ]
+      },
+      "domainObjects": {
+        "data": "contentData/images",
+        "imageContentId": "contentData/sponsorLogo"
+      }
+    },
+    {
+      "label": "Audio AI",
+      "name": "audioArticle",
+      "widget": "pAudioArticle",
+
+      "domainObjects": {
+        "data": "contentData/audioAI",
+        "name": "contentData/headline/text",
+        "webSection": "p.InsertionInfo/insertParentId",
+        "premiumType": "contentData/premiumType",
+        "resources": "contentData/resources"
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "toolbar-configurations": [
+    {
+      "id": "default-toolbar-configurations",
+      "description": "ACT Toolbars List - Default Configuration",
+      "config": {
+        "user-menu": {
+          "componentId": "act-user-menu",
+          "items": [
+            {
+              "label":"EDIT_USER_PROFILE",
+              "action": "openUserProfile",
+              "controller": "ArtNavbarCtrl",
+              "visible": false
+            },
+            {
+              "label":"CHANGE_PASSWORD",
+              "action": "changePassword",
+              "controller": "ArtNavbarCtrl",
+              "visible": true
+            }
+          ]
+        },
+        "toolbars": [
+          {
+            "type":"cross-search",
+            "visible": true
+          },
+          {
+            "type":"publish-button",
+            "visible": true,
+            "background-style": {
+               "published": "#66FF33",
+               "updated": "#66FF33",
+               "unpublished": "gold",
+               "draft": "gold",
+               "default": "gold"
+            }
+          },
+          {
+            "type":"edit-user-profile",
+            "visible": false
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,292 @@
+{
+  "id": "atex.onecms.article.dam.preview",
+  "type": "atex.onecms.article",
+  "label": "Production Article Preview",
+  "namePath": "contentData/headline/text",
+
+  "group": {
+    "type": "Article",
+    "default": 1
+  },
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.article",
+      "data": {
+        "inputTemplate": "p.NosqlArticle"
+      }
+    },
+    "atex.Metadata": {}
+  },
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": [
+          "name",
+          "headline",
+          "lead",
+          "body",
+          "status",
+          "webstatus",
+          "images"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": [
+          "metadata"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.CHANNELS",
+        "fields": [
+          "channels",
+          "activePreview"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.PAGE",
+        "fields": [
+          "activePreview"
+        ]
+      }
+    ]
+  },
+  "dataBindings": [
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "damFieldView",
+      "config": {},
+      "domainObjects": {
+        "data": "contentData/name"
+      }
+    },
+    {
+      "name": "contentCategorization",
+      "widget": "pContentCategorization",
+      "config": {
+        "editable": false,
+        "categorizations": [
+          {
+            "dimension": "dimension.markas-colorcoding",
+            "configuration": "color-categorization",
+            "label": true,
+            "visible": true
+          },
+          {
+            "dimension": "dimension.markas-multiiconcoding",
+            "configuration": "icon-categorization",
+            "label": true,
+            "visible": true
+          }
+        ],
+        "ratings": [
+          {
+            "dimension": "dimension.markas-iconcoding",
+            "configuration": "rating",
+            "visible": true
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "damFieldView",
+      "config": {},
+      "domainObjects": {
+        "data": "contentData/headline"
+      }
+    },
+    {
+      "name": "lead",
+      "label": "TEMPLATE.FIELD.LEAD",
+      "widget": "damFieldView",
+      "config": {},
+      "domainObjects": {
+        "data": "contentData/lead"
+      }
+    },
+    {
+      "name": "body",
+      "label": "TEMPLATE.FIELD.BODY",
+      "widget": "damFieldView",
+      "config": {},
+      "domainObjects": {
+        "data": "contentData/body"
+      }
+    },
+    {
+      "name": "status",
+      "label": "TEMPLATE.FIELD.STATUS",
+      "widget": "pContentStatus",
+      "config": {
+        "editable": true
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "webstatus",
+      "label": "TEMPLATE.FIELD.WEBSTATUS",
+      "widget": "pContentStatus",
+      "config": {
+        "editable": false,
+        "statusList": "atex.WebStatusList"
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WebContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "images",
+      "label": "TEMPLATE.FIELD.IMAGES",
+      "widget": "pGallery",
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "images"
+        ]
+      },
+      "config": {
+        "editable": false
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+      "domainObjects": {
+        "data": [
+          "atex.Metadata"
+        ],
+        "body": [
+          "contentData",
+          "body"
+        ]
+      },
+      "config": {
+        "editable": false
+      }
+    },
+    {
+      "name": "channels",
+      "label": "TEMPLATE.FIELD.CHANNELS",
+      "widget": "pChannelVariants",
+      "domainObjects": {
+        "data": "contentData",
+        "channelData": "atex.ChannelContentData",
+        "printData": "atex.PrintVariants"
+      },
+      "config": {
+        "currentLeft": true,
+        "fields": [
+          "headline",
+          "lead",
+          "body"
+        ],
+        "labels": {
+          "headline": {
+            "alias": "_HEADLINE_"
+          },
+          "lead": {
+            "alias": "_LEAD_LABEL_"
+          },
+          "body": {
+            "alias": "_BODY_"
+          }
+        },
+        "variants": [
+          {
+            "channel": "Web",
+            "icon": "fa fa-globe",
+            "default": false
+          },
+          {
+            "channel": "Print",
+            "icon": "fa fa-newspaper-o",
+            "default": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "activePreview",
+      "label": "TEMPLATE.FIELD.PAGEPREVIEW",
+      "widget": "activePreview",
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "name"
+        ],
+        "files": [
+          "atex.Files"
+        ],
+        "revision": [
+          "revision"
+        ]
+      },
+      "config": {
+        "module": "previewView",
+        "isPage": true,
+        "usePrintServer": true,
+        "liveUpdate": false
+      }
+    },
+    {
+      "name": "planning",
+      "widget": "pDamTask",
+      "config": {
+        "editable": false,
+        "types": [
+          {
+            "label": "Article",
+            "value": "article"
+          },
+          {
+            "label": "Image",
+            "value": "image"
+          },
+          {
+            "label": "Images",
+            "value": "images"
+          },
+          {
+            "label": "Video",
+            "value": "video"
+          }
+        ],
+        "ratios": [
+          {
+            "label": "4:3 standard",
+            "value": "4:3 standard"
+          },
+          {
+            "label": "16:9 standard",
+            "value": "16:9 standard"
+          },
+          {
+            "label": "21:9",
+            "value": "21:9"
+          },
+          {
+            "label": "18:9 (2:1)",
+            "value": "18:9 (2:1)"
+          }
+        ],
+        "measurementUnit": "characters"
+      },
+      "domainObjects": {
+        "data": "atex.Planning"
+      }
+    }
+  ]
+}

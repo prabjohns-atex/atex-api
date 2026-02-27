@@ -1,0 +1,171 @@
+{
+  "id": "atex.dam.standard.WireImage",
+  "type": "atex.dam.standard.WireImage",
+  "label": "Dam Wire Image",
+  "namePath": ["contentData", "headline"],
+  "aspects": {
+    "atex.Files": {
+    },
+    "atex.ImageEditInfo": {
+    },
+    "atex.Image": {
+    },
+    "atex.Metadata": {
+    }
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["securityParent", "status", "headline", "body", "image", "byline", "specialInstructions", "urgency"]
+      },
+  
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "Exif/Xmp/Iptc",
+        "fields": ["exifMetadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "Security Parent",
+      "widget": "damSecurityParent",
+      "config": {
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "headline",
+      "label": "Headline",
+      "widget": "pTextInput",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "pCKEditor",
+      "config": {
+        "height": "200",
+        "resizable": "true"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "image",
+      "label": "Image",
+      "widget": "pImageEditor",
+
+      "config": {
+
+      },
+
+      "domainObjects": {
+        "files": ["atex.Files"],
+        "editInfo": ["atex.ImageEditInfo"],
+        "image": ["atex.Image"]
+      }
+    },
+    {
+      "name": "byline",
+      "label": "By-line",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "full": false,
+        "tags": {
+          "IPTC": ["By-line"],
+          "IPTC_types":["java.lang.String"]
+        }
+      }
+    },
+    {
+      "name": "specialInstructions",
+      "label": "Special Instructions",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "full": false,
+        "tags": {
+          "IPTC": ["SpecialInstructions"],
+          "IPTC_types":["java.lang.String"]
+        }
+      }
+    },
+    {
+      "name": "urgency",
+      "label": "Urgency",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "full": false,
+        "tags": {
+          "IPTC": ["Urgency"],
+          "IPTC_types":["java.lang.Double"]
+        }
+      }
+    },
+    {
+      "name": "metadata",
+  	  "label": "Metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+
+        "body": "contentData/body"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["body"]
+      }
+    },
+    {
+      "name": "exifMetadata",
+  	  "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+       	"tags": {
+		  "general": ["title", "byline", "description", "imageHeight", "imageWidth"],
+		  "general_types":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String"],
+		  "IPTC": ["Test","By-line", "Caption-Abstract", "City", "Credit", "Headline", "ObjectName", "Source", "SpecialInstructions", "Urgency"],
+		  "IPTC_types":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.Double"]
+		}
+      }
+    }
+  ]
+}

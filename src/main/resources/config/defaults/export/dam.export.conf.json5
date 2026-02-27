@@ -1,0 +1,100 @@
+{
+			"export": [
+			{
+			"id"   :"0",
+			"icon":"fa fa-share-square-o",
+			"label":"Engage",
+			"service":"export",
+			"disabled":"",
+			"visible":"true",
+			"templates":["p.DamArticle", "p.DamWireArticle"],
+			"defaultAction":"false"
+			},
+			{
+			"id"   :"1",
+			"icon":"fa fa-files-o",
+			"label":"Engage and copy to clipboard",
+			"service":"copy",
+			"disabled":"",
+			"visible":"true",
+			"templates":["p.DamArticle", "p.DamWireArticle"],
+			"defaultAction":"false"
+			},
+			{
+			"id"   :"2",
+			"icon":"fa fa-files-o",
+			"label":"Copy to clipboard",
+			"service":"add",
+			"disabled":"",
+			"visible":"true",
+			"templates":["*"],
+			"defaultAction":"true"
+			},
+			{
+			"id"   :"3",
+			"icon":"fa fa-edit",
+			"label":"Edit in new window",
+			"service":"open",
+			"disabled":"",
+			"visible":"false",
+			"templates":["p.DamArticle","p.DamImage","p.StandardArticle","p.NosqlArticle","p.NosqlImage","p.Collection","p.LiveBlogArticle","p.EventArticle"],
+			"callback":"editUsing",
+			"defaultAction":"false"
+			},
+			{
+			"id"   :"4",
+			"icon":"fa fa-external-link-square",
+			"label":"Open in new window",
+			"service":"preview",
+			"disabled":"",
+			"visible":"false",
+			"templates":["p.NosqlArticle","p.NosqlImage","p.Collection","p.EventArticle"],
+			"defaultAction":"false"
+			},
+			{
+			"id"   :"5",
+			"icon":"fa fa-edit",
+			"label":"Engage and Edit",
+			"service":"edit",
+			"disabled":"",
+			"visible":"true",
+			"templates":["p.DamArticle","p.DamImage", "p.DamWireArticle","p.DamWireImage"],
+			"defaultAction":"false"
+			},
+			{
+			"id"   :"6",
+			"icon":"fa fa-share",
+			"label":"Publish To Web",
+			"service":"publish",
+			"disabled":"",
+			"visible":"true",
+			"templates":["*"],
+			"defaultAction":"false"
+			},
+			{
+			"id"   :"7",
+			"icon":"fa fa-ban",
+			"label":"Un-Publish from Web",
+			"service":"unpublish",
+			"disabled":"",
+			"visible":"true",
+			"templates":["*"],
+			"defaultAction":"false"
+			},
+			{
+			"id"   :"8",
+			"icon":"fa fa-files-o",
+			"label":"Duplicate",
+			"service":"duplicate",
+			"disabled":"",
+			"visible":"true",
+			"templates":["p.DamArticle","p.DamImage","p.DamGraphic","p.Collection","p.DamPage","p.DamVideo","p.NosqlArticle","p.NosqlImage","p.DamJob","p.EventArticle"],
+			"defaultAction":"false"
+			}
+			],
+			"_type": "com.atex.onecms.app.dam.export.DamExportBean",
+			"objectType": "DamExport",
+			"inputTemplate": "p.DamExport",
+			"contentType": "parentDocument",
+			"name": "Engage Menu Configuration"
+			}

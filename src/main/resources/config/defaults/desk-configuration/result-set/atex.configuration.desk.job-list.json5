@@ -1,0 +1,152 @@
+{
+  "job-list": [
+    {
+      "id": "default-job-list",
+      "description": "Job List - Default Configuration",
+      "config": {
+          "job-list": {
+          "componentId": "desk-job-list",
+          "body": [
+            {
+              "id": "default",
+              "widgets": [
+                {
+                  "name": "select-entry",
+                  "id": "desk-select-entry",
+                  "css": "auto pull-left"
+                },
+
+                {
+                  "name": "type",
+                  "id": "desk-type"
+                },
+
+                {
+                  "name": "name",
+                  "id": "desk-name"
+                },
+
+                {
+                  "name": "engage-icon",
+                  "id": "desk-engage-icon",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "attributes-icon",
+                  "id": "desk-attributes-icon",
+                  "view":"jobs",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "editable-web-status",
+                  "id": "desk-editable-web-status",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "editable-status",
+                  "id": "desk-editable-status",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "deadline",
+                  "id": "desk-deadline",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "assignees",
+                  "id": "desk-assignees",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "lock-entry",
+                  "id": "desk-lock-entry",
+                  "css": "auto pull-right",
+                  "display-at-startup":true
+                }
+
+              ],
+              "fields": [
+                {
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold; color: #31708f;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "style": "color: #31708f;",
+                    "limit": 350
+                  },
+                  "style":"margin-top: 1%;"
+                },
+                {
+                  "label": {
+                    "value": "_CAPTION_",
+                    "style": "font-weight: bold; color: #31708f;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/caption",
+                    "style": "color: #31708f;",
+                    "limit": 350
+                  },
+                  "style":"margin-top: 1%;"
+                },
+                {
+                  "label": {
+                    "value": "_BODY_",
+                    "style": "font-weight: bold; color: #31708f;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/body",
+                    "style": "color: #31708f;",
+                    "limit": 350
+                  },
+                  "style":"margin-top: 1%;"
+                },
+                {
+                  "label": {
+                    "value": "_DESCRIPTION_",
+                    "style": "font-weight: bold; color: #31708f;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/description",
+                    "style": "color: #31708f;",
+                    "limit": 350
+                  },
+                  "style":"margin-top: 1%;"
+                },
+                {
+                  "label": {
+                    "value": "__WORDS_COUNT__",
+                    "style": "font-weight: bold; color: #31708f;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/words",
+                    "style": "color: #31708f;"
+                  },
+                  "style":"margin-top: 1%;"
+                },
+                {
+                  "label": {
+                    "value": "_NOTES_LABEL_",
+                    "style": "font-weight: bold; color: #31708f;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.Planning/data/notes",
+                    "style": "color: #31708f;"
+                  },
+                  "style":"margin-top: 1%;"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

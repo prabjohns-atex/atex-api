@@ -1,0 +1,20 @@
+{
+  "disable-edit-rules":[
+    {
+      "id":"default-disable-edit-rules",
+      "description":"Disable Edit Rules",
+      "config": {
+        "rules":[
+          {
+            "field": "aspects/atex.WFContentStatus/data/status/statusID",
+            "values": ["finished", "rawWire"]
+          },
+          {
+            "field": "aspects/contentData/data/inputTemplate",
+            "values": ["p.DamWireArticle","p.DamWireImage"]
+          }
+        ]
+      }
+    }
+  ]
+}

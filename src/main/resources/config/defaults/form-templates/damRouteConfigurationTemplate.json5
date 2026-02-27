@@ -1,0 +1,27 @@
+{
+  "id": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean",
+  "type": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean",
+  "label": "Dam Route Configuration",
+
+  "dataBindings": [
+    {
+      "label": "Route Configuration",
+      "widget": "pDamRouteConfiguration",
+      
+      "config": {
+      	 "editable":true,
+      	  "extensions": [
+            {"text":"All files","value":".*.*","placeholder":"All files"},
+            {"text":"Filter json files","value":".*.json|.*.JSON","placeholder":"Filtering for json files"},
+            {"text":"Filter xml files","value":".*.xml|.*.XML","placeholder":"Filtering for xml files"},
+            {"text":"Filter jpg files","value":".*.jpg|.*.JPG","placeholder":"Filtering for jpg files"},
+            {"text":"Filter jar files","value":".*.jar|.*.JAR","placeholder":"Filtering for jar files"}
+          ]
+      },
+      
+      "domainObjects": {
+         "data": "contentData"
+      }
+    }
+  ]
+}

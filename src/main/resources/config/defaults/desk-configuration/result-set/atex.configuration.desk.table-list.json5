@@ -1,0 +1,181 @@
+{
+  "table-list": [
+    {
+      "id": "default-table-list",
+      "description": "Table List - Default Configuration",
+      "config": {
+        "table-list": {
+          "componentId": "desk-table-list",
+          "body": [
+            {
+              "id": "default",
+              "widgets": [
+                {
+                  "name": "sequential",
+                  "id": "desk-sequential",
+                  "display": {
+                    "fields": [
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "archive"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "production"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "IS-NULL"
+                      }
+                    ],
+                    "operator": "OR"
+                  }
+                },
+                {
+                  "name": "select-entry",
+                  "id": "desk-select-entry",
+                  "display": {
+                    "fields": [
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "archive"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "production"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "IS-NULL"
+                      }
+                    ],
+                    "operator": "OR"
+                  }
+                },
+
+                {
+                  "name": "info",
+                  "id": "desk-info",
+                  "display": {
+                    "fields": [
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "archive"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "production"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "IS-NULL"
+                      }
+                    ],
+                    "operator": "OR"
+                  }
+                },
+                {
+                  "name": "source-icon",
+                  "id": "desk-source-icon",
+                  "hide-label": true
+                },
+                {
+                  "name": "engage-icon",
+                  "id": "desk-engage-icon"
+                },
+                {
+                  "name": "table-insertion-date",
+                  "id": "desk-table-insertion-date",
+                  "style": "font-weight: bold; font-size: 0.87em",
+                  "hide-label": true,
+                  "display": {
+                    "fields": [
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "production"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "incoming"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "IS-NULL"
+                      }
+                    ],
+                    "operator": "OR"
+                  }
+                },
+                {
+                  "name": "words",
+                  "id": "desk-words"
+                },
+                {
+                  "name": "table-publication-date",
+                  "id": "desk-table-publication-date",
+                  "style": "font-weight: bold; font-size: 0.87em",
+                  "hide-label": true,
+                  "display": {
+                    "fields": [
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "archive"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "production"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "IS-NULL"
+                      }
+                    ],
+                    "operator": "OR"
+                  }
+                },
+                {
+                  "name": "headline",
+                  "id": "desk-headline",
+                  "limit": 280
+                },
+                {
+                  "name": "priority",
+                  "id": "desk-priority",
+                  "display": {
+                    "fields": [
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "archive"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "CONTAINS",
+                        "to": "production"
+                      },
+                      {
+                        "query-field": "tag_dimension.partition_ss",
+                        "condition": "IS-NULL"
+                      }
+                    ],
+                    "operator": "OR"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

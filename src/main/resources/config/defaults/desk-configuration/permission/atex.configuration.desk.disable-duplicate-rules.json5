@@ -1,0 +1,12 @@
+{
+  "disable-duplicate-rules":[
+    {
+      "id":"default-disable-duplicate-rules",
+      "description":"Disable Duplicate Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

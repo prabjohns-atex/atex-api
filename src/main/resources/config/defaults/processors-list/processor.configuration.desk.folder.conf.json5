@@ -1,0 +1,12 @@
+{
+	  "id":"processor.configuration.desk.folder.conf",
+	  "name":"Assign to Desk Folder Processor",
+	  "classPath":"com.atex.onecms.app.dam.camel.processor.folder.DeskFolderProcessor",
+	  "method":"process",
+	  "type":"2",
+	  "label":[],
+      "_type": "com.atex.onecms.app.dam.camel.configuration.DamProcessorConfigurationBean",
+	  "objectType": "DamProcessorConfiguration",
+	  "inputTemplate": "p.DamProcessorConfiguration",
+	  "contentType": "parentDocument"
+	}

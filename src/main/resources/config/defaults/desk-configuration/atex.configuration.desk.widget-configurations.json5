@@ -1,0 +1,25 @@
+{
+  "widget-configurations": [{
+    "id": "default-widget-configurations",
+	  "description": "Desk Widget Configurations - Default Configuration",
+	  "config": {
+	    "widget-configurations": {
+	      "componentId": "onecms-widget-configurations",
+        "widgets":[
+          {
+            "type": "changeStatusDlg",
+            "defaultTemplateId": "atex.dam.changeStatus",
+            "specificTemplateId": {
+              "article": "atex.dam.changeStatus",
+              "liveblog": "atex.dam.changeStatus"
+            }
+          },
+          {
+            "type": "pTags",
+            "enable-new-tag": true
+          }
+        ]
+	    }
+	  }
+	}]
+}

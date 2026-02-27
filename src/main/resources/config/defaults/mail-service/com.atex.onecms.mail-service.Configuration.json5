@@ -1,0 +1,31 @@
+{
+  "mailServer": {
+    // simple validation regular expression
+    "validation": "^.+@(?!\\.)\\S+\\.\\S+$",
+
+    // smtp hostname
+    "hostname": "localhost",
+
+    // use 465 for gmail
+    "port": 25,
+
+    "username": "",
+    "password": "",
+
+    // in milliseconds
+    "socketTimeout": 30000,
+
+    // in milliseconds
+    "connectionTimeout": 5000,
+
+    "defaultFromAddress": "",
+
+    // set it to true for gmail
+    "startTLS": false,
+
+    // set it to true for gmail
+    "useSSL": false,
+
+    "debug": false
+  }
+}

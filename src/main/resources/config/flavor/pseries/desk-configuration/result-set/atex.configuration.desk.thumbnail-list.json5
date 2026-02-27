@@ -1,0 +1,1099 @@
+{
+  "thumbnail-list": [
+    {
+      "id": "default-thumbnail-list",
+      "description": "Thumbnail List - Default Configuration",
+      "config": {
+        "thumbnail-list": {
+          "componentId": "desk-thumbnail-list",
+          "body": [
+            {
+              "id": "default",
+              "widgets": [
+                {
+                  "name": "sequential",
+                  "id": "desk-sequential"
+                },
+
+                {
+                  "name": "partition",
+                  "id": "desk-partition"
+                },
+
+                {
+                  "name": "hidden-type",
+                  "id": "desk-hidden-type"
+                },
+
+                {
+                  "name": "type",
+                  "id": "desk-type"
+                },
+
+                {
+                  "name": "non-plan-icon",
+                  "id": "desk-non-plan-icon"
+                },
+
+                {
+                  "name": "out-of-date-icon",
+                  "id": "desk-out-of-date-icon"
+                },
+
+                {
+                  "name": "editable-status",
+                  "id": "desk-editable-status"
+                },
+
+                {
+                  "name": "editable-web-status",
+                  "id": "desk-editable-web-status"
+                },
+
+                {
+                  "name": "attributes-icon",
+                  "id": "desk-attributes-icon",
+                  "view":"thumb_list"
+                },
+
+                {
+                  "name": "engage-icon",
+                  "id": "desk-engage-icon"
+                },
+
+                {
+                  "name": "publication-icon",
+                  "id": "desk-publication-icon"
+                },
+
+                {
+                  "name": "unplaced-icon",
+                  "id": "desk-unplaced-icon"
+                },
+
+                {
+                  "name": "candidate-icon",
+                  "id": "desk-candidate-icon"
+                },
+
+                {
+                  "name": "edition-child-icon",
+                  "id": "desk-edition-child-icon"
+                },
+
+                {
+                  "name": "select-entry",
+                  "id": "desk-select-entry",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "collect-entry",
+                  "id": "desk-collect-entry",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "has-resources",
+                  "id": "desk-has-resources",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "lock-entry",
+                  "id": "desk-lock-entry",
+                  "css":"auto pull-right"
+                },
+
+                {
+                  "name": "auto-link-to-page",
+                  "id": "desk-auto-link-to-page",
+                  "css": "auto pull-right"
+                }
+              ],
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                  "operation": {
+                    "component-name": "edit",
+                    "id":"desk-edit"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "article",
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                  "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "Queue",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path":"_data/aspects/prestige.ContentData/data/queue",
+                    "limit": 250
+                  }
+                },
+                {
+                 "label": {
+                   "value": "Byline",
+                   "style": "font-weight: bold;"
+                 },
+                  "value": {
+                   "path": "_data/aspects/contentData/data/byline",
+                   "limit": 250
+                 }
+                },
+                {
+                  "label": {
+                    "value": "__WORDS_COUNT__",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/words"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "__CHARS_COUNT__",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/chars"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "SeoScore",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/seoScore"
+                  }
+                },
+                {
+                  /*
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold;"
+                  },
+                  */
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "style": "font-style:bold; font-size:20px; font-weight:bold;",
+                    "limit": 250
+                  }
+                },
+                {
+                  /*
+                  "label": {
+                    "value": "Lead",
+                    "style": "font-weight: bold;"
+                  },
+                  */
+                  "value": {
+                    "path": "_data/aspects/contentData/data/lead",
+                    "style": "font-style: italic;",
+                    "limit": 250
+                  }
+                 },
+                {
+                  /*
+                  "label": {
+                    "value": "_BODY_",
+                    "style": "font-weight: bold;"
+                  },
+                  */
+                  "value": {
+                    "path": "_data/aspects/contentData/data/body",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_INSERTION_DATE_"
+                  },
+                  "value": {
+                    "path": "_data/meta/originalCreationTime",
+                    "format": "yyyy-MM-dd HH:mm:ss"
+                  },
+                  "style": "float:right; font-style: italic;"
+                },
+                {
+                  "label": {
+                    "value": "_DEADLINE_LABEL_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.print.Deadline/data/deadline",
+                    "directive": "<deadline-status deadline=\"entry._data.aspects['atex.print.Deadline'].data.deadline\" warning=\"entry._data.aspects['atex.print.Deadline'].data.deadlineWarning\"></deadline-status>",
+                    "style":"width: 150px; white-space: nowrap;overflow: hidden;text-overflow: ellipsis; text-align: center;"
+                  },
+                  "display": {
+                    "condition": "!==",
+                    "value": "0"
+                  }
+                }
+                /*,
+                {
+                  "display": {
+                    "force": true
+                  },
+                  "widget": {
+                    "name": "user-info",
+                    "id": "desk-user-info"
+                  }
+                }
+                */
+              ]
+            },
+            {
+              "id": "liveblog",
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                  "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                 "label": {
+                   "value": "Byline",
+                   "style": "font-weight: bold;"
+                 },
+                  "value": {
+                   "path": "_data/aspects/contentData/data/byline",
+                   "limit": 250
+                 }
+                },
+                {
+                  "label": {
+                    "value": "__WORDS_COUNT__",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/words"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "__CHARS_COUNT__",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/chars"
+                  }
+                },
+                {
+                  /*
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold;"
+                  },
+                  */
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "style": "font-style:bold; font-size:20px; font-weight:bold;",
+                    "limit": 250
+                  }
+                },
+                {
+                  /*
+                  "label": {
+                    "value": "Lead",
+                    "style": "font-weight: bold;"
+                  },
+                  */
+                  "value": {
+                    "path": "_data/aspects/contentData/data/lead",
+                    "style": "font-style: italic;",
+                    "limit": 250
+                  }
+                 },
+                {
+                  /*
+                  "label": {
+                    "value": "_BODY_",
+                    "style": "font-weight: bold;"
+                  },
+                  */
+                  "value": {
+                    "path": "_data/aspects/contentData/data/body",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_INSERTION_DATE_"
+                  },
+                  "value": {
+                    "path": "_data/meta/originalCreationTime",
+                    "format": "yyyy-MM-dd HH:mm:ss"
+                  },
+                  "style": "float:right; font-style: italic;"
+                },
+                {
+                  "label": {
+                    "value": "_DEADLINE_LABEL_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.print.Deadline/data/deadline",
+                    "directive": "<deadline-status deadline=\"entry._data.aspects['atex.print.Deadline'].data.deadline\" warning=\"entry._data.aspects['atex.print.Deadline'].data.deadlineWarning\"></deadline-status>",
+                    "style":"width: 150px; white-space: nowrap;overflow: hidden;text-overflow: ellipsis; text-align: center;"
+                  },
+                  "display": {
+                    "condition": "!==",
+                    "value": "0"
+                  }
+                }
+                /*,
+                {
+                  "display": {
+                    "force": true
+                  },
+                  "widget": {
+                    "name": "user-info",
+                    "id": "desk-user-info"
+                  }
+                }
+                */
+              ]
+            },
+            {
+              "id": "document",
+              "image": {
+                "path": "_data/aspects/contentData/data/thumbUrl",
+                "dimension": {
+                  "width": "calcWidth",
+                  "height": "calcHeight"
+                }
+              },
+              "fields": [
+
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                  /*
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold;"
+                  },
+                  */
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "style": "font-style:bold; font-size:20px; font-weight:bold;",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_AUTHOR_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/byline",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_DESCRIPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/description",
+                    "limit": 250
+                  }
+                },
+                {
+                   "label":{
+                      "value":"_INSERTION_DATE_"
+                   },
+                   "value":{
+                      "path":"_data/meta/originalCreationTime",
+                      "format":"yyyy-MM-dd HH:mm:ss"
+                   },
+                   "style":"float:right; font-style: italic;"
+                }
+                /*
+                ,
+                {
+                  "display": {
+                    "force": true
+                  },
+                  "widget": {
+                    "name": "user-info",
+                    "id": "desk-user-info"
+                  }
+                }
+                */
+              ]
+            },
+            {
+              "id": "image",
+              "image": {
+                "path": "_data/aspects/contentData/data/thumbUrl",
+                "dimension": {
+                  "width": "calcWidth",
+                  "height": "calcHeight"
+                }
+              },
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                   "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "Queue",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path":"_data/aspects/prestige.ContentData/data/queue",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_CAPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/caption",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_BODY_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/body",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_INSERTION_DATE_"
+                  },
+                  "value": {
+                    "path": "_data/meta/originalCreationTime",
+                    "format": "yyyy-MM-dd HH:mm:ss"
+                  },
+                  "style": "float:right; font-style: italic;"
+                },
+                {
+                  "label": {
+                    "value": "_DEADLINE_LABEL_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.print.Deadline/data/deadline",
+                    "directive": "<deadline-status deadline=\"entry._data.aspects['atex.print.Deadline'].data.deadline\" warning=\"entry._data.aspects['atex.print.Deadline'].data.deadlineWarning\"></deadline-status>",
+                    "style":"width: 150px; white-space: nowrap;overflow: hidden;text-overflow: ellipsis; text-align: center;"
+                  },
+                  "display": {
+                    "condition": "!==",
+                    "value": "0"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "job",
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                   "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "video",
+              "image": {
+                "path": "_data/aspects/contentData/data/thumbUrl",
+                "dimension": {
+                  "width": "calcWidth",
+                  "height": "calcHeight"
+                }
+              },
+              "fields": [
+                {
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "limit": 250,
+                    "style": " font-style:italic; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                  "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_DESCRIPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/description",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_CAPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/caption",
+                    "limit": 250
+                  }
+                }
+              ]
+            },
+            {
+              "id": "bulkUpload",
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                  "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_DESCRIPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/description",
+                    "limit": 250
+                  }
+                }
+              ]
+            },
+            {
+              "id": "collection",
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                   "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_DESCRIPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/description",
+                    "limit": 250
+                  }
+                }
+              ]
+            },
+            {
+              "id": "audio",
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                  "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_BODY_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/body",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_CAPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/summary",
+                    "limit": 250
+                  }
+                }
+              ]
+            },
+            {
+              "id": "graphic",
+              "image": {
+                "path": "_data/aspects/contentData/data/thumbUrl",
+                "dimension": {
+                  "width": "calcWidth",
+                  "height": "calcHeight"
+                }
+              },
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                  "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_SOURCE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/source",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_SECTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/section",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_DESCRIPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/description",
+                    "limit": 250
+                  }
+                }
+              ]
+            },
+            {
+              "id": "page",
+              "image": {
+                "path": "_data/aspects/contentData/data/thumbUrl",
+                "dimension": {
+                  "width": "calcWidth",
+                  "height": "calcHeight"
+                }
+              },
+              "fields": [
+                {
+                  "label": {
+                    "value": "_NAME_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/name",
+                    "style": "font-style:bold; font-weight: bold; color: #31708f; cursor:pointer;"
+                  },
+                  "display": {
+                    "force":true,
+                    "label": "_NOT_DEFINED_LABEL_"
+                  },
+                  "operation": {
+                    "name": "edit",
+                    "id":"desk-edit"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "Queue",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path":"_data/aspects/prestige.ContentData/data/queue",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_DESCRIPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/description",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_PUBLICATION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/lastPublication",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_SECTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/lastSection",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_PAGE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/lastPage",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_PUBLICATION_DATE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pubdate",
+                    "format": "yyyy-MM-dd"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_PUBLICATION_NUMBER_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pubnumber",
+                    "format": "yyyy-MM-dd"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_PUBLICATION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/publication",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_EDITION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/edition",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_ZONE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/zone",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_SECTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/section",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_PLAN_PAGE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/page",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_PRINT_PAGE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/printPage",
+                    "limit": 250
+                  },
+                  "display": {
+                    "condition": "!==",
+                    "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/page"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_DEADLINE_LABEL_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/atex.print.Deadline/data/deadline",
+                    "directive": "<deadline-status deadline=\"entry._data.aspects['atex.print.Deadline'].data.deadline\" warning=\"entry._data.aspects['atex.print.Deadline'].data.deadlineWarning\"></deadline-status>",
+                    "style":"width: 150px; white-space: nowrap;overflow: hidden;text-overflow: ellipsis; text-align: center;"
+                  },
+                  "display": {
+                    "condition": "!==",
+                    "value": "0"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "tweet",
+              "image": {
+                "path": "_data/aspects/contentData/data/thumbUrl",
+                "dimension": {
+                  "width": "calcWidth",
+                  "height": "calcHeight"
+                }
+              },
+              "fields": [
+                {
+                  "label": {
+                    "value": "_SOURCE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/source"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_CREATION_DATE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/creationdate",
+                    "format": "yyyy-MM-dd HH:mm:ss"
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_BODY_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/body",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_HEADLINE_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/headline",
+                    "limit": 250
+                  }
+                },
+                {
+                  "label": {
+                    "value": "_DESCRIPTION_",
+                    "style": "font-weight: bold;"
+                  },
+                  "value": {
+                    "path": "_data/aspects/contentData/data/description",
+                    "limit": 250
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

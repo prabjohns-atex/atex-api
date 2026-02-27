@@ -1,0 +1,37 @@
+{
+  "fields": [
+    {
+      "id": "default-fields-list",
+      "description": "Fields List - Default Configuration",
+
+      "config": {
+        "sort-form": {
+          "componentId": "desk-sort-form",
+          "fields": [
+            {"label":"__SCORE__", "value":""},
+            {"label":"__INSERTION__", "value":"originalCreationTime_dt"},
+            {"label":"__CREATION__", "value":"creationdate_atex_desk_dt"},
+            {"label":"__MODIFY__", "value":"modificationTime"},
+            {"label":"_TYPE_", "value":"atex_desk_objectType"},
+            {"label":"__PUBLICATION__", "value":"lpublication_atex_desk_s"},
+            {"label":"_EDITION_", "value":"ledition_atex_desk_s"},
+            {"label":"__PUB_DATE__", "value":"lpubdate_atex_desk_dt"},
+            {"label":"_SECTION_", "value":"lsection_atex_desk_s"},
+            {"label":"__PAGE__", "value":"lpage_atex_desk_alphaSort"},
+            {"label":"__LEVEL__", "value":"lpageleve_atex_desk_s"},
+            {"label":"__STARS__", "value":"iconcoding_ss_atex_desk_alphaSort"},
+            {"label":"__ICONS__", "value":"multiiconcoding_ss_atex_desk_alphaSort"},
+            {"label":"_WF_STATUS_LABEL_", "value":"content_status_id_s"},
+            {"label":"_DEADLINE_LABEL_", "value":"deadline_atex_desk_dt"},
+            {"label":"_PRIORITY_", "value":"priority_atex_desk_s"},
+            {"label":"_ASSIGNEES_", "value":"tag_dimension.sendto.Users_ss"},
+            {"label":"_AUTHORS_", "value":"authors_atex_desk_sm"},
+            {"label":"Deadline+Relevance", "value":"digitalpublishingtime_atex_desk_dt,relevance_atex_desk_s"},
+            {"label":"Desk+Relevance", "value":"desk_atex_desk_i,relevance_atex_desk_s"},
+            {"label":"__SEOSCORE__", "value":"seoscore_f"}
+          ]
+        }
+      }
+    }
+  ]
+}

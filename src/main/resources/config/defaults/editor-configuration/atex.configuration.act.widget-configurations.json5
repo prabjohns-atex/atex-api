@@ -1,0 +1,44 @@
+{
+  "widget-configurations": [
+    {
+      "id": "default-widget-configurations",
+      "description": "ACT Widget Configurations - Default Configuration",
+      "config": {
+        "widgets":[
+          {
+            "type": "pSiteSelect",
+            "id": "3017",
+            "default-site": "externalid/dam.assets.production.d"
+          },
+          {
+            "type": "pTags",
+            "enable-new-tag": false
+          },
+          {
+            "type": "pMetadataSelect",
+            "id": "5019",
+            "default-dimensions": ['dimension.IPTC']
+          },
+          {
+            "type": "unsplash-cross-search-provider",
+            "url": "https://api.unsplash.com/search/photos",
+            /*To generate key please refer to https://unsplash.com/documentation#registering-your-application*/
+            "key": "" ,
+            "disable": true,
+            "imageSize": "regular" /* imageSize options: raw, full, regular, small */
+          },
+          {
+            "type": "desk-cross-search-provider",
+            "disable": false,
+            "queryTermsInAnd": false
+          },
+          {
+            "type": "polopoly-cross-search-provider",
+            "disable": false,
+            "queryTermsInAnd": false
+          }
+        ]
+      }
+    }
+  ]
+}

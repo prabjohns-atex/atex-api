@@ -1,0 +1,140 @@
+{
+  "id": "atex.dam.standard.Article",
+  "type": "atex.dam.standard.Article",
+  "label": "Dam Article",
+  "hidden":true,
+  "namePath": ["contentData", "headline"],
+  
+  "aspects": {
+    "atex.Metadata": {
+    },
+    
+    "p.InsertionInfo":{
+    }
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["securityParent", "status", "name", "headline", "body"]
+      },
+      {
+        "label": "Resources",
+        "fields": ["image"]
+      },
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "Planning",
+        "fields":["planning"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "Security Parent",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.common.d"
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+       "name": "status",
+       "label": "Status",
+       "widget": "pContentStatus",
+       "config": {
+         "commentPlaceholder" : "Comment"
+       },
+       "domainObjects": {
+         "contentStatus": "atex.WFContentStatus",
+         "contentData": "contentData"
+       }
+     },
+    {
+      "name": "name",
+      "label": "Name",
+      "widget": "pTextInput",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "Headline",
+      "widget": "pTextInput",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "pCKEditor",
+
+      "config": {
+        "height": "400"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "image",
+      "label": "Images & Resources",
+      "widget": "pResourceArea",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": "atex.dam.standard.Image"
+        }
+      },
+      "domainObjects": {
+        "data": ["contentData", "resources"]
+      }
+    },
+    {
+      "name": "metadata",
+  	  "label": "Metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "headline": "contentData/headline",
+        "body": "contentData/body"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["headline","body"]
+      }
+    },
+    {
+      "name": "planning",
+      "widget": "pDamTask",
+
+      "config": {
+        "editable":false,
+        "types" : [{"label":"Article","value":"article"},{"label":"Image","value":"image"},{"label":"Images","value":"images"},{"label":"Video","value":"video"}],
+        "ratios": [{"label":"4:3 standard","value":"4:3 standard"},{"label":"16:9 standard","value":"16:9 standard"},{"label":"21:9","value":"21:9"},{"label":"18:9 (2:1)","value":"18:9 (2:1)"}],
+        "measurementUnit":"characters"
+      },
+
+      "domainObjects": {
+        "data": "atex.Planning"
+      }
+    }
+  ]
+}

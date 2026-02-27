@@ -1,0 +1,19 @@
+{
+  "id": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean.security.parent",
+  "type": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean",
+  "label": "Dam Route Configuration",
+
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "Security Parent",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.common.d"
+      },
+      "domainObjects": {
+        "securityParentId": "contentData/securityParent"
+      }
+    }
+  ]
+}

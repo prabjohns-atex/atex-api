@@ -1,0 +1,155 @@
+{
+
+  "menus": [
+    {
+      "id": "default-menus-list",
+      "description": "Menus List - Default Configuration",
+
+      "config": {
+        "user-menu": {
+          "componentId": "desk-user-menu",
+          "items": [
+            {
+              "label":"__EDIT_JOB_TEMPLATES__",
+              "check": "jobsEnabled",
+              "action": "showJobsTemplates",
+              "controller": "DamHeaderController",
+              "icon": "fa fa-tasks"
+            },
+            {
+              "label":"__MANAGE_PUBLISHING_SCHEDULES_DLG_TITLE__",
+              "check": "publishingScheduleEnabled",
+              "action": "showPublishingSchedules",
+              "controller": "DamHeaderController",
+              "icon": "fa fa-calendar"
+            },
+            {
+              "label":"__PROCESS_CANDIDATE_PAGES__",
+              "action": "processCandidates",
+              "controller": "DamHeaderController",
+              "icon": "fa fa-file"
+            },
+            {
+              "label":"__AUTHORS_MANAGE__",
+              "check": "canManageAuthors",
+              "action": "showAuthor",
+              "controller": "DamHeaderController",
+              "icon": "fa fa-at"
+            },
+            {
+              "label":"__EDIT_MY_AUTHOR__",
+              "check": "canEditMyAuthor",
+              "action": "editMyAuthor",
+              "controller": "DamHeaderController",
+              "icon": "fa fa-edit"
+            },
+            {
+              "label":"__PAGE_BROWSER__",
+              "action": "openPageBrowser",
+              "controller": "DamHeaderController",
+              "icon": "fa fa-book"
+            },
+            {
+              "label":"__TWITTER_TAGS__",
+              "action": "showTwitterRoutes",
+              "controller": "DamHeaderController",
+              "icon": "fa fa-twitter"
+            },
+            {
+              "label":"__OPEN_ADMIN_GUI__",
+              "icon": "fa fa-key",
+              "href-config": "adminGUIUrl"
+            },
+            {
+              "label":"__OPEN_WEB_GUI__",
+              "icon": "fa fa-globe",
+              "href": "/"
+            },
+            {
+              "label":"__OPEN_PRINT_PAGE_GUI__",
+              "icon": "fa fa-newspaper-o",
+              "href-config": "printPageGUIUrl",
+              "check": "printPageGUIUrl"
+            },
+            {
+              "label":"__EXPORT_UI_CFG__",
+              "icon": "fa fa-plane",
+              "action": "exportUICfg",
+              "controller": "DamHeaderController",
+              "check": "isAdmin"
+            },
+            {
+              "label":"__CHANGE_PASSWORD__",
+              "icon": "fa fa-lock",
+              "action": "changePassword",
+              "controller": "DamHeaderController"
+            },
+            {
+              "label":"__PLAUSIBLE__",
+              "icon": "fa fa-bar-chart",
+              "action": "openPlausibleAppUrl('acetimes.atexcloud.io')",
+              "controller": "DamHeaderController"
+            },
+            {
+              "label":"__DESK_COMPANION_APP__",
+              "icon": "fa fa-plug",
+              "action": "openCompanionAppUrl",
+              "controller": "DamHeaderController"
+            }
+        ]
+        },
+
+        "create-new": {
+          "componentId": "desk-create-new",
+          "templates": [
+            "atex.onecms.article.print",
+            "atex.onecms.image",
+            "atex.dam.standard.Video.import",
+            "atex.dam.standard.Collection.act",
+            "atex.dam.standard.BulkImages.act",
+            "atex.dam.standard.Audio",
+            "atex.dam.standard.Embed",
+            "atex.dam.standard.Document",
+            "atex.dam.standard.LiveBlog.article",
+            "atex.onecms.event",
+            "atex.dam.standard.Page.production.dam.create",
+            "atex.dam.standard.Page.production.dam.build.book"
+          ]
+        },
+
+        "jobs-list": {
+          "componentId": "desk-jobs-list",
+          "templates": [
+            "0",
+            "1"
+          ]
+        },
+
+        "stories-list": {
+          "componentId": "desk-stories-list",
+          "templates": [
+            "0"
+          ]
+        }
+
+      }
+    },
+
+    {
+      "id": "dummy-menus-list",
+      "description": "Menus list for dummy-user",
+
+      "config": {
+        "create-new": {
+          "componentId": "desk-create-new",
+          "templates": []
+        }
+      },
+
+      "jobs-list": {
+        "componentId": "desk-jobs-list",
+         "templates": []
+      }
+    }
+  ]
+}

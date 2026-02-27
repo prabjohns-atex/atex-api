@@ -1,0 +1,31 @@
+{
+  "id": "act.template.EditorConfiguration.view",
+  "type": "com.atex.gong.configuration.EditorConfigurationBean",
+  "label": "Editor Configuration",
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["configuration"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "label": "Configuration",
+      "name": "configuration",
+      "widget": "editorConfiguration",
+
+      "config": {
+        "editable": false
+      },
+
+      "domainObjects": {
+        "data": "contentData"
+      }
+    }
+  ]
+
+}

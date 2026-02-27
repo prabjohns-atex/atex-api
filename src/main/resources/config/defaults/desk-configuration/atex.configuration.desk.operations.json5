@@ -1,0 +1,40 @@
+{
+  "operations": [{
+    "id": "default-operations",
+    "description": "Operations List - Default Configuration",
+    "config":{
+      "edit" : {
+        "componentId":"desk-edit",
+        "controller":"DamClipboardController",
+        "action":"open",
+        "callback":"editUsing",
+        "icon": "fa fa-edit",
+        "label": "__EDIT__",
+        "templates":["p.DamArticle","p.DamImage","p.StandardArticle","p.NosqlArticle","p.NosqlImage", "p.Collection","p.LiveBlogArticle","p.EventArticle"],
+        "inline": {
+          "label":"__EDIT_IN_CURRENT_WINDOW__",
+          "visibility":true,
+          "excludeType": ["liveblog", "event"],
+          "disableFn": "{
+            var data = arguments[0];
+            var currentStatusID = atex.onecms.ObjectUtils.getByPath(data, 'aspects/atex.WebContentStatus/data/status/statusID');
+            var disable = currentStatusID==='inProgress';
+            return disable;
+          }"
+        },
+        "localapp": {
+          "label":"__EDIT_IN_LOCAL_APP__",
+          "templates":["p.OnePage"],
+          "visibility":true
+        }
+      },
+      "preview": {
+         "componentId":"desk-preview",
+         "controller":"DamClipboardController",
+         "action":"preview",
+         "label": "__OPEN_IN_READ_ONLY_IN_NEW_WINDOW__",
+         "templates":["p.NosqlArticle","p.NosqlImage","p.Collection","p.EventArticle"]
+      }
+    }
+  }]
+}

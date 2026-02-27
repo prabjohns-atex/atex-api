@@ -1,0 +1,12 @@
+{
+	  "id":"chain.configuration.demo.content.conf",
+	  "routes": [
+	  	"route.configuration.unzip.conf",
+	  	"route.configuration.json.conf"
+	 	],
+	  "_type": "com.atex.onecms.app.dam.camel.configuration.DamChainConfigurationBean",
+	  "objectType": "DamChainConfiguration",
+	  "inputTemplate": "p.DamChainConfiguration",
+	  "contentType": "parentDocument",
+	  "name": "Demo Content Importer"  
+	}

@@ -1,0 +1,41 @@
+{
+  "iconConfig": [
+    {
+      "types": [
+        "com.atex.nosql.image.ImageContentDataBean",
+        "atex.onecms.image",
+        "atex.dam.standard.Image"
+      ],
+      "path": "/img/image-x-generic.png",
+      "content": "image"
+    },
+    {
+      "types": [
+        "atex.onecms.animation"
+      ],
+      "path": "/img/application-octet-stream.png",
+      "content": "animation"
+    },
+    {
+      "types": [
+        "atex.dam.standard.Video"
+      ],
+      "path": "/img/video-x-generic.png",
+      "content": "video"
+    },
+    {
+      "types": [
+        "atex.dam.standard.Audio"
+      ],
+      "path": "/img/audio-x-generic.png",
+      "content": "audio"
+    },
+    {
+      "types": [
+        "atex.dam.standard.Collection"
+      ],
+      "path": "/img/image-x-generic.png",
+      "content": "gallery"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+	  "id":"chain.configuration.reuters.conf",
+	  "routes": [
+	    "route.configuration.reuters.conf"
+	 	],
+	  "_type": "com.atex.onecms.app.dam.camel.configuration.DamChainConfigurationBean",
+	  "objectType": "DamChainConfiguration",
+	  "inputTemplate": "p.DamChainConfiguration",
+	  "contentType": "parentDocument",
+	  "name": "Reuters Wire Importer"  
+	}

@@ -1,0 +1,15 @@
+{
+	  "id":"route.configuration.newsml.conf",
+	  "name":"Newsml Wire Importer",
+	  "errorHandler":"file:{{polopoly.work-dir}}/newsml-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
+	  "threadsPoolSize":"10",
+	  "from":"file:{{polopoly.work-dir}}/feeds/newsml/dpa-in?delete=true&recursive=true&readLock=changed&include=.*\.xml|.*\.XML",
+	  "parameters":["desk/desk-loader/src/main/resources/newsml/dpa2json.xsl","{{polopoly.work-dir}}/inbox"],
+      "processor":"processor.configuration.xsl.conf", 
+      "run":"true", 
+      "securityParent":"externalid/dam.assets.common.d", 
+      "_type": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean",
+	  "objectType": "DamRouteConfiguration",
+	  "inputTemplate": "p.DamRouteConfiguration",
+	  "contentType": "parentDocument"
+	}

@@ -1,0 +1,26 @@
+{
+  // this flags determines whether the system should use the configuration for setting the Status and Web status
+  //  if true any status configuration in this file is ignoted
+  "usePublicationStatusConfiguration": true,
+
+  // The default security parent set to imported content
+  "securityParent": "dam.assets.production.d",
+
+  // default insert parent for imported content
+  // In ACE integration the code will interate down the tree from this point in attempt to resove parent
+  "insertParent": "p.siteengine.Sites.d",
+
+  // Defines the visibility of imported authors.
+  // if not defined the user performing the import will own the imported author
+  "authorAccess": {
+    "owner": "user:sysadmin",
+    "assignees": ["group:desk users", "user:caller"]
+  },
+
+  // Defines which act template show be used by default when opening the imported content in ACT
+  // This used to create a "atex.OneCMS" aspect in the imported content if a matching entry is present
+  "actTemplate" : {
+    "atex.onecms.article": "atex.onecms.article.print"
+  }
+
+}

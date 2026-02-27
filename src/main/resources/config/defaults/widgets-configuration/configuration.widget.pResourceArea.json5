@@ -1,0 +1,15 @@
+{
+  "engagement": {
+
+    // this is a list of sources that will be
+    // considered as "Engage On Paste".
+
+    "sources": [
+      "atex.dam.standard.WireImage",
+      "p.DamWireImage"
+    ],
+
+    "exportEndpoint": "/onecms/dam/content/export"
+
+  }
+}

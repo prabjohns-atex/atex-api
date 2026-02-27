@@ -1,0 +1,114 @@
+{
+  "defaults": {
+
+    // by default the audio ai is disabled
+    "enabled": false,
+
+    // you can set the default toneId and voiceId (they will match a value in the tones and voices arrays)
+    "toneId": "auto",
+    "voiceId": "auto",
+
+    // the tone setting can be hidden if required.
+    "showTone": true,
+
+    // the voidce setting can be hidden if required.
+    "showVoice": true,
+
+    // the tone setting can be readonly if required.
+    "enableTone": true,
+
+    // the voice setting can be readonly if required.
+    "enableVoice": true,
+
+    // while editing the article, the audio name will be changed when the article name is changed.
+    "updateName": true,
+
+    // the timeout (in ms) to wait before updating the audio name (coalescing further updates).
+    "updateNameTimeout": 2000,
+
+    "premium": {
+      // the audio ai will be forced to be enabled for some premium flags.
+      "mandatory": ["premiumRegistered"],
+
+      // the audio ai will be disabled for some premium flags.
+      "disabled": ["free"]
+    },
+
+    // this setting can be used to configure the audio object being created
+    "content": {
+      "contentType": "atex.dam.standard.Audio",
+      "inputTemplate": "p.DamAudioAI",
+      "objectType": "audio",
+      "name": "AIAudio - ${articleName}",
+
+      // the webStatus allow you to specify a web status for the audio object
+      "webStatus": "ready",
+
+      // the printStatus allow you to specify a print status for the audio object
+      "printStatus": "",
+
+      // the template to be used when editing the content.
+      "templateId": "atex.dam.standard.Audio",
+
+      // the metadata taxonomyId.
+      "taxonomyId": "p.StandardCategorization",
+
+      // editorial tags that will be added to the audio content
+      "editorialTags": ["AudioAI"],
+
+      // the security parent
+      "securityParentId": "dam.assets.production.d"
+
+      // the insert parent of the article will be used for the audio object but you can also specify a specific one.
+      // "insertParentId": "section.atextimes.site"
+    },
+
+    // the list of tones available
+    "tones": [
+      {
+        "id": "auto",
+        "label": "Automatic"
+      },
+      {
+        "id": "neutral",
+        "label": "Neutral"
+      },
+      {
+        "id": "fast_pace",
+        "label": "Fast"
+      },
+      {
+        "id": "slow_pace",
+        "label": "Slow"
+      }
+    ],
+
+    // the list of voices available
+    "voices": [
+      {
+        "id": "auto",
+        "label": "Automatic"
+      },
+      {
+        "id": "male",
+        "label": "Male"
+      },
+      {
+        "id": "female",
+        "label": "Female"
+      }
+    ]
+  },
+
+  // for each web section you can specify the audio ai configuration, you can override any setting from the defaults.
+  // Once you change the configuration in a web section, all the children web sections will inherit the configuration.
+  "levels": [
+    {
+      // id is the externalId of a web section.
+      "id": "section.atextimes.site",
+      "enabled": true,
+      "toneId": "auto",
+      "voiceId": "auto"
+    }
+  ]
+}

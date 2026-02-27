@@ -1,0 +1,111 @@
+{
+  // define all the available backends
+  "configurations": [
+    // a polopoly backend
+    {
+      "id": "polopoly",
+      "data": {
+        "remoteApiUrl": "http://localhost:8080/onecms/",
+        "remoteImageService": "http://localhost:8080/image/",
+        "remoteUser": "sysadmin",
+        "remotePassword": "sysadmin",
+        "previewAdapterClassName": "com.atex.onecms.preview.web.WebPreviewAdapter",
+        "previewConfigClassName": "com.atex.onecms.preview.web.WebPreviewServiceChannelConfiguration",
+
+        // you can customize the publishing configuration.
+        //"publishConfigId": "com.atex.onecms.dam.beanPublisher.Configuration",
+
+        // you can customize the import configuration.
+        //"importConfigId": "com.atex.onecms.dam.beanImporter.Configuration",
+
+        // you can change the engagement appType if needed and add custom attributes.
+        /*
+        "engagement": {
+          "appType": "atex.dm.polopoly",
+          "attributes": [
+            {
+              "name": "config",
+              "value": "polopoly"
+            }
+          ]
+        },
+        */
+
+        // The preview configuration
+        "previewConfig": {
+          "previewDispatcherUrl": "/preview/"
+        }
+      }
+    },
+    // an ace backend
+    {
+      "id": "ace",
+      "data": {
+        "remoteApiUrl": "https://api.acetimes.atexcloud.io/content-service/",
+        "remoteFileServiceUrl": "https://api.acetimes.atexcloud.io/file-service/",
+        "remoteImageService": "https://api.acetimes.atexcloud.io/image-service/",
+        "remoteUser": "desk",
+        "remotePassword": "654321",
+        "remoteModuleClassName": "com.atex.onecms.ace.publish.AceModulePublisher",
+        "previewAdapterClassName": "com.atex.onecms.ace.AceWebPreviewAdapter",
+        "previewConfigClassName": "com.atex.onecms.ace.AceWebPreviewServiceChannelConfiguration",
+
+        // The preview configuration
+        "previewConfig": {
+          "acePreviewBaseUrl": "https://acetimes.atexcloud.io",
+          "acePreviewVariant": "webPreview"
+        }
+      }
+    },
+    {
+      "id": "dummy",
+      "data": {
+        "remoteModuleClassName": "com.atex.onecms.ace.publish.dummy.DummyModulePublisher",
+        "previewAdapterClassName": "com.atex.onecms.preview.web.WebPreviewAdapter",
+        "previewConfigClassName": "com.atex.onecms.preview.web.WebPreviewServiceChannelConfiguration",
+
+        // The preview configuration
+        "previewConfig": {
+          "previewDispatcherUrl": "/preview/"
+        }
+      }
+    }
+  ],
+  "rules": {
+    // example rules, they are evaluated in order, the first one that match will be used.
+    // if a rule specify multiple conditions (users, groups, securityParentIds) they all need to match
+    // for the rule to be applied (AND condition).
+    // you can have many rules as you want.
+    /*
+    "publish": [
+      // backend 'polopoly' will be used when the content has the PolopolyPost.d website
+      {
+        "id": "polopoly",
+        "securityParentIds": [
+          "PolopolyPost.d"
+        ]
+      },
+      // backend 'ace' is used if the user doing the publishing is in the 'desk users' group and the security
+      // parent id of the content is a under 'dam.assets.common.d' (or children).
+      {
+        "id": "ace",
+        "groups": ["desk users"],
+        "securityParentIds": [
+          "dam.assets.production.d",
+          "section.atextimes.site"
+        ]
+      }
+    ]
+    */
+  },
+  "defaults": {
+    // the default publishing configuration when none of the above rules match.
+    "configId": "polopoly"
+
+    // you can customize the publishing configuration for all the backends.
+    //"publishConfigId": "com.atex.onecms.dam.beanPublisher.Configuration"
+
+    // you can customize the import configuration for all the backends.
+    //"importConfigId": "com.atex.onecms.dam.beanImporter.Configuration"
+  }
+}

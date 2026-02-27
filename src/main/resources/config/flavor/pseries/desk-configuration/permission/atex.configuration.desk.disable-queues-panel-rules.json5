@@ -1,0 +1,11 @@
+{
+  "disable-queues-panel-rules":[
+    {
+      "id":"default-disable-queues-panel-rules",
+      "description":"Disable Queues Panel",
+      "config": {
+        "always": false
+      }
+    }
+  ]
+}

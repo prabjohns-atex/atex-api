@@ -1,0 +1,12 @@
+{
+	  "id":"processor.configuration.image.conf",
+	  "name":"Image Importer Processor",
+	  "classPath":"com.atex.onecms.app.dam.camel.processor.ImageToNoSqlFeedProcessor",
+	  "method":"process",
+	  "type":"0",
+	  "label":[],
+      "_type": "com.atex.onecms.app.dam.camel.configuration.DamProcessorConfigurationBean",
+	  "objectType": "DamProcessorConfiguration",
+	  "inputTemplate": "p.DamProcessorConfiguration",
+	  "contentType": "parentDocument"
+	}

@@ -1,0 +1,14 @@
+{
+      "_type": "com.atex.onecms.app.dam.cfg.ThirdPartiesCfgBean",
+      "name": "Third parties Cfg",
+      "instagramAccessToken": "",
+      "instagramClientId": "",
+      "instagramClientSecret": "",
+      "instagramCount": "20",
+      "instagramDelay": "60",
+      "twitterAccessToken": "",
+      "twitterAccessTokenSecret": "",
+      "twitterConsumerKey": "",
+      "twitterConsumerSecret": "",
+      "twitterDelay": "60"
+      }

@@ -1,0 +1,71 @@
+{
+  "midnightShiftHours": 0,
+
+  "statistics": {
+    "plausible": {
+      // each domain you want to enable should have the domain with the key
+      "domains": {
+        "acetimes.atexcloud.io-pwd": "https://plausible.io/share/acetimes.atexcloud.io?auth=RTMCgLnvH0vg5xN1NNjuT",
+        "acetimes.atexcloud.io": "https://plausible.io/share/acetimes.atexcloud.io?auth=s2L49zwiuBnl5B-Knviq8"
+      },
+      // for each domain you can have a specif embed
+      "embeds": {
+        "acetimes.atexcloud.io": "<iframe plausible-embed src=\"%URL%&embed=true&theme=light\" scrolling=\"no\" frameborder=\"0\" loading=\"lazy\" style=\"width: 1px; min-width: 100%; height: 1600px;\"></iframe>"
+      },
+      // if none match above you can use a default embed
+      "defaultEmbed": "<iframe plausible-embed src=\"%URL%&embed=true&theme=system\" scrolling=\"no\" frameborder=\"0\" loading=\"lazy\" style=\"width: 1px; min-width: 100%; height: 1600px;\"></iframe>",
+
+      // set it to false if you don't want to use the embed in an iframe, if you use a password protected share url you'll need
+      // to set this to false since plausible do not support the embed option with a password protected share url.
+      "useEmbed": true
+    }
+  },
+
+  "contentPreStore": {
+    // The name prefix that OneContentPreStore will add to the copy content
+    "copyPrefixName": "Copy Of ",
+
+    // when copying an image clean selected image attributes
+    "images": {
+      "cleanCrops": true,
+      "cleanPixelate": false,
+      "cleanFlip": false,
+      "cleanRotation": false
+    },
+
+    "statuses": {
+      // if you need to want to use private status you need also to change "permission" : "off" to
+      // "permission" : "read" in desk-config.json otherwise query status count will not work correctly.
+      "private": [
+        {
+          //"contentType": "",
+          //"inputTemplate": "",
+          //"statusID": "collab_draft",
+          "webStatusID": "collab_draft"
+          //"groups": [],
+          //"users": []
+        }
+      ],
+      "public": [
+        {
+          //"contentType": "",
+          //"inputTemplate": "",
+          //"statusID": "collab_ready",
+          "webStatusID": "collab_ready",
+          "views": ["ready"]
+          /*
+          "forbid-save": {
+            "groups": ["editors", "journalists"],
+            "users": ["riccardo"]
+          }
+          */
+        }
+      ]
+    }
+  },
+
+  "photoshopConnect": {
+    // If required setup a releaseStatusID on which the Photoshops plugin will move the content during release.
+    // "releaseStatusID": "finished"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "disable-collect-panel-rules":[
+    {
+      "id":"default-disable-collect-panel-rules",
+      "description":"Disable Collect Panel",
+      "config": {
+        "always": false
+      }
+    }
+  ]
+}

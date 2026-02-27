@@ -1,0 +1,76 @@
+{
+  "id": "act.template.Image.view",
+  "type": "com.atex.standard.image.ImageContentDataBean",
+  "label": "Image View",
+  "hidden":"true",
+  "namePath": "contentData/title",
+  "aspects": {
+    "atex.Files": {},
+    "atex.ImageEditInfo": {},
+    "atex.Image": {},
+    "atex.Metadata": {}
+  },
+  "dataBindings": [
+    {
+      "label": "Image",
+      "widget": "pImageEditor",
+      "config": {
+        "editable": false
+      },
+      "domainObjects": {
+        "files": "atex.Files",
+        "editInfo": "atex.ImageEditInfo",
+        "image": "atex.Image"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextOutput",
+      "domainObjects": {
+        "data": "contentData/title"
+      }
+    },
+    {
+      "label": "Caption",
+      "widget": "pTextOutput",
+      "domainObjects": {
+        "data": "contentData/caption"
+      }
+    },
+    {
+      "label": "Byline",
+      "widget": "pTextOutput",
+      "domainObjects": {
+        "data": "contentData/byline"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "pTextOutput",
+      "domainObjects": {
+        "data": "contentData/description"
+      }
+    },
+    {
+      "label": "Associated Sites",
+      "widget": "pAssociatedSites",
+      "config": {
+        "editable": false
+      },
+      "domainObjects": {
+        "associatedSites": "p.InsertionInfo/associatedSites",
+        "taxonomyIds": "atex.Metadata/taxonomyIds"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+      "config": {
+        "editable": false
+      },
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    }
+  ]
+}

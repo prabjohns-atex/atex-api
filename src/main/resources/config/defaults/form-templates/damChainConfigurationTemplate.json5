@@ -1,0 +1,31 @@
+{
+  "id": "com.atex.onecms.app.dam.camel.configuration.DamChainConfigurationBean",
+  "type": "com.atex.onecms.app.dam.camel.configuration.DamChainConfigurationBean",
+  "label": "Dam Route Configuration",
+
+  "dataBindings": [
+    {
+      "label": "Route Configuration",
+      "widget": "pDamChainConfiguration",
+      
+      "config": {
+      	 "editable":true,
+      	  "extensions": [
+            {"text":"All files","value":".*.*","placeholder":"All files"},
+            {"text":"Filter json files","value":".*.json|.*.JSON","placeholder":"Filtering for json files"},
+            {"text":"Filter xml files","value":".*.xml|.*.XML","placeholder":"Filtering for xml files"},
+            {"text":"Filter jpg files","value":".*.jpg|.*.JPG","placeholder":"Filtering for jpg files"},
+            {"text":"Filter jar files","value":".*.jar|.*.JAR","placeholder":"Filtering for jar files"}
+          ],
+          "protocols": [
+            {"icon":"fa fa-file","text":"Use file protocol","value":"file:","placeholder":"Using file protocol","additionalparameter":"?recursive=true&readLock=changed&include="}, 
+            {"icon":"fa fa-rss","text":"Use rss protocol","value":"rss:","placeholder":"Using rss protocol","additionalparameter":"?splitEntries=false&consumer.delay=900000&filter=true&include="}
+          ] 
+      },
+      
+      "domainObjects": {
+         "data": "contentData"
+      }
+    }
+  ]
+}

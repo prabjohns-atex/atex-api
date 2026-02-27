@@ -1,0 +1,119 @@
+{
+  // use the status attributes to signal an online content.
+  // "useAttributesForWebStatus": true,
+
+  // the "useAttributesForWebStatus" was the old setting, we will still read it and preset
+  // the configuration (if it is true we will set contentStatus.setAttributes to true,
+  // contentStatus.setStatus to false and webStatus.setStatus to false, if it is false we
+  // will set contentStatus.setAttributes to false, contentStatus.setStatus to false and
+  // webStatus.setStatus to true), we will then ready the contentStatus and webStatus
+  // configuration if present.
+
+  // how to process the content status
+  "contentStatus": {
+
+    // if true we will set the attributes on the current or the new status.
+    "setAttributes": true,
+
+    // the name of the attributes to be used.
+    // Left commented to show the defaults.
+    /*
+    "attributes": {
+      "embargo": "attr.embargo",
+      "online": "attr.online"
+    },
+    */
+
+    // if true we will change the content status.
+    "setStatus": false
+
+    // the status id used for the content status.
+    // Left commented to show the defaults.
+    /*
+    ,
+    "workflow": {
+      "publish": "finished",
+      "unpublish": "review"
+    }
+    */
+  },
+
+  // how to process the web status
+  "webStatus": {
+
+    // if true we will change the web status.
+    "setStatus": true,
+
+    // the status id used for the web status.
+    // Left commented to show the defaults.
+    "workflow": {
+      "publish": "published",
+      "unpublish": "unpublished",
+      "embargo": "published"
+    }
+  },
+
+  // when calculating the remote security parent id of a content use
+  // the content insertion parent Id (if null the security parent id
+  // will be used).
+  "preferInsertParentId": true,
+
+  // if the content is a legacy content (i.e. has a legacy id that does
+  // not start with "remote:") we will calculate the security parent id
+  // from the url field if available instead of calculating it from the
+  // content insertion aspect bean.
+  "useUrlForSecurityParentIdInLegacyBean": false,
+
+  // when processing content resources (such as related content and images)
+  // we will ignore any failure when publishing due to authentication failed
+  // and replace the id with the already existing remote it (if any).
+  // If there is not remote contentId we will rethrow the exception and
+  // prevent the publishing of the content.
+  "ignoreAuthenticationFailed": true,
+
+  "images": {
+
+    // images larger than this value will be resized during publishing, you
+    // can override this value with -Ddesk.config.webImageSize
+    "maxWidth": 900,
+
+    // when resizing will use this value as image quality, you can override
+    // this value with -Ddesk.config.webImageQuality
+    "quality": 0.75
+  },
+
+  // the default security parent id used when no other rules apply.
+  "defaultSecurityParentId": "PolopolyPost.d",
+
+  // when true we will use zookeeper to keep a distributed lock for each
+  // contentId making sure that no two clients will publish the same content
+  // at the same time.
+  "useDistributedLock": true,
+
+  //object to define not publishable content types-status
+  "notPublicableStatus": {
+    "atex.dam.standard.Video" : ["prepareVideo","retrieveVideo"]
+  },
+
+  // object to define not publishable content based on its web status
+  "notPublishableWebStatus": {
+  // Example configuration
+  /*
+   "atex.dam.standard.Video" : ["draftMedia", "retrieveMedia", "encoding"],
+   "atex.dam.standard.Audio" : ["draftMedia", "retrieveMedia", "encoding"]
+  */
+  },
+
+  // when publishing a related content we will check if the content is a private content
+  // and if the user does not have access we will show an error, when the private content
+  // is a related content we will show the error only if the content type is not in the
+  // "privateContentAsEmpty" list, you can add "*" to the list to not show errors for any
+  // private content.
+  "privateContentAsEmpty": [ "atex.onecms.article" ],
+
+  // when publishing a content we will check if the content in the following list needs to be updated
+  // when we add the engagement because the class has been changed since the last content update
+  // (otherwise the engagement operation will fail).
+  // Keep it short to make keep the publishing process fast, add '*' to check all the content.
+  "checkContentDataClass": ["atex.dam.standard.Author"]
+}

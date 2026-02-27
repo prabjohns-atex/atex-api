@@ -1,0 +1,94 @@
+{
+  "id": "atex.dam.standard.WireArticle",
+  "type": "atex.dam.standard.WireArticle",
+  "label": "Dam Wire",
+  "namePath": ["contentData", "headline"],
+  "aspects": {
+    "atex.Metadata": { }
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["securityParent", "status",  "source", "creationdate", "headline", "body"]
+      },
+  
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "Security Parent",
+      "widget": "damSecurityParent",
+      "config": {
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "source",
+      "label": "Source",
+      "widget": "pTextInput",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "source"]
+      }
+    },
+    {
+      "name": "creationdate",
+      "label": "Date",
+      "widget": "pDateTimePicker",
+      "domainObjects": {
+        "data": ["contentData", "creationdate"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "Headline",
+      "widget": "pTextInput",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "pCKEditor",
+      "config": {
+        "height": "300",
+        "resizable": "true"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "metadata",
+  	  "label": "Metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+
+        "body": "contentData/body"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["body"]
+      }
+    }   
+  ]
+}

@@ -1,0 +1,110 @@
+{
+"icons": {
+    "anchor": "fa-thumb-tack",
+    "notAnchor": "fa-dot-circle-o",
+    "refresh": "fa-refresh"
+},
+
+  "editUsing": {
+    "article": "atex.onecms.article.print",
+    "image": "atex.onecms.image"
+    },
+  "activePageToolbar": {
+            "cmds": [{
+              "name": "showFit",
+              "type": "span",
+              "label": "__PAGE_SHOW_FIT__"
+            }, {
+              "name": "showStatus",
+              "type": "span",
+              "label": "__PAGE_SHOW_STATUS__"
+            }, {
+              "name": "sendToBack",
+              "visibility": true,
+              "disabled": "canSendToBack()",
+              "action": "sendToBack()",
+              "element": false,
+              "ctrlKey": false,
+              "icon": "fa fa-level-down",
+              "label": "ADM.SEND_AREA_TO_BACK"
+            }, {
+              "name": "sendToBack",
+              "visibility": true,
+              "disabled": "canSendToBack()",
+              "action": "sendToBack()",
+              "element": true,
+              "ctrlKey": true,
+              "icon": "fa fa-level-down",
+              "label": "ADM.SEND_ELEMENT_TO_BACK"
+            }, {
+              "name": "showImages",
+              "type": "span",
+              "label": "__PAGE_SHOW_IMAGES__",
+              "visibility": false
+            }, {
+              "name": "createWithShape",
+              "disabled": true,
+              "icon": "fa fa-pencil",
+              "label": "__CREATE_WITH_SHAPE__"
+            }, {
+              "name": "changeShape",
+              "visibility": true,
+              "disabled": "canChangeShapeMode2()",
+              "action": "changeShape()",
+              "mode": 2,
+              "icon": "fa fa-pencil",
+              "label": "change shape"
+            },
+            {
+              "name": "changeShape",
+              "visibility": true,
+              "disabled": "canChangeShape()",
+              "action": "changeShape()",
+              "mode": 4,
+              "icon": "fa fa-pencil",
+              "label": "COPYFIT.SELECT_PAGE_DESIGN"
+            }, {
+              "name": "order",
+              "disabled": "canOrder()",
+              "action": "order()",
+              "icon": "fa fa-pencil",
+              "label": "__ORDER__"
+            }, {
+              "name": "unassign",
+              "icon": "fa fa-unlink",
+              "visibility": true,
+              "label": "__PAGE_UNASSIGN__",
+              "tooltip": "__PAGE_UNASSIGN__"
+            }, {
+              "name": "remove",
+              "disabled": "canRemove()",
+              "icon": "fa fa-circle-o",
+              "visibility": true,
+              "label": "Unplace from page"
+            },
+            {
+              "name": "delete",
+              "disabled": true,
+              "icon": "fa fa-trash",
+              "visibility": true,
+              "label": "__PAGE_DELETE__"
+            }, {
+              "name": "removeLayouts",
+              "disabled": "canLayoutCmd()",
+              "action": "layoutCmd()",
+              "verify": true,
+              "chkunassign": 1,
+              "chkremovefurniture": 1,
+              "icon": "fa fa-power-off",
+              "visibility": true,
+              "label": "__PAGE_REMOVE_LAYOUTS__"
+            },  {
+              "name": "pdf",
+              "default": true,
+              "disabled": "canViewPdf()",
+              "action": "viewPdf()",
+              "icon": "fa fa-file-pdf-o",
+              "label": "__PAGE_VIEW_PDF__"
+            }]
+  }
+}

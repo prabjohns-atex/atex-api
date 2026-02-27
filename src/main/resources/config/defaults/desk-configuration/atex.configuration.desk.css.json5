@@ -1,0 +1,22 @@
+{
+  "css": [
+    {
+      "id": "default-css-list",
+      "description": "css List - Default Configuration",
+
+       "config": {
+        "css-config": {
+          "componentId": "desk-css-config",
+          "css": [
+            {
+              "selector":".navbar",
+              "properties": [
+                "background-color:#28567e !important;"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

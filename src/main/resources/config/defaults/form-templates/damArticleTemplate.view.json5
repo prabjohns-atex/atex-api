@@ -1,0 +1,79 @@
+{
+  "id": "atex.dam.standard.Article.dam.preview",
+  "type": "atex.dam.standard.Article",
+  "label": "Dam Article",
+  "hidden":true,
+  "namePath": ["contentData", "headline"],
+  "aspects": {
+    "atex.Metadata": {
+    }
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["status", "name", "headline", "body"]
+      },
+  
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "editable": false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "name",
+      "label": "Name",
+      "widget": "damFieldView",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "Headline",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "damFieldView",
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

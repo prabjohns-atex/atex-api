@@ -1,0 +1,11 @@
+{
+  "disable-facets-panel-rules":[
+    {
+      "id":"default-disable-facets-panel-rules",
+      "description":"Disable Facets Panel",
+      "config": {
+        "always": false
+      }
+    }
+  ]
+}

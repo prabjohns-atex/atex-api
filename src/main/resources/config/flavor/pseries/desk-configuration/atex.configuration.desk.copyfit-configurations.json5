@@ -1,0 +1,102 @@
+{
+  "copyfit-configurations":[
+    {
+      "id":"default-copyfit-configurations",
+      "description":"Copyfit Configurations",
+      "config": {
+        "createIntent": "web",
+        "selection": {
+          "strokeColor": "purple",
+          "dash": 1,
+          "weight": 50
+        },
+        "autoInterval": 1000,
+        "suppressWhileTyping": true,
+        "usePreviewService": false,
+        "createElementsFromShape": true,
+        "webToPrintPlainTxt": false,
+        "showCopyWithObjects": true,
+        "copyWithObjectsDefault": false,
+        "reloadOnWholePage": true,
+        "sendContentOnOrder": false,
+        "sendContentOnCreate": false,
+        "checkExisting": false,
+        "autoPreview": true,
+        "initialiseFromPrint": {
+          "enabled": false,
+          "contentPath": "contentData/data/initialisedFromPrint"
+        },
+        "pagePdf": {
+          "dynamic": false,
+          "dateFormat": "YYYY-MM-DD",
+          "nameFormat": "{%pubdate%-}{%publication%-}{%edition%-}{%pagelevel%-}{%zone%-}{%page%}"
+        },
+        "pasteOptions": {
+          "keySelectAll": true,
+          "forcePasteAsPlainText": false,
+          "shouldProcessPaste": true,
+          "processPasteFilter": "none",
+          "processNextOnPaste": true
+        },
+        "useSection": true,
+        "toggleWholePageAsDefault": false,
+        "attributeToolbar": {
+          "cmds":[{
+          "label": "COPYFIT.COPY_PRINT_WEB_LABEL",
+          "name": "copyPrintToWeb",
+          "disabled": false,
+          "visibility": true,
+          "tooltip": "COPYFIT.COPY_PRINT_WEB_TOOLTIP",
+          "icon": "fa fa-copy",
+          "action": "requestProcessCommand()",
+          "checked": false,
+          "defaultForChannel": "Web",
+          "showDefaultLabel": true,
+          "makeDefaultOnUse": true
+        },{
+          "label":"COPYFIT.COPY_WEB_PRINT_LABEL",
+          "name":"copyWebToPrint",
+          "disabled":"false",
+          "visibility":true,
+          "tooltip":"COPYFIT.COPY_WEB_PRINT_TOOLTIP",
+          "icon":"fa fa-copy",
+          "action":"requestProcessCommand()",
+          "checked":false,
+          "defaultForChannel": "Print",
+          "default":true,
+          "showDefaultLabel": true,
+          "makeDefaultOnUse": true
+        }]
+        },
+        "previewToolbar": {
+          "cmds": [
+          /*{
+            "name": "autoPreview",
+            "default": true
+          }, {
+            "type": "divider",
+            "intents": ["Print"]
+          },*/{
+            "name": "autoFit",
+            "onlyGraphics": false,
+            "intents": ["Print"]
+          }],
+          "zoomer": {
+            "min": 10,
+            "max": 200,
+            "step": 10,
+            "scroll": 5
+          }
+        },
+        "visibleSets": {
+            "attributeController": {
+                "createElement": ["Print", "PrintOnlyInWeb"],
+                "splitAll": ["Web", "Print", "PrintOnlyInWeb"]
+            },
+            "previewController": {
+            }
+        }
+      }
+    }
+  ]
+}

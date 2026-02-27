@@ -1,0 +1,21 @@
+{
+  "homeVsDomain" : {
+  	"PolopolyPost.d": "dam.assets.d"
+  },
+  "domain":[
+    {
+      "id":"default-domain",
+      "description":"The default domain",
+      "config": {
+        "exportSites": [{
+        	name: "Assets",
+        	extId: "dam.assets.d"
+        }],
+        "archivePartition": {
+        	name: "Archive",
+        	id: "archive"
+        }
+      }
+    }
+  ]
+}

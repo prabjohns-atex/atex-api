@@ -1,0 +1,20 @@
+{
+  "id": "com.atex.onecms.app.dam.export.DamExportBean",
+  "type": "com.atex.onecms.app.dam.export.DamExportBean",
+  "label": "Export Configuration",
+
+  "dataBindings": [
+    {
+      "label": "Export Configuration",
+      "widget": "pDamExport",
+      
+      "config": {
+      	 "editable":true
+      },
+      
+      "domainObjects": {
+         "data": "contentData/export"
+      }
+    }
+  ]
+}

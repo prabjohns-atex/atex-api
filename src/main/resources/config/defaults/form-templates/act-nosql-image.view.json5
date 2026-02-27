@@ -1,0 +1,229 @@
+{
+  "id": "com.atex.nosql.image.ImageContentDataBean.dam.preview",
+
+  "type": "com.atex.nosql.image.ImageContentDataBean",
+
+  "label": "Image",
+  "namePath": "contentData/title",
+
+  "aspects": {
+    "atex.Metadata": {},
+    "atex.Files": {},
+    "atex.ImageEditInfo": {},
+    "atex.Image": {},
+    "atex.Planning":{}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["image", "name", "credit", "caption", "datePhotographTaken", "place", "byline", "section", "reporter", "instructions", "oneTimeUse", "noUsePrint", "assignees", "status"]
+      },
+      {
+        "label": "Metadata",
+        "fields": ["metadata", "exifMetadata"]
+      },
+      {
+        "label": "Page",
+        "fields": ["activePreview"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "image",
+      "label": "Image",
+      "widget": "pImageEditor",
+
+      "config" : {
+        "editable": false
+      },
+
+      "domainObjects": {
+        "files": "atex.Files",
+        "editInfo": "atex.ImageEditInfo",
+        "image": "atex.Image"
+      }
+    },
+    {
+      "name": "name",
+      "label": "Slug",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/title"
+      }
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/caption"
+      }
+    },
+    {
+      "name": "byline",
+      "label": "Photographer/byline",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/byline"
+      }
+    },
+    {
+      "label": "Date taken",
+      "name": "datePhotographTaken",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "No date/time selected",
+        "editable" : false
+      },
+
+      "domainObjects": {
+        "data": "contentData/datePhotographTaken"
+      }
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "editable": false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "place",
+      "label": "Place/location",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/place"
+      }
+    },
+    {
+      "name": "credit",
+      "label": "Source/credit",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/credit"
+      }
+    },
+    {
+      "name": "section",
+      "label": "Section",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/section"
+      }
+    },
+    {
+      "name": "reporter",
+      "label": "Reporter",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/reporter"
+      }
+    },
+    {
+      "name": "instructions",
+      "label": "Special instructions",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/instructions"
+      }
+    },
+    {
+      "name": "oneTimeUse",
+      "label": "One-time use only",
+      "widget": "pCheckbox",
+      "config": {
+        "editable" : false
+      },
+      "domainObjects": {
+        "data": "contentData/oneTimeUse"
+      }
+    },
+    {
+      "name": "noUsePrint",
+      "label": "No use for print",
+      "widget": "pCheckbox",
+      "config": {
+        "editable" : false
+      },
+      "domainObjects": {
+        "data": "contentData/noUsePrint"
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "Metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "annotation": false,
+        "editable": false,
+        "dimensions" : ["dimension.Topic", "dimension.Company","dimension.Organisation", "dimension.Location", "dimension.Person", "dimension.Tag", "dimension.sendto.Users" ]
+      }
+    },
+    {
+      "name": "exifMetadata",
+      "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false
+      }
+    },
+    {
+      "name": "assignees",
+      "label": "Assignees",
+      "widget": "pUsersList",
+
+      "config": {
+        "editable":false,
+        "dimension": "dimension.sendto.Users"
+      },
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    }
+
+  ]
+}

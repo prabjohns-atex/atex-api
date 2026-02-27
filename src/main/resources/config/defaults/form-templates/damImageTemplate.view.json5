@@ -1,0 +1,112 @@
+{
+  "id": "atex.dam.standard.Image.dam.preview",
+  "type": "atex.dam.standard.Image",
+  "label": "Dam Image",
+  "hidden":true,
+  "namePath": ["contentData", "headline"],
+  "aspects": {
+    "atex.Files": {
+    },
+    "atex.ImageEditInfo": {
+    },
+    "atex.Image": {
+    },
+    "atex.Metadata": {
+    }
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["status", "image", "headline", "caption", "description"]
+      },
+  
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "Exif/Xmp/Iptc",
+        "fields": ["exifMetadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "editable": false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "image",
+      "widget": "pImageEditor",
+
+      "config": {
+        "editable": false 
+      },
+
+      "domainObjects": {
+        "files": ["atex.Files"],
+        "editInfo": ["atex.ImageEditInfo"],
+        "image": ["atex.Image"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "Headline",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "caption"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    },
+    {
+      "name": "exifMetadata",
+  	  "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

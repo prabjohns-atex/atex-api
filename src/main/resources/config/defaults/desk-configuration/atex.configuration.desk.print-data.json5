@@ -1,0 +1,11 @@
+{
+  "print-data":[
+    {
+      "id":"default-print-data",
+      "description":"Specific data for print environment",
+      "config": {
+        "editions": []
+      }
+    }
+  ]
+}

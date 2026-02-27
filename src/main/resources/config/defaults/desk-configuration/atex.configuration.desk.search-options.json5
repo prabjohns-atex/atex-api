@@ -1,0 +1,26 @@
+{
+  "search-options":[
+    {
+      "id":"default-search-options",
+      "description":"Search Options - Default Configuration",
+      "config": {
+        "execute-at-startup": false,
+        "use-tab-search-at-startup": false,
+        "solrCoreSimpleSearch":"latest",
+        "targetTextFieldSimpleSearch":"+atex_desk_text",
+        "pageElementLinkQueryFields":["publication_atex_desk_ss","pubdate_atex_desk_dts","edition_atex_desk_ss","zone_atex_desk_ss","section_atex_desk_ss","page_atex_desk_ss","doc_id_atex_desk_ss"],
+        "defaultHighlightInputCss": "font-weight: bold !important;color:darkblue !important;font-size:larger !important;line-height:1.5 !important;",
+        "query": {
+          "hiddenQuery": true,
+          "sortValue":"creationdate_atex_desk_dt",
+          "sortOrderValue":"desc",
+          "fields":[]
+        },
+        "mark-as-read": {
+          "enabled": true,
+          "mark-as-read-after-ms": 2000
+        }
+      }
+    }
+  ]
+}

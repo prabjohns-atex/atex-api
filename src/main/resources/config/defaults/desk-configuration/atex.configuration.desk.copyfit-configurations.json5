@@ -1,0 +1,96 @@
+{
+  "copyfit-configurations":[
+    {
+      "id":"default-copyfit-configurations",
+      "description":"Copyfit Configurations",
+      "config": {
+        "createIntent": "print",
+        "openIntent": "print",
+        "selection": {
+          "strokeColor": "red",      // default -> yellow
+          "dash": 4,    // default -> 4; 0 -> Solid
+          "weight": 400 // default -> 200
+        },
+        "autoInterval": 1000,
+        "suppressWhileTyping": true,
+        "usePreviewService": false,
+        "webToPrintPlainTxt": false,
+        "showCopyWithObjects": true,
+        "copyWithObjectsDefault": false,
+        "reloadOnWholePage": true,
+        "initialiseFromPrint": {
+          "enabled": false,
+          "contentPath": "contentData/data/initialisedFromPrint"
+        },
+        "pagePdf": {
+          "dynamic": false,
+          "dateFormat": "YYYY-MM-DD",
+          "nameFormat": "{%pubdate%-}{%publication%-}{%edition%-}{%pagelevel%-}{%zone%-}{%page%}"
+        },
+        "pasteOptions": {
+          "keySelectAll": true,
+          "forcePasteAsPlainText": false,
+          "shouldProcessPaste": true,
+          "processPasteFilter": 'none',
+          "processNextOnPaste": true
+        },
+        "useSection": true,
+        "attributeToolbar": {
+          "cmds":[{
+          "label": "COPYFIT.COPY_PRINT_WEB_LABEL",
+          "name": "copyPrintToWeb",
+          "disabled": false,
+          "visibility": true,
+          "tooltip": "COPYFIT.COPY_PRINT_WEB_TOOLTIP",
+          "icon": "fa fa-copy",
+          "action": "requestProcessCommand()",
+          "checked": false,
+          "defaultForChannel": "Print",
+          "showDefaultLabel": true,
+          "makeDefaultOnUse": true
+        },{
+          "label":"COPYFIT.COPY_WEB_PRINT_LABEL",
+          "name":"copyWebToPrint",
+          "disabled":"false",
+          "visibility":true,
+          "tooltip":"COPYFIT.COPY_WEB_PRINT_TOOLTIP",
+          "icon":"fa fa-copy",
+          "action":"requestProcessCommand()",
+          "checked":false,
+          "defaultForChannel": "Web",
+          "default":true,
+          "showDefaultLabel": true,
+          "makeDefaultOnUse": true
+        }]
+        },
+        "previewToolbar": {
+          "cmds": [
+          /*{
+            "name": "autoPreview",
+            "default": true
+          }, {
+            "type": "divider",
+            "intents": ["Print"]
+          },*/{
+            "name": "autoFit",
+            "onlyGraphics": false,
+            "intents": ["Print"]
+          }],
+          "zoomer": {
+            "min": 10,
+            "max": 200,
+            "step": 10,
+            "scroll": 5
+          }
+        },
+        "visibleSets": {
+            "attributeController": {
+                "splitAll": ["Web", "Print", "PrintOnlyInWeb"]
+            },
+            "previewController": {
+            }
+        }
+      }
+    }
+  ]
+}

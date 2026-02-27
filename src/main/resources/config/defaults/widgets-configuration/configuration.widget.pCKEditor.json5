@@ -1,0 +1,41 @@
+{
+  "engagement": {
+
+    // this is a list of sources that will be
+    // considered as "Engage On Paste".
+
+    "sources": [
+      "atex.dam.standard.WireImage",
+      "p.DamWireImage"
+    ],
+
+    "configs": {
+      "atex.onecms.article": {
+        "map": {
+          "name": [
+            "contentData/name",
+            "contentData/headline/text"
+          ],
+          "type": [
+            "contentData/objectType"
+          ]
+        }
+      },
+      "atex.dam.standard.LiveBlog.article": {
+        "map": {
+          "name": [
+            "contentData/name",
+            "contentData/headline/text"
+          ],
+          "type": [
+            "contentData/objectType"
+          ]
+        }
+      }
+    },
+
+    "exportEndpoint": "/onecms/dam/content/export"
+
+  },
+  "embed_provider": "https://iframely.atexcloud.io/oembed?url={url}&callback={callback}"
+}

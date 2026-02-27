@@ -1,0 +1,133 @@
+{
+  "id": "com.atex.onecms.app.dam.cfg.ThirdPartiesCfgBean",
+  "type": "com.atex.onecms.app.dam.cdg.ThirdPartiesCfgBean",
+  "label": "Third Parties Cfg",
+
+  "layout": {
+    "views": [
+      {
+        "label": "Instagram",
+        "fields": ["instagramAccessToken", "instagramClientId", "instagramClientSecret", "instagramCount", "instagramDelay"]
+      },
+  
+      {
+        "label": "Twitter",
+        "fields": ["twitterAccessToken", "twitterAccessTokenSecret", "twitterConsumerKey", "twitterConsumerSecret", "twitterDelay"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "instagramAccessToken",
+      "label": "Instagram AccessToken",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Instagram AccessToken"
+      },
+      "domainObjects": {
+        "data": ["contentData", "instagramAccessToken"]
+      }
+    },
+    {
+      "name": "instagramClientId",
+      "label": "Instagram ClientId",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Instagram ClientId"
+      },
+      "domainObjects": {
+        "data": ["contentData", "instagramClientId"]
+      }
+    },
+    {
+      "name": "instagramClientSecret",
+      "label": "Instagram ClientSecret",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Instagram ClientSecret"
+      },
+      "domainObjects": {
+        "data": ["contentData", "instagramClientSecret"]
+      }
+    },
+    {
+      "name": "instagramCount",
+      "label": "Instagram Count",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Instagram Count"
+      },
+      "domainObjects": {
+        "data": ["contentData", "instagramCount"]
+      }
+    },
+    {
+      "name": "instagramDelay",
+      "label": "Instagram Delay",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Instagram Delay"
+      },
+      "domainObjects": {
+        "data": ["contentData", "instagramDelay"]
+      }
+    },
+    
+    {
+      "name": "twitterAccessToken",
+      "label": "Twitter AccessToken",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Twitter AccessToken"
+      },
+      "domainObjects": {
+        "data": ["contentData", "twitterAccessToken"]
+      }
+    },
+    {
+      "name": "twitterAccessTokenSecret",
+      "label": "Twitter AccessTokenSecret",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Twitter AccessTokenSecret"
+      },
+      "domainObjects": {
+        "data": ["contentData", "twitterAccessTokenSecret"]
+      }
+    },
+    {
+      "name": "twitterConsumerKey",
+      "label": "Twitter ConsumerKey",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Twitter ConsumerKey"
+      },
+      "domainObjects": {
+        "data": ["contentData", "twitterConsumerKey"]
+      }
+    },
+    {
+      "name": "twitterConsumerSecret",
+      "label": "Twitter ConsumerSecret",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Twitter ConsumerSecret"
+      },
+      "domainObjects": {
+        "data": ["contentData", "twitterConsumerSecret"]
+      }
+    },
+    {
+      "name": "twitterDelay",
+      "label": "Twitter Delay",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Twitter Delay"
+      },
+      "domainObjects": {
+        "data": ["contentData", "twitterDelay"]
+      }
+    }
+  ]
+}

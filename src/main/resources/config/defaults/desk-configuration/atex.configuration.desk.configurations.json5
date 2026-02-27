@@ -1,0 +1,128 @@
+{
+  "configurations": [
+    {
+      "id": "Default",
+      "extend": null,
+      "config": {
+        "search-forms":"tab-search-forms",
+        "folder-filters":"default-folder-filters",
+        "smart-folder-filters":"default-smart-folder-filters",
+        "page-browser":"default-page-browser",
+        "forms":"default-forms",
+        "thumbnail-list":"default-thumbnail-list",
+        "table-list":"default-table-list",
+        "grid-list":"default-grid-list",
+        "job-list":"default-job-list",
+        "field-configurations":"default-field-configurations",
+        "operations":"default-operations",
+        "widgets":"default-widgets-configuration",
+        "widget-configurations":"default-widget-configurations",
+        "toolbars": "default-toolbars-list",
+        "menus": "default-menus-list",
+        "fields": "default-fields-list",
+        "result-set":"default-result-set",
+        "facets":"default-facets-list",
+        "css":"default-css-list",
+        "disable-edit-rules": "default-disable-edit-rules",
+        "disable-delete-rules": "default-disable-delete-rules",
+        "disable-create-job-rules": "default-disable-create-job-rules",
+        "disable-publish-rules": "default-disable-publish-rules",
+        "disable-unpublish-rules": "default-disable-unpublish-rules",
+        "disable-engage-rules": "default-disable-engage-rules",
+        "disable-engage-edit-rules": "default-disable-engage-edit-rules",
+        "disable-engage-edit-with-template-rules": "default-disable-engage-edit-with-template-rules",
+        "disable-engage-copy-rules": "default-disable-engage-copy-rules",
+        "disable-copy-rules": "default-disable-copy-rules",
+        "disable-duplicate-rules": "default-disable-duplicate-rules",
+        "disable-clear-engagements-rules": "default-disable-clear-engagements-rules",
+        "disable-collections-panel-rules": "default-disable-collections-panel-rules",
+        "disable-collect-panel-rules": "default-disable-collect-panel-rules",
+        "disable-facets-panel-rules": "default-disable-facets-panel-rules",
+        "disable-folders-panel-rules": "default-disable-folders-panel-rules",
+        "disable-queries-panel-rules": "default-disable-queries-panel-rules",
+        "disable-queues-panel-rules": "default-disable-queues-panel-rules",
+        "disable-scheduling-panel-rules": "default-disable-scheduling-panel-rules",
+        "disable-redirect-rules": "default-disable-redirect-rules",
+        "disable-send-to-archive-rules": "default-disable-send-to-archive-rules",
+        "disable-edit-authors-rules": "default-disable-edit-authors-rules",
+        "disable-manage-authors-rules": "default-enable-manage-authors-rules",
+        "copyfit-configurations": "default-copyfit-configurations",
+        "disable-unlock-rules": "default-disable-unlock-rules",
+        "domain":"default-domain",
+        "search-options": "default-search-options",
+        "disable-restrict-content-rules": "image-enable-restrict-content-rules",
+        "print-data": "default-print-data",
+        "search-fields": "default-search-fields",
+        "print": "default-print-configuration"
+      }
+    },
+
+    {
+      "id": "Set1",
+      "extend": "Default",
+      "config": {}
+    },
+
+    {
+      "id": "Set3",
+      "extend": "Default",
+      "config": {
+          "disable-edit-authors-rules":"always-disable-edit-authors-rules"
+      }
+    },
+
+    {
+      "id": "Set4",
+      "extend": "Default",
+      "config": {
+          "disable-manage-authors-rules": "always-enable-manage-authors-rules"
+      }
+    },
+
+    {
+      "id": "Set2",
+      "extend": null,
+      "config": {
+        "search-forms":"tab-search-forms",
+        "folder-filters":"default-folder-filters",
+        "smart-folder-filters":"default-smart-folder-filters",
+        "page-browser":"default-page-browser",
+        "forms":"default-forms",
+        "thumbnail-list":"default-thumbnail-list",
+        "table-list":"default-table-list",
+        "grid-list":"default-grid-list",
+        "job-list":"default-job-list",
+        "field-configurations":"default-field-configurations",
+        "operations":"default-operations",
+        "widgets":"default-widgets-configuration",
+        "toolbars": "dummy-toolbars-list",
+        "menus": "dummy-menus-list",
+        "fields": "dummy-fields-list",
+        "result-set":"default-result-set",
+        "facets":"default-facets-list",
+        "css":"default-css-list",
+        "disable-edit-rules": "default-disable-edit-rules",
+        "disable-delete-rules": "default-disable-delete-rules",
+        "disable-create-job-rules": "default-disable-create-job-rules",
+        "disable-publish-rules": "default-disable-publish-rules",
+        "disable-unpublish-rules": "default-disable-unpublish-rules",
+        "disable-engage-rules": "default-disable-engage-rules",
+        "disable-engage-edit-rules": "default-disable-engage-edit-rules",
+        "disable-copy-rules": "default-disable-copy-rules",
+        "disable-duplicate-rules": "default-disable-duplicate-rules",
+        "disable-clear-engagements-rules": "default-disable-clear-engagements-rules",
+        "disable-send-to-archive-rules": "default-disable-send-to-archive-rules",
+        "disable-collections-panel-rules": "bart-disable-collections-panel-rules",
+        "disable-redirect-rules": "default-disable-redirect-rules",
+        "copyfit-configurations": "default-copyfit-configurations",
+        "disable-unlock-rules": "bart-disable-unlock-rules",
+        "domain":"default-domain",
+        "search-options": "default-search-options",
+        "disable-restrict-content-rules": "image-enable-restrict-content-rules",
+        "print-data": "default-print-data",
+        "search-fields": "default-search-fields",
+        "print": "default-print-configuration"
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "disable-engage-rules":[
+    {
+      "id":"default-disable-engage-rules",
+      "description":"Disable Engage Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

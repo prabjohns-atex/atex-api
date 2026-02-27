@@ -1,0 +1,20 @@
+{
+  "disable-delete-rules":[
+    {
+      "id":"default-disable-delete-rules",
+      "description":"Disable Delete Rules",
+      "config": {
+        "rules":[
+          {
+            "field": "aspects/atex.WFContentStatus/data/status/statusID",
+            "values": ["finished"]
+          },
+          {
+            "field": "dimension.partition",
+            "values": ["archive"]
+          }
+        ]
+      }
+    }
+  ]
+}

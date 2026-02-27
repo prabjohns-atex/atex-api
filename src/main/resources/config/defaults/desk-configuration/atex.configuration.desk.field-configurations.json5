@@ -1,0 +1,392 @@
+{
+  "field-configurations": [
+    {
+      "id": "default-field-configurations",
+      "description": "Field Configuration List - Default Configuration",
+      "config": {
+        "type": {
+          "componentId": "desk-type",
+          "configurations": {
+            "article": {
+              "label": "__ARTICLE_LABEL__",
+              "icon": "fa fa-pencil"
+            },
+            "liveblog": {
+              "label": "__LIVEBLOG_LABEL__",
+              "icon": "fa fa-list-ul"
+            },
+            "image": {
+              "label": "__IMAGE_LABEL__",
+              "icon": "fa fa-camera"
+            },
+            "page": {
+              "label": "__PAGE_LABEL__",
+              "icon": "fa fa-file"
+            },
+            "video": {
+              "label": "__VIDEO_LABEL__",
+              "icon": "fa fa-video-camera"
+            },
+            "audio": {
+              "label": "__AUDIO_LABEL__",
+              "icon": "fa fa-volume-up"
+            },
+            "graphic": {
+              "label": "__GRAPHIC_LABEL__",
+              "icon": "fa fa-bar-chart"
+            },
+            "collection": {
+              "label": "__COLLECTION_LABEL__",
+              "icon": "fa fa-folder"
+            },
+            "job": {
+              "label": "__JOB_LABEL__",
+              "icon": "fa fa-tasks"
+            },
+            "instagram": {
+              "label": "__INSTAGRAM_LABEL__",
+              "icon": "fa fa-instagram"
+            },
+            "tweet": {
+              "label": "__TWEET_LABEL__",
+              "icon": "fa fa-twitter"
+            },
+            "embed": {
+              "label": "__EMBED_LABEL__",
+              "icon": "fa fa-file-code-o"
+            },
+            "document": {
+              "label": "__DOCUMENT_LABEL__",
+              "icon": "fa fa-file"
+            }
+          }
+        },
+        "hidden-type": {
+          "componentId": "desk-hidden-type",
+          "configurations": {
+            "dam.assets.restricted.d": {
+              "label": "__RESTRICTED_CONTENT__",
+              "icon": "fa fa-eye-slash",
+              "icon-color":"red"
+            }
+          }
+        },
+        "partition": {
+          "componentId": "desk-partition",
+          "configurations": {
+            "archive": {
+              "label": "__ARCHIVE_PARTITION__",
+              "icon": "fa fa-archive",
+              "icon-color":"green"
+            },
+            "production": {
+              "label": "__PRODUCTION_PARTITION__",
+              "icon": "fa fa-globe",
+              "icon-color":"black"
+            },
+            "all video": {
+              "label": "__ALL_VIDEO_PARTITION__",
+              "icon": "fa fa-video-camera",
+              "icon-color":"black"
+            },
+            "common": {
+              "label": "__COMMON_PARTITION__",
+              "icon": "fa fa-archive",
+              "icon-color":"green"
+            },
+            "trash": {
+              "label": "__TRASH_PARTITION__",
+              "icon": "fa fa-trash",
+              "icon-color":"red"
+            },
+            "incoming": {
+              "label": "__INCOMING_PARTITION__",
+              "icon": "fa fa-rss",
+              "icon-color":"blue"
+            },
+            "images for review": {
+              "label": "__IMAGES_FOR_REVIEW_PARTITION__",
+              "icon": "fa fa-exclamation-triangle",
+              "icon-color":"red"
+            },
+            "archived images for review": {
+              "label": "__MIGRATED_ARCHIVE_PARTITION__",
+              "icon": "fa fa-archive",
+              "icon-color":"red"
+            },
+            "video in use": {
+              "label": "__VIDEO_IN_USE_PARTITION__",
+              "icon": "fa fa-video-camera",
+              "icon-color":"red"
+            }
+          }
+        },
+        "engagement": {
+          "componentId": "desk-engagement",
+          "configurations": {
+            "-Engaged-": {
+              "label": "-Engaged-",
+              "value": [
+                "*"
+              ]
+            },
+            "-Unengaged-": {
+              "label": "-Unengaged-",
+              "value": [
+                "-*"
+              ]
+            },
+            "Online": {
+              "label": "Online",
+              "value": [
+                "atex.dm.polopoly"
+              ]
+            },
+            "Print": {
+              "label": "Print",
+              "value": [
+                "atex.dm.desk",
+                "newsroom"
+              ]
+            }
+          }
+        },
+
+        "print-variant": {
+          "componentId": "desk-print-variant",
+          "configurations": {
+            "print": {
+              "label": "Print",
+              "value": "true"
+            },
+            "Web": {
+              "label": "Web",
+              "value": "false"
+            }
+          }
+        },
+
+        "print-pub-date": {
+          "componentId": "desk-print-pub-date",
+          "configurations": {
+            "TODAY": {
+              "label":"__PH_PAGE_TODAY__"
+            },
+            "NEXT": {
+              "label":"__PH_PAGE_NEXT_PUB_DATE__"
+            },
+            "CUSTOM":{
+              "label":"__PH_PAGE_CUSTOM__"
+            }
+          }
+        },
+
+        "placed": {
+          "componentId": "desk-placed",
+          "configurations": {
+            "P": {
+              "label": "__PLACED__",
+              "icon": "fa fa-newspaper-o",
+              "icon-color":"blue"
+            },
+            "U": {
+              "label": "__UNPLACED__",
+              "icon": "fa fa-newspaper-o",
+              "icon-color":"red"
+            },
+            "C": {
+              "label": "__CANDIDATE__",
+              "icon": "fa fa-newspaper-o",
+              "icon-color":"green"
+            }
+          }
+        },
+
+        "planstatus": {
+          "componentId": "desk-plan-status",
+          "configurations": {
+            "N": {
+              "label": "__NON_PLAN__",
+              "icon": "fa fa-ban",
+              "icon-color":"grey"
+            },
+            "O": {
+              "label": "__OUT_OF_DATE__",
+              "icon": "fa fa-refresh",
+              "icon-color":"red"
+            }
+          }
+        },
+
+        "childstatus": {
+          "componentId": "desk-child-status",
+          "configurations": {
+            "true": {
+              "label": "__EXCLUDE_CHILDREN__",
+              "icon": "fa fa-child",
+              "icon-color":"red"
+            },
+            "false": {
+              "label": "__CHILDREN_ONLY__",
+              "icon": "fa fa-child",
+              "icon-color":"green"
+            }
+          }
+        },
+
+        "publication-date": {
+          "componentId": "desk-publication-date",
+          "configurations": {
+            "presets": [
+              {"label":"Tomorrow", "value":"NOW/DAY+1DAY-11HOURS TO NOW/DAY+1DAY+11HOURS"},
+              {"label":"Today", "value":"NOW/DAY-11HOURS TO NOW/DAY+11HOURS"},
+              {"label":"Last7D", "value":"NOW/DAY-7DAYS TO NOW/DAY"}
+            ]
+          }
+        },
+
+        "creation-date": {
+          "componentId": "desk-creation-date",
+          "configurations": {
+            "presets": [
+              {"label":"LastHour", "value":"NOW-1HOUR TO NOW"},
+              {"label":"Today", "value":"NOW/DAY TO NOW"},
+              {"label":"Last24H", "value":"NOW-24HOUR TO NOW"},
+              {"label":"Last7D", "value":"NOW/DAY-7DAYS TO NOW/DAY+1DAY"}
+            ]
+          }
+        },
+
+        "deadline-date": {
+          "componentId": "desk-deadline-date",
+          "configurations": {
+            "presets": [
+              {"label":"Tomorrow", "value":"NOW/DAY+1DAYS TO NOW/DAY+2DAYS"},
+              {"label":"Today", "value":"NOW/DAY TO NOW/DAY+1DAY"},
+              {"label":"Last7D", "value":"NOW/DAY-7DAYS TO NOW/DAY+1DAY"}
+            ]
+          }
+        },
+
+        "icon-categorization": {
+          "componentId": "desk-icon-categorization",
+          "configurations": {
+            "0": {
+              "icon": "fa fa-minus",
+              "label": "__NONE__",
+              "default-label":"None"
+            },
+            "1": {
+              "label": "__PREMIUM__",
+              "icon": "fa fa-usd",
+              "default-label":"Premium"
+            },
+            "2": {
+              "label": "__FREE__",
+              "icon": "fa fa-thumbs-up",
+               "default-label":"Free"
+            }
+          }
+        },
+        "color-categorization": {
+          "componentId": "desk-color-categorization",
+          "configurations": {
+           "0": {
+              "color": "white",
+              "label": "__NONE__",
+              "default-label":"None"
+            },
+            "1": {
+              "color": "red",
+              "label": "__IMPORTANT__",
+              "default-label":"Important"
+            },
+            "2": {
+              "color": "blue",
+              "label": "__POLITICS__",
+              "default-label":"Politics"
+            },
+            "3": {
+              "color": "yellow",
+              "label": "__ECONOMICS__",
+              "default-label":"Economics"
+            },
+            "4": {
+              "color": "green",
+              "label": "__SPORT__",
+              "default-label":"Sport"
+            }
+          }
+        },
+        "rating": {
+          "componentId": "desk-rating",
+          "configurations": {
+            "rating": {
+              "icon": "fa fa-star-o",
+              "selected": "fa fa-star",
+              "reset": "fa fa-times",
+              "range": 5
+            }
+          }
+        },
+        "views": {
+          "componentId": "desk-views",
+          "configurations": {
+            "thumb-list": {
+              "title": "__THUMBLIST_VIEW__",
+              "icon": "fa fa-th-list"
+            },
+            "list": {
+              "title": "__LIST_VIEW__",
+              "icon": "fa fa-align-justify"
+            },
+            "thumb": {
+              "title": "__THUMB_VIEW__",
+              "icon": "fa fa-picture-o"
+            },
+            "grid": {
+              "title": "__GRID_VIEW__",
+              "icon": "fa fa-th-large"
+            },
+            "jobs": {
+              "title": "__JOBS_LABEL__",
+              "icon": "fa fa-tasks"
+            }
+          }
+        },
+
+        "print-views": {
+          "componentId": "desk-print-views",
+          "configurations": {
+            "all-editions": {
+              "title": "__SWITCH_TO_FULL_EDITIONS_VIEW__",
+              "icon": "fa fa-th-list",
+              "value": false
+            },
+            "single-editions": {
+              "title": "__SWITCH_TO_SINGLE_EDITION_VIEW__",
+              "icon": "fa fa-th-large",
+              "value": true
+            }
+          }
+        },
+
+        "search-buttons": {
+          "componentId": "desk-search-buttons",
+          "configurations": {
+            "search": {
+              "label": "_SEARCH_",
+              "title": "_SEARCH_",
+              "icon": "fa fa-check"
+            },
+            "clear": {
+              "label": "_CLEAR_",
+              "title": "_CLEAR_",
+              "icon": "fa fa-times"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

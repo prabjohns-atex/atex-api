@@ -1,0 +1,20 @@
+{
+  "id": "com.atex.onecms.app.dam.sendcontent.DamSendContentBean",
+  "type": "com.atex.onecms.app.dam.sendcontent.DamSendContentBean",
+  "label": "Send Content",
+
+  "dataBindings": [
+    {
+      "label": "Send Content",
+      "widget": "pDamSendContent",
+      
+      "config": {
+        "editable": true
+      },
+      
+      "domainObjects": {
+         "data": "contentData/configurations"
+      }
+    }
+  ]
+}

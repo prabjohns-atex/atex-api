@@ -1,0 +1,11 @@
+{
+  "disable-scheduling-panel-rules":[
+    {
+      "id":"default-disable-scheduling-panel-rules",
+      "description":"Disable Publishing Schedules Panel",
+      "config": {
+        "always": true
+      }
+    }
+  ]
+}

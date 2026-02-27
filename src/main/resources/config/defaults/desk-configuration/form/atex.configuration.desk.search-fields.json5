@@ -1,0 +1,296 @@
+{
+  "search-fields": [
+    {
+      "id": "default-search-fields",
+      "description": "Search Fields Configuration - Default Configuration",
+      "config": {
+        "print-search-starter": {
+          "style": "display:none",
+          "componentId": "desk-print-search-starter",
+          "description": "Print Starter Field",
+          "value": {
+            "type": "select",
+            "placeholder": "__PROFILE__",
+            "multiple": false,
+            "display-on-empty-model": true,
+            "model": {
+              "attribute": "searchStarter",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter"
+          }
+        },
+        "print-profiles": {
+          "componentId": "desk-print-profiles",
+          "description": "Prestige Print System Profiles",
+          "value": {
+            "type": "select",
+            "placeholder": "__PROFILE__",
+            "multiple": false,
+            "operator": false,
+            "display-on-empty-model": true,
+            "model": {
+              "attribute": "profile_atex_desk_ss",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter"
+          }
+        },
+        "print-publications": {
+          "componentId": "desk-print-publications",
+          "value": {
+            "type": "select",
+            "placeholder": "_PUBLICATIONS_",
+            "multiple": false,
+            "search-enabled": true,
+            "operator": false,
+            "display-on-empty-model": true,
+            "model": {
+              "attribute": "publication_atex_desk_ss",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter"
+          }
+        },
+        "print-editions": {
+          "componentId": "desk-print-editions",
+          "value": {
+            "type": "select",
+            "placeholder": "_EDITIONS_",
+            "multiple": false,
+            "search-enabled": true,
+            "operator": false,
+            "display-on-empty-model": true,
+            "model": {
+              "attribute": "edition_atex_desk_ss",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter"
+          }
+        },
+        "print-zones": {
+          "componentId": "desk-print-zones",
+          "value": {
+            "type": "select",
+            "placeholder": "_ZONES_",
+            "multiple": false,
+            "operator": false,
+            "search-enabled": true,
+            "display-on-empty-model": true,
+            "model": {
+              "attribute": "zone_atex_desk_ss",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter"
+          }
+        },
+        "print-sections": {
+          "componentId": "desk-print-sections",
+          "value": {
+            "type": "select",
+            "placeholder": "_SECTION_",
+            "search-enabled": true,
+            "multiple": false,
+            "operator": false,
+            "display-on-empty-model": true,
+            "model": {
+              "attribute": "section_atex_desk_ss",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter"
+          }
+        },
+        "print-page-design-searches": {
+          "componentId": "desk-print-page-design-searches",
+          "description": "Prestige Print System Page Design Searches",
+          "value": {
+            "type": "select",
+            "placeholder": "Page Design Searches",
+            "multiple": false,
+            "search-enabled": true,
+            "display-on-empty-model": true,
+            "clear-group-fields": "advSearchGroup",
+            "model": {
+              "attribute": "pageDesign",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter"
+          }
+        },
+        "print-full-book-searches": {
+          "componentId": "desk-print-full-book-searches",
+          "description": "Prestige Print System Full Book Searches",
+          "value": {
+            "type": "select",
+            "placeholder": "Full Book Searches",
+            "multiple": false,
+            "search-enabled": true,
+            "display-on-empty-model": true,
+            "clear-group-fields": "advSearchGroup",
+            "model": {
+              "attribute": "fullBook",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter"
+          }
+        },
+        "print-logical-pages": {
+          "componentId": "desk-print-logical-pages",
+          "description": "Hermes Print System Logical Pages",
+          "value": {
+            "type": "select",
+            "placeholder": "Pagine Logiche",
+            "multiple": false,
+            "display-on-empty-model": true,
+            "model": {
+              "attribute": "logicalPage",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter"
+          }
+        },
+        "print-edit-box": {
+          "componentId": "desk-print-edit-box",
+          "description": "vvv print-edit-box",
+          "value": {
+            "type": "text",
+            "placeholder": "Nome Template",
+            "model": {
+              "attribute": "templateName",
+              "type": "STRING"
+            }
+          },
+          "configuration": {
+            "use-configured-values": true
+          }
+        },
+        "print-search-buttons": {
+          "componentId": "desk-print-search-buttons",
+          "description": "Print System Search Buttons",
+          "value": {
+            "type": "button-view"
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiExec": "searchButtons",
+            "field-configuration": {
+              "name": "search-buttons",
+              "id": "desk-search-buttons"
+            }
+          }
+        },
+        "search-queues": {
+          "componentId": "desk-search-queues",
+          "description": "Prestige Print System queues",
+          "value": {
+            "type": "select",
+            "placeholder": "_QUEUES_",
+            "search-enabled": true,
+            "multiple": true,
+            "mru-ui-select": 5,
+            "mru-sort-latest": false,
+            "mru-storage-key": "selectMru_{principalId}_queueList",
+            "operator": true,
+            "display-on-empty-model": true,
+            "model": {
+              "attribute": "queue_atex_desk_s",
+              "type": "LIST",
+              "sub-query": false
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "queueList",
+            "uiMethod": "GET"
+          }
+        },
+        "print-queues": {
+          "componentId": "desk-print-queues",
+          "description": "Prestige Print System queues",
+          "value": {
+            "type": "select",
+            "placeholder": "_QUEUES_",
+            "search-enabled": true,
+            "multiple": false,
+            "mru-ui-select": 5,
+            "mru-sort-latest": false,
+            "mru-storage-key": "selectMru_{principalId}_queueList",
+            "operator": false,
+            "display-on-empty-model": true,
+            "model": {
+              "attribute": "queue_atex_desk_s",
+              "type": "LIST",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "queueList",
+            "uiMethod": "GET"
+          }
+        },
+        "print-publication-dates": {
+          "componentId": "desk-print-publication-dates",
+          "description": "Print System Search Buttons",
+          "value": {
+            "type": "publication-dates",
+            "placeholder": "_PUBLICATION_DATE_",
+            "copy-model": {
+              "key": "publication_atex_desk_ss"
+            },
+            "parse": true,
+            "model": {
+              "attribute": "pubdate_atex_desk_ss",
+              "type": "PRINT-DATE",
+              "sub-query": true
+            }
+          },
+          "configuration": {
+            "use-configured-values": true,
+            "uiQuery": "searchStarter",
+            "fields-configuration": {
+              "name": "print-pub-date",
+              "id": "desk-print-pub-date"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

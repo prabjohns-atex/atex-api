@@ -1,0 +1,28 @@
+{
+  // Tag Manager configuration
+  "tag-manager-configuration" : {
+
+    // if checkUserHomeDept is true, the tree view is limited to the home department of the user
+    //"checkUserHomeDept": false,
+
+    // groupsPermissions's key is the "Group Name" in polopoly
+    // "sites" is the array of Site's externalId to be visible in the Sites tree.
+    // "dimensions" is the dimension array to show.
+    // "access" can be 'W' (Write), 'A' (Approve tags) or '*' (All)
+
+    "groupsPermissions" : {
+      "User admin top group": {
+        "sites": ["*"],
+        "dimensions": ["*"],
+        "access":["*"]
+      }
+    },
+
+    // A map between site externalId and dimensions to be shown
+    "dimensionsFilters" : {
+      "PolopolyPost.d": ["dimension.Organisation", "dimension.Location", "dimension.Person", "dimension.EditorialTag"],
+      "section.atextimes.site": ["dimension.Organisation", "dimension.Location", "dimension.Person", "dimension.EditorialTag"],
+      "dam.d": ["dimension.Organisation", "dimension.Location", "dimension.Person", "dimension.Tag", "dimension.EditorialTag"]
+    }
+  }
+}

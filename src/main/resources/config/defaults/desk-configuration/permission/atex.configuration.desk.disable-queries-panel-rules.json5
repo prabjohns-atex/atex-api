@@ -1,0 +1,11 @@
+{
+  "disable-queries-panel-rules":[
+    {
+      "id":"default-disable-queries-panel-rules",
+      "description":"Disable Queries Panel",
+      "config": {
+        "always": false
+      }
+    }
+  ]
+}

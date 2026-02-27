@@ -1,0 +1,22 @@
+{
+  "disable-manage-authors-rules": [
+    {
+      "id":"default-enable-manage-authors-rules",
+      "config": {
+        "always": true
+      }
+    },
+    {
+      "id":"always-enable-manage-authors-rules",
+      "config": {
+        "always": false
+      }
+    },
+    {
+      "id":"always-disable-manage-authors-rules",
+      "config": {
+        "always": true
+      }
+    }
+  ]
+}

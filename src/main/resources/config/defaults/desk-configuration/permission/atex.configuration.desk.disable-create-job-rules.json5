@@ -1,0 +1,12 @@
+{
+  "disable-create-job-rules":[
+    {
+      "id":"default-disable-create-job-rules",
+      "description":"Disable Create Job Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

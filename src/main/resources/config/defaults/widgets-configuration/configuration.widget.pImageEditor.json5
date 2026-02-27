@@ -1,0 +1,71 @@
+{
+  "engagement": {
+
+    // this is a list of sources..
+
+    "sources": [
+      "atex.dam.standard.WireImage",
+      "p.DamWireImage"
+    ],
+
+    // global configuration is optional.
+
+    "global": {
+
+      // this flag will specify if we need to add
+      // the original content aspect that points to
+      // the original wire.
+
+      "addOriginalContent": true
+
+      // the mapping configuration can be specified as a global
+      // property and then you can override in the specific one.
+
+      /*
+        "map": {
+          "name": [
+            "contentData/name",
+            "contentData/title"
+          ],
+          "type": [
+            "contentData/objectType"
+          ]
+        }
+      */
+    },
+
+    // configs will contain configuration specific to a certain source
+    "configs": {
+
+      "atex.dam.standard.WireImage": {
+        "map": {
+          "name": [
+            "contentData/name",
+            "contentData/title"
+          ],
+          "type": [
+            "contentData/objectType"
+          ]
+        }
+        // we will use the global configuration, uncomment this
+        // if you want to change the configuration for this source type.
+        // "addOriginalContent": true
+      },
+
+      "atex.onecms.image": {
+        "map": {
+          "name": [
+            "contentData/name",
+            "contentData/title"
+          ],
+          "type": [
+            "contentData/objectType"
+          ]
+        }
+      }
+
+    },
+
+    "exportEndpoint": "/onecms/dam/content/export"
+  }
+}

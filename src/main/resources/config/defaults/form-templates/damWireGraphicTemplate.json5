@@ -1,0 +1,78 @@
+{
+  "id": "com.atex.onecms.app.dam.wire.DamWireGraphicBean",
+  "type": "com.atex.onecms.app.dam.wire.DamWireGraphicBean",
+  "label": "Dam Wire Graphic",
+
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["securityParent", "name", "source", "section"]
+      },
+  
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "Security Parent",
+      "widget": "damSecurityParent",
+      "config": {
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "name",
+      "label": "name",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Graphic Name"
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "source",
+      "label": "Source",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Graphic source"
+      },
+      "domainObjects": {
+        "data": ["contentData", "source"]
+      }
+    },
+    {
+      "name": "section",
+      "label": "Section",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Graphic section"
+      },
+      "domainObjects": {
+        "data": ["contentData", "section"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": true
+      }
+    }
+  ]
+}

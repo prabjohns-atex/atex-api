@@ -16,7 +16,7 @@ public class AuthConfig
     {
         FilterRegistrationBean<AuthFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new AuthFilter(tokenService, properties.isEnabled()));
-        registration.addUrlPatterns("/content/*", "/dam/*", "/principals/*");
+        registration.addUrlPatterns("/content/*", "/dam/*", "/principals/*", "/admin/*");
         registration.setOrder(1);
         return registration;
     }

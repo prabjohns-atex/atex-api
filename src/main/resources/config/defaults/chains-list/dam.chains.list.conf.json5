@@ -1,0 +1,14 @@
+{
+	  "chains": [
+	  	"chain.configuration.demo.content.conf",
+	  	"chain.configuration.image.conf",
+	  	"chain.configuration.reuters.conf",
+	  	"chain.configuration.newsml.conf",
+	  	"chain.configuration.video.conf"
+	 	],
+	  "_type": "com.atex.onecms.app.dam.camel.configuration.DamChainsListBean",
+	  "objectType": "DamChainsList",
+	  "inputTemplate": "p.DamChainsList",
+	  "contentType": "parentDocument",
+	  "name": "Routes Configuration"
+	}

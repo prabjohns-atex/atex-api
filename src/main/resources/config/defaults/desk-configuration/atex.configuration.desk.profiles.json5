@@ -1,0 +1,38 @@
+{
+  "profiles": {
+
+    // you can specify a configuration for a group.
+
+    "groups": [
+      /*
+      {
+        "name": "Global Comments Moderators",
+        "config": "Set1"
+      }
+      */
+    ],
+
+    // and you can specify a configuration for a user which will override
+    // any other configuration.
+
+    "users": [
+
+      {
+        "name": "riccardo",
+        "config": "Set3"
+      },
+
+      {
+        "name": "sysadmin",
+        "config": "Set4"
+      }
+
+    ],
+
+    // you can also specify a default configuration which will be applied
+    // to any user which has not received any configuration from the rules
+    // above.
+
+    "default": "Default"
+  }
+}

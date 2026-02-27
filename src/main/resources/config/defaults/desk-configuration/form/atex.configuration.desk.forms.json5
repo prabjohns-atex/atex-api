@@ -1,0 +1,10 @@
+{
+  "forms": [
+    {
+      "id": "default-forms",
+      "description": "Forms - Default Configuration",
+      "config": {
+      }
+    }
+  ]
+}

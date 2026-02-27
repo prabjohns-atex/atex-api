@@ -1,0 +1,143 @@
+{
+  "id": "atex.dam.standard.WireImage.dam.preview",
+  "type": "atex.dam.standard.WireImage",
+  "label": "Dam Wire Image",
+  "namePath": ["contentData", "headline"],
+  "aspects": {
+    "atex.Files": {
+    },
+    "atex.ImageEditInfo": {
+    },
+    "atex.Image": {
+    },
+    "atex.Metadata": {
+    }
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["image", "headline", "body", "byline", "specialInstructions", "urgency"]
+      },
+  
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "Exif/Xmp/Iptc",
+        "fields": ["exifMetadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "image",
+      "widget": "pImageEditor",
+
+      "config": {
+        "editable": false 
+      },
+
+      "domainObjects": {
+        "files": ["atex.Files"],
+        "editInfo": ["atex.ImageEditInfo"],
+        "image": ["atex.Image"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "Headline",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "damFieldView",
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "byline",
+      "label": "By-line",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false,
+        "full": false,
+        "tags": {
+          "IPTC": ["By-line"],
+          "IPTC_types":["java.lang.String"]
+        }
+      }
+    },
+    {
+      "name": "specialInstructions",
+      "label": "Special Instructions",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false,
+        "full": false,
+        "tags": {
+          "IPTC": ["SpecialInstructions"],
+          "IPTC_types":["java.lang.String"]
+        }
+      }
+    },
+    {
+      "name": "urgency",
+      "label": "Urgency",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false,
+        "full": false,
+        "tags": {
+          "IPTC": ["Urgency"],
+          "IPTC_types":["java.lang.Double"]
+        }
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    },
+    {
+      "name": "exifMetadata",
+  	  "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

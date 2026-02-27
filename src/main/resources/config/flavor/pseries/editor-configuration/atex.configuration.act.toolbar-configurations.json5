@@ -1,0 +1,82 @@
+{
+  "toolbar-configurations": [
+    {
+      "id": "default-toolbar-configurations",
+      "description": "ACT Toolbars List - Default Configuration",
+      "config": {
+        "toolbars": [
+          {
+            "type": "cross-search",
+            "visible-if": {
+              "fields": [
+                {
+                  "path": "data/aspects/contentData/data/inputTemplate",
+                  "condition": "NOT-EQUALS",
+                  "to": "p.NosqlArticleCollab"
+                }
+              ]
+            }
+          },
+          {
+            "type": "publish-button",
+            "visible-if": {
+              "fields": [
+                {
+                  "path": "data/aspects/contentData/data/inputTemplate",
+                  "condition": "NOT-EQUALS",
+                  "to": "p.NosqlArticleCollab"
+                }
+              ]
+            },
+            "background-style": {
+               "published": "#66FF33",
+               "updated": "#66FF33",
+               "unpublished": "gold",
+               "draft": "gold",
+               "default": "gold"
+            }
+          },
+          {
+            "type": "edit-user-profile",
+            "visible": true
+          },
+          {
+            "type": "send-to-queue",
+            "visible": true,
+            "config": {
+              "objectTypes": "article,image"
+            }
+          },
+          {
+            "type": "link-to-page",
+            "visible": true,
+            "config": {
+              "objectTypes": "article,image"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "collab-robin-toolbar-configurations",
+      "description": "ACT Toolbars List - Collaboratori Configuration",
+      "config": {
+        "toolbars": [
+          {
+            "type": "cross-search",
+            "visible": false
+          },
+          {
+            "type": "publish-button",
+            "visible": true
+
+          },
+          {
+            "type": "edit-user-profile",
+            "visible": true
+          }
+        ]
+      }
+    }
+  ]
+}

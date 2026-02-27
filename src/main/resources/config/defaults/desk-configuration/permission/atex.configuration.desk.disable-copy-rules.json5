@@ -1,0 +1,12 @@
+{
+  "disable-copy-rules":[
+    {
+      "id":"default-disable-copy-rules",
+      "description":"Disable Copy Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

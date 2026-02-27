@@ -1,0 +1,10 @@
+{
+    "height": "550px",
+    "useCurrentLocation": true,
+    "gmConfig": {
+      "center": {
+        "lat": 52.633872,
+        "lng": 1.294744
+      }
+    }
+}

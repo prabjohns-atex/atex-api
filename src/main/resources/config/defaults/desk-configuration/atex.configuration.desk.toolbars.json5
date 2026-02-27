@@ -1,0 +1,546 @@
+{
+  "toolbars": [{
+      "id": "default-toolbars-list",
+      "description": "Toolbars List - Default Configuration",
+
+      "config": {
+                "advanced-search-panel": {
+                  "visibility": true,
+                  "componentId": "desk-advanced-search-panel",
+                  "buttons": [
+                    {
+                      "buttonId": "physical-pages-search",
+                      "visibility": false
+                    }
+                  ]
+                },
+          "send-contents": {
+            "visibility": true,
+            "componentId": "desk-send-contents",
+          "buttons": [
+          {
+            "buttonId": "0",
+          "visibility": true
+          },
+          {
+            "buttonId": "1",
+          "visibility": true
+          },
+          {
+            "buttonId": "2",
+          "visibility": true
+          },
+          {
+            "buttonId": "3",
+          "visibility": true
+          }]
+          },
+
+        "right-buttons": {
+          "componentId": "desk-right-buttons",
+          "buttons": [
+          {
+            "buttonId": "unlock",
+          "visibility": true
+          },
+          {
+            "buttonId": "refresh",
+          "visibility": true
+          },
+          {
+            "buttonId": "thumbnailList",
+          "visibility": true
+          },
+          {
+            "buttonId": "list",
+          "visibility": true
+            },
+          {
+            "buttonId": "thumbnail",
+          "visibility": true
+          },
+          {
+            "buttonId": "grid",
+          "visibility": true
+            },
+          {
+            "buttonId": "job",
+          "visibility": true
+          },
+          {
+            "buttonId": "sort-button",
+          "visibility": true
+          }
+          ]
+        },
+
+        "edit-toolbar": {
+            "componentId": "desk-edit-toolbar",
+          "visibility": true,
+          "icon":"fa fa-edit",
+          "operations": {
+            "edit" : {
+              "name": "edit",
+                      "id":"desk-edit"
+                    },
+
+                    "preview": {
+                      "name": "preview",
+                      "id":"desk-preview"
+                    }
+          }
+          },
+
+        "export-operations": {
+          "componentId": "desk-export-operations",
+          "visibility": true,
+          "controller":"DamClipboardController",
+          "buttons": [
+                  {
+                    "buttonId": "engage",
+                    "icon": "fa fa-share-square-o",
+                    "label": "__ENGAGE__",
+                    "action": "export",
+                    "visibility": true,
+                    "templates":["p.DamArticle", "p.DamWireArticle"],
+                    "default": false,
+                    "check": "showEngage"
+                  },
+                  {
+                    "buttonId": "engageAndOpenWithTemplateDialog",
+                    "icon": "fa fa-share-square",
+                    "label": "__ENGAGE_AND_EDIT_WITH_TEMPLATE__",
+                    "action": "engageAndOpenWithTemplateDialog",
+                    "visibility": true,
+                    "default": false,
+                    "check": "canEngageEditWithTemplate"
+                  },
+                  {
+                    "buttonId":"engage-copy-to-clipboard",
+                    "icon":"fa fa-files-o",
+                    "label":"__ENGAGE_AND_COPY_TO_CLIPBOARD__",
+                    "action":"copy",
+                    "visibility": true,
+                    "templates":["p.DamArticle", "p.DamWireArticle"],
+                    "default":false,
+                    "check": "showEngageCopy"
+                  },
+                  {
+                    "buttonId":"copy-to-clipboard",
+                    "icon":"fa fa-copy",
+                    "label":"__COPY_TO_CLIPBOARD__",
+                    "action":"add",
+                    "visibility":true,
+                    "templates":["*"],
+                    "default":true,
+                    "check": "showCopy"
+                  },
+                  {
+                    "buttonId":"engage-and-edit",
+                    "icon":"fa fa-edit",
+                    "label":"__ENGAGE_AND_EDIT__",
+                    "action":"openUsing",
+                    "visibility":true,
+                    "use-template":[{"type": "article", "template":"atex.onecms.article.print"}],
+                    "templates":["p.DamArticle","p.DamImage", "p.DamWireArticle","p.DamWireImage"],
+                    "default":false,
+                    "check": "showEngageEdit"
+                  },
+                  {
+                    "buttonId": "create-print-variant",
+                    "visibility": true,
+                    "default": false,
+                    "templates":["p.NosqlImage"],
+                    "icon": "fa fa-copy",
+                    "action": "createPrintVariantImage",
+                    "label": "__CREATE_IMAGE_PRINT_VARIANT__",
+                    "check": "showCreatePrintVariant"
+                  },
+                  {
+                    "buttonId":"publish-to-web",
+                    "icon":"fa fa-share",
+                    "label":"__PUBLISH_TO_WEB__",
+                    "action":"publish",
+                    "visibility":true,
+                    "templates":["*"],
+                    "default":false,
+                    "check": "showPublish"
+                  },
+                  {
+                    "buttonId":"unpublish-to-web",
+                    "icon":"fa fa-ban",
+                    "label":"__UNPUBLISH_FROM_WEB__",
+                    "action":"unpublish",
+                    "visibility":true,
+                    "templates":["*"],
+                    "default":false,
+                    "check": "showUnpublish"
+                  },
+                  {
+                    "buttonId":"duplicate",
+                    "icon":"fa fa-files-o",
+                    "label":"__DUPLICATE__",
+                    "action":"duplicate",
+                    "visibility":true,
+                    "templates":["p.DamArticle","p.DamImage","p.DamGraphic","p.Collection","p.DamPage","p.DamVideo","p.NosqlArticle","p.NosqlImage","p.DamJob","p.EventArticle"],
+                    "default":false,
+                    "check": "showDuplicate",
+                    "popup": "isInPublication"
+                  }
+           ]
+        },
+
+        "other-operations": {
+            "componentId": "desk-other-operations",
+            "css": "hidden-xs",
+          "visibility": true,
+          "buttons": [
+          {
+            "buttonId": "change-status",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-send",
+            "action": "changeStatus",
+            "label": "__CHANGE_STATUS_LABEL__"
+          },
+          {
+            "buttonId": "print",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-print",
+            "action": "printThis",
+            "label": "__PRINT__"
+          },
+          {
+            "buttonId": "download",
+            "visibility": true,
+            "default": false,
+            "directive": " <dam-download-button entries='entries' button-style=\"'hidden-xs btn btn-default table-list-view'\" label=\"'__DOWNLOAD__'\"></dam-download-button>"
+          },
+          {
+            "buttonId": "unlock",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-unlock",
+            "action": "unlock",
+            "label": "__UNLOCK_ITEM_BUTTON__",
+            "check": "showUnlock"
+          },
+          {
+            "buttonId": "delete",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-trash-o",
+            "action": "delete",
+            "label": "__REMOVE__",
+            "check": "showDelete",
+            "message": "_ASK_PROCEED_DELETE_"
+          },
+          {
+            "buttonId": "undelete",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-undo",
+            "action": "undelete",
+            "label": "__RESTORE__",
+            "check": "showUndelete"
+          },
+          {
+            "buttonId": "add-to-collection",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-plus-circle",
+            "action": "collect",
+            "label": "__COLLECT_ITEMS_TOOLTIP__",
+            "check": "canCollect()"
+          },
+          {
+            "buttonId": "show-history",
+            "visibility": true,
+            "default": true,
+            "icon": "fa fa-history",
+            "action": "showHistory",
+            "label": "__SHOW_HISTORY_TOOLTIP__",
+            "check": "canShowHistory()"
+          },
+          {
+            "buttonId": "remove-from-folder",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-remove",
+            "action": "removeFromCurrentFolder",
+            "label": "__FOLDERS_REMOVE_FROM_CURRENT_LABEL__",
+            "check": "canRemoveFromCurrentFolder()",
+            "message": "_ASK_PROCEED_REMOVE_"
+          },
+          {
+            "buttonId": "move-to-folder",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-folder",
+            "action": "moveToFolder",
+            "label": "__FOLDERS_MOVE_TO_LABEL__"
+          },
+          {
+            "buttonId": "page-planner",
+            "visibility": true,
+            "default": true,
+            "icon": "fa fa-columns",
+            "action": "loadPlanView",
+            "label": "__PAGEPLAN_VIEW__",
+            "check": "showPlanner"
+          },
+          {
+            "buttonId": "page-typeset",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-file-pdf-o",
+            "action": "openPageTypeSet",
+            "label": "__TYPESET_BUTTON__",
+            "check": "showPlanner"
+          },
+          {
+            "buttonId": "create-job",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-tasks",
+            "action": "createJob",
+            "label": "__CREATE_JOB__",
+            "check": "showCreateJob"
+          },
+          {
+            "buttonId": "clear-engage",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-share-square",
+            "action": "clearEngage",
+            "label": "__CLEAR_ENGAGE__",
+            "check": "showClearEngagements"
+          },
+          {
+            "buttonId": "color-coding",
+            "visibility": true,
+            "default": false,
+            "directive": "<div class=\" dam-list-multi-tools\" ><dam-color-coding-multiple show-caret=\" false\"  button-style=\" 'table-list-view'\"  showlabel=\" true\"  values=\"entries\" ></dam-color-coding-multiple></div>",
+            "check": "showRating()"
+          },
+          {
+            "buttonId": "icon-coding",
+            "visibility": true,
+            "default": false,
+            "directive": "<div class=\" dam-list-multi-tools\" ><dam-multi-icon-coding-multiple showlabel=\" true\"  show-caret=\" false\"  button-style=\" 'table-list-view'\"   ng-clickshowlabel=\" true\"  values=\"entries\" ></dam-multi-icon-coding-multiple></div>",
+            "check": "showRating()"
+          },
+          {
+            "buttonId": "rating",
+            "visibility": true,
+            "default": false,
+            "directive": "<div class=\" dam-list-multi-tools\" ><dam-icon-coding-multiple  button-style=\" 'table-list-view'\"  values=\"entries\" ></dam-icon-coding-multiple></div>",
+            "check": "showRating()"
+          },
+          {
+            "buttonId": "link-to-print",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-square",
+            "action": "linkToPrint",
+            "label": "__LINK_TO_PRINT__",
+            "check": "showLinkToPrint"
+          },
+          {
+            "buttonId": "copy-to-queue",
+            "visibility": false,
+            "excludeTemplates":["p.DamArticle", "p.DamWireArticle", "p.DamImage", "p.DamWireImage", "p.DamPage"],
+            "default": false,
+            "icon": "fa fa-square",
+            "action": "copyToQueue",
+            "label": "_COPY_TO_QUEUE_",
+            "check": "showSendToQueue"
+          },
+          {
+            "buttonId": "send-to-queue",
+            "visibility": false,
+            "default": false,
+            "icon": "fa fa-square",
+            "action": "sendToQueue",
+            "label": "_SEND_TO_QUEUE_",
+            "check": "showSendToQueue"
+          },
+          {
+            "buttonId": "spike",
+            "visibility": false,
+            "default": false,
+            "icon": "fa fa-square",
+            "action": "spike",
+            "label": "_SPIKE_",
+            "check": "showSpike"
+          },
+          {
+            "buttonId": "unassign-from-page",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-unlink",
+            "action": "unassignFromPage",
+            "label": "__UNASSIGN_FROM_PAGE__",
+            "check": "showUnassignFromPage"
+          },
+          {
+            "buttonId": "assign-to-page",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-link",
+            "action": "assignToPage",
+            "label": "__ASSIGN_TO_PAGE__",
+            "check": "showAssignToPage"
+          },
+          {
+            "buttonId": "dup-assign-to-page",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-copy",
+            "action": "dupAssignToPage",
+            "label": "__DUP_AND_ASSIGN_TO_PAGE__",
+            "check": "showDupAssignToPage"
+          },
+          {
+            "buttonId": "rebuild-page",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-refresh",
+            "action": "rebuildPage",
+            "label": "__REBUILD_PAGE__",
+            "check": "showRebuildPage"
+          },
+          /*{
+            "buttonId": "folios-property-bag-page",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-newspaper-o",
+            "action": "propertyBag",
+            "label": "Edit Folios",
+            "template": "atex.dam.changeFoliosPropertyBag"
+          },
+          {
+            "buttonId": "puffs-property-bag-page",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-newspaper-o",
+            "action": "propertyBag",
+            "label": "Edit Puffs",
+            "template": "atex.dam.changePuffsPropertyBag"
+          },*/
+          {
+            "buttonId": "plan-rebuild",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-list-alt",
+            "action": "planRebuildPage",
+            "label": "__PLAN_REBUILD__",
+            "check": "showPlanRebuildPage"
+          },
+          {
+            "buttonId": "send-to-archive",
+            "visibility": true,
+            "default": true,
+            "icon": "fa fa-paper-plane",
+            "action": "sendToArchive",
+            "label": "__SEND_TO_ARCHIVE__",
+            "check": "showSendToArchive"
+          },
+          {
+            "buttonId": "restrict-content",
+            "visibility": true,
+            "default": true,
+            "icon": "fa fa-thumbs-down",
+            "action": "restrictContent",
+            "label": "__RESTRICT_CONTENT__",
+            "check": "showRestrictContent"
+          },
+          {
+            "buttonId": "unrestrict-content",
+            "visibility": true,
+            "default": true,
+            "icon": "fa fa-thumbs-up",
+            "action": "unRestrictContent",
+            "label": "__UNRESTRICT_CONTENT__",
+            "check": "showUnRestrictContent"
+          }
+          ]
+        },
+        "physpage-operations": {
+            "componentId": "desk-physpage-operations",
+            "css": "hidden-xs",
+          "visibility": true,
+          "buttons": [
+          {
+            "buttonId": "change-status",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-send",
+            "action": "changeStatus",
+            "label": "__CHANGE_STATUS_LABEL__"
+          },
+          {
+            "buttonId": "rebuild-page",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-refresh",
+            "action": "rebuildPage",
+            "label": "__REBUILD_PAGE__",
+            "check": "showRebuildPage"
+          },
+          {
+            "buttonId": "plan-rebuild",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-list-alt",
+            "action": "planRebuildPage",
+            "label": "__PLAN_REBUILD__",
+            "check": "showPlanRebuildPage"
+          }
+          ]
+        },
+        "custom-operations": {
+            "componentId": "desk-custom-operations",
+            "css": "hidden-xs",
+          "visibility": false,
+          "buttons": [
+          {
+            "buttonId": "change-status-to-fixed-value",
+            "visibility": true,
+            "default": false,
+            "icon": "fa fa-send",
+            "action": "invokeJS",
+            "javascript": "this.aspects['atex.WebContentStatus'].data.status.statusID = 'autopublish';",
+            "updateContent": true,
+            "label": "__CHANGE_STATUS_LABEL__"
+          },
+          {
+                        "buttonId": "call-web-service",
+                        "visibility": true,
+                        "default": false,
+                        "icon": "fa fa-send",
+                        "action": "invokeJS",
+                        "javascript": "this.$http.get('http://localhost:8080/publish/' + this.data.id);",
+                        "updateContent": false,
+                        "label": "Publish to Web Service"
+                      }
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "dummy-toolbars-list",
+      "description": "Toolbars list for dummy users",
+
+      "config": {
+        "other-operations": {
+          "componentId": "desk-other-operations",
+          "visibility": false,
+          "buttons": []
+        }
+      }
+    }
+  ]
+}

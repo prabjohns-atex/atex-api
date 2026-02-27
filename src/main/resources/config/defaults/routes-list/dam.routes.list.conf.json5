@@ -1,0 +1,15 @@
+{
+	  "configurations": [
+	  	"route.configuration.unzip.conf",
+	  	"route.configuration.json.conf",
+	  	"route.configuration.image.conf",
+	  	"route.configuration.reuters.conf",
+	  	"route.configuration.newsml.conf",
+	  	"route.configuration.video.conf" 
+	 	],
+	  "_type": "com.atex.onecms.app.dam.camel.configuration.DamRoutesListBean",
+	  "objectType": "DamRoutesList",
+	  "inputTemplate": "p.DamRoutesList",
+	  "contentType": "parentDocument",
+	  "name": "Routes Configuration"  
+	}

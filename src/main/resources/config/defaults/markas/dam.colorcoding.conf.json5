@@ -1,0 +1,35 @@
+{
+	  "field": "colorcoding",
+	  "colors": [ 
+	  	{
+	  		"id"   :"0",
+	  		"color":"white",
+       	  	"label":"None"
+    	},
+    	{
+	  		"id"   :"1",
+	  		"color":"red",
+       	  	"label":"Important"
+    	},
+    	{
+	  		"id"   :"2",
+	  		"color":"blue",
+       	  	"label":"Politics"
+    	},
+    	{
+	  		"id"   :"3",
+	  		"color":"yellow",
+       	  	"label":"Economics"
+    	},
+    	{
+	  		"id"   :"4",
+	  		"color":"green",
+       	  	"label":"Sport"
+    	}    	
+	 	],
+	  "_type": "com.atex.onecms.app.dam.markas.colorcoding.DamColorCodingBean",
+	  "objectType": "ColorCoding",
+	  "inputTemplate": "p.DamColorCoding",
+	  "contentType": "parentDocument",
+	  "name": "colorcoding_conf"  
+	}

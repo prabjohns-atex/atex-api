@@ -1,0 +1,171 @@
+{
+  "grid-list": [
+    {
+      "id": "default-grid-list",
+      "description": "Grid List - Default Configuration",
+      "config": {
+        "grid-list": {
+        "componentId": "desk-grid-list",
+        "body": [
+          {
+            "id": "default",
+            "thumbnail": {
+              "path": "_data/aspects/contentData/data/thumbUrl"
+            },
+            "placeholder": {
+              "field": "_data/aspects/contentData/data/body",
+              "limit": 200
+            },
+            "display-thumbnails":["collection"],
+            "rows":[
+              {
+                "widgets": [
+                  {
+                    "name": "sequential",
+                    "id": "desk-sequential"
+                  },
+                  {
+                    "name": "info",
+                    "id": "desk-info"
+                  }
+                ]
+              },
+
+              {
+                "widgets": [
+                  {
+                    "name": "editable-status",
+                    "id": "desk-editable-status"
+                  },
+                  {
+                    "name": "editable-web-status",
+                    "id": "desk-editable-web-status"
+                  },
+                  {
+                    "name": "engage-icon",
+                    "id": "desk-engage-icon",
+                    "css": "auto pull-right",
+                    "display-if-empty":false
+                  }
+                ]
+              },
+
+              {
+                "widgets": [
+                  {
+                    "name": "name",
+                    "id": "desk-name"
+                  }
+                ]
+              },
+
+              {
+                "widgets": [
+                  {
+                    "name": "insertion-date",
+                    "id": "desk-insertion-date"
+                  }
+                ]
+              },
+
+              {
+                "widgets": [
+                  {
+                    "name": "source",
+                    "id": "desk-source"
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            "id": "page",
+            "thumbnail": {
+              "path": "_data/aspects/contentData/data/thumbUrl"
+            },
+            "placeholder": {
+              "field": "_data/aspects/contentData/data/body",
+              "limit": 200
+            },
+            "display-thumbnails":["collection"],
+            "rows":[
+              {
+                "widgets": [
+                  {
+                    "name": "sequential",
+                    "id": "desk-sequential"
+                  },
+                  {
+                    "name": "info",
+                    "id": "desk-info"
+                  },
+                  {
+                    "name": "non-plan-icon",
+                    "id": "desk-non-plan-icon"
+                    },
+
+                    {
+                    "name": "out-of-date-icon",
+                    "id": "desk-out-of-date-icon"
+                    }
+                ]
+              },
+
+              {
+                "widgets": [
+                  {
+                    "name": "editable-status",
+                    "id": "desk-editable-status"
+                  },
+                  {
+                    "name": "editable-web-status",
+                    "id": "desk-editable-web-status"
+                  },
+                  {
+                    "name": "engage-icon",
+                    "id": "desk-engage-icon",
+                    "css": "auto pull-right",
+                    "display-if-empty":false
+                  }
+                ]
+              },
+
+              {
+                "widgets": [
+                  {
+                    "name": "name",
+                    "id": "desk-name"
+                  }
+                ]
+              },
+
+              {
+                "widgets": [
+                  {
+                    "name": "publication-date",
+                    "id": "desk-publication-date"
+                  }
+                ]
+              },
+
+              {
+                "widgets": [
+                  {
+                    "name": "source",
+                    "id": "desk-source"
+                  }
+                ]
+              }
+            ]
+          }
+
+
+
+
+          ]
+        }
+      }
+    }
+  ]
+}

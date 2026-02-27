@@ -1,0 +1,7 @@
+{
+	 "configurations": [],
+	  "_type": "com.atex.onecms.app.dam.camel.DamCamelRoutesBean",
+	  "objectType": "CamelRoutes",
+	  "inputTemplate": "p.DamCamelRoutes",
+	  "name": "dam-camelroutes-configuration.cfg"  
+	}

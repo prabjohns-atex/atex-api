@@ -807,3 +807,265 @@ desk.image-metadata-service.enabled=false
 | `LifecycleContextPreStore.java` | Add optional `FileService` field |
 | `LocalContentManager.java` | Wildcard hook matching, post-store indexing, `FileService` + `ContentIndexer` injection |
 | `SolrService.java` | Add `index()` and `delete()` methods |
+
+## Increment 7 — Resource-Based Configuration System
+
+Replaces database-stored configuration with a 5-tier resource-based system. All existing consumers that call `ContentManager.resolve(externalId)` → `ContentManager.get(vid)` work without code changes.
+
+### Architecture
+
+```
+Configuration Lookup (precedence order):
+
+1. DATABASE (live)     — config modified via UI at runtime
+2. PLUGIN (classpath)  — config/project/*.json inside PF4J plugin JARs
+3. PROJECT (classpath) — classpath:config/project/{id}.json
+4. FLAVOR (classpath)  — classpath:config/flavor/{hseries|pseries}/{id}.json
+5. PRODUCT (classpath) — classpath:config/defaults/{id}.json
+
+                        ┌──────────────────────┐
+  WFStatusUtils ──────→ │                      │
+  RemotesConfigFactory → │  LocalContentManager │
+  RestrictContentCfg ──→ │    resolve(extId)    │──→ ConfigurationService
+  BeanMapperConfig ────→ │    get(versionId)    │     ├─ check DB (live)
+  DamDataResource ─────→ │                      │     ├─ check plugin resources
+  ContentController ───→ │                      │     ├─ check project resources
+                        └──────────────────────┘     ├─ check flavor overlay
+                                                     └─ check product defaults
+```
+
+Projects are expected to be PF4J plugins — a JAR containing `config/project/*.json` overrides plus any custom `DeskPreStoreHook` or `DeskContentComposer` extensions. The plugin classloader is scanned at startup so project config files are automatically discovered.
+
+### Flavor System (hseries / pseries)
+
+The original adm-starterkit has two flavors controlled by a Maven build property (`-Ddesk=hseries` or `-Ddesk=pseries`). Only ~22 files differ between them (menus, toolbars, widgets, search forms, permissions, print templates). In desk-api, flavors are handled at runtime via `desk.config.flavor`:
+
+- `config/flavor/hseries/` — only the files that differ for H-Series integration
+- `config/flavor/pseries/` — only the files that differ for P-Series integration
+- Files NOT present in the flavor directory fall through to product defaults
+- A system doesn't change flavors at runtime — this is a deployment-time setting
+
+### Config Interception
+
+**`LocalContentManager.resolve(externalId)`**: tries DB first; if not found and `ConfigurationService.isConfigId(externalId)`, returns a synthetic `ContentVersionId` with delegation ID `"config"`.
+
+**`LocalContentManager.get(vid)`**: if `vid.getDelegationId() == "config"`, returns config from `ConfigurationService.toContentResult()` instead of hitting DB.
+
+**`ContentController.getContentByExternalId()`**: if `ContentService.resolveExternalId()` returns empty and `ConfigurationService.isConfigId(id)`, returns the config directly as `ContentResultDto` (no redirect).
+
+### File Format
+
+All config files use the **`.json5`** extension. This allows comments (`//`, `/* */`), trailing commas, and other JSON5 syntax without IDE validation errors. `ConfigurationService` scans for `.json5` first, then `.json` as a fallback (for backwards compatibility with plugins using `.json`).
+
+The `parseJson()` method tries standard JSON parsing first; if that fails, it falls back to `Json5Reader.toJson()` which strips comments/trailing commas and uses Gson's lenient mode. This means both strict JSON and JSON5 content work regardless of file extension.
+
+### Resource File Layout
+
+```
+src/main/resources/config/
+  defaults/                              ← product defaults (187 files, shipped with desk-api)
+    audioai/
+      com.atex.onecms.audioAI.Configuration.json5
+    ayrshare/
+      com.atex.onecms.ayrshare.Configuration.json5
+    camel-routes/
+      dam.camelroutes.conf.json5
+    cfg/
+      com.atex.onecms.beanmapper.Configuration.json5
+      dam.thirdpartiescfg.conf.json5
+    chains-list/
+      dam.chains.list.conf.json5
+      chain.configuration.*.conf.json5    (5 chain configs)
+    desk-configuration/
+      atex.configuration.desk.*.json5     (~17 desk UI configs)
+      form/
+        atex.configuration.desk.*.json5   (7 form configs)
+      permission/
+        atex.configuration.desk.disable-*.json5  (~26 permission rules)
+      result-set/
+        atex.configuration.desk.*.json5   (7 result-set configs)
+    desk-system-configuration/
+      atex.configuration.desk-system-configuration.json5
+    distributionlist/
+      dam.distributionlist.conf.json5
+    editor-configuration/
+      atex.configuration.act.*.json5       (5 ACT editor configs)
+      com.atex.onecms.texteditor.EditorConfigurationContent.json5
+      permission/
+        atex.configuration.act.disable-publish-rules.json5
+    export/
+      dam.export.conf.json5
+    form-templates/
+      dam*Template*.json5                  (38 form definitions from desk)
+      atex.onecms.Template-*.json5         (7 from content/common)
+    gallery-configurations/
+      dam.galleryconfigurations.conf.json5
+    image-service/
+      com.atex.onecms.image.ImageFormatConfigurationContent.json5
+    importer/
+      com.atex.onecms.dam.beanImporter.Configuration.json5
+    index/
+      desk.content.indexing.indexComposer.json5
+      desk.content.indexing.liveblog.indexComposer.json5
+    localization/
+      desk/
+        atex.onecms.desk.locale.{lang}.json5  (10 languages)
+      locale/
+        atex.onecms.custom.locale.{lang}.json5 (10 languages)
+    mail-service/
+      com.atex.onecms.mail-service.Configuration.json5
+    markas/
+      dam.colorcoding.conf.json5
+      dam.iconcoding.conf.json5
+      dam.multiiconcoding.conf.json5
+    partition/
+      dam.partitions.conf.json5
+    permissions/
+      com.atex.onecms.permission.PermissionConfigurationContent.json5
+    processors-list/
+      dam.processors.list.conf.json5
+      processor.configuration.*.conf.json5 (7 processor configs)
+    publish/
+      com.atex.onecms.dam.beanPublisher.Configuration.json5
+      com.atex.onecms.ace.publish.Configuration.json5
+      publish.page.configuration.json5
+    remotes/
+      com.atex.onecms.dam.remotes.Configuration.json5
+    reset-password/
+      com.atex.onecms.reset-password.Configuration.json5
+    restrictContent/
+      atex.configuration.desk.restrictContent.json5
+    routes-list/
+      dam.routes.list.conf.json5
+      route.configuration.*.conf.json5    (6 route configs)
+    sendcontent/
+      dam.sendcontent.conf.json5
+    settings/
+      com.atex.onecms.general.default.Configuration.json5
+    smartupdates/
+      dam.smartupdates.conf.json5
+    tag-manager/
+      atex.configuration.tag-manager-configuration.json5
+    widgets-configuration/
+      configuration.widget.*.json5         (9 widget configs)
+    workflow/
+      dam.wfstatuslist.d.json5            ← empty default: {"statuses": []}
+      dam.webstatuslist.d.json5           ← empty default: {"statuses": []}
+  flavor/                                 ← flavor-specific overrides (only files that differ)
+    hseries/
+      .gitkeep
+    pseries/                              ← 14 P-Series override files
+      desk-configuration/
+        atex.configuration.desk.copyfit-configurations.json5
+        atex.configuration.desk.menus.json5
+        atex.configuration.desk.toolbars.json5
+        atex.configuration.desk.widgets.json5
+        form/
+          atex.configuration.desk.search-forms.json5
+          atex.configuration.desk.smart-folder-filters.json5
+        permission/
+          atex.configuration.desk.disable-queues-panel-rules.json5
+        result-set/
+          atex.configuration.desk.thumbnail-list.json5
+      editor-configuration/
+        atex.configuration.act.toolbar-configurations.json5
+        permission/
+          atex.configuration.act.disable-publish-rules.json5
+      form-templates/
+        atex.onecms.Template-atex.onecms.article.print.json5
+        atex.onecms.Template-atex.onecms.article.print.preview.json5
+        atex.onecms.Template-atex.onecms.article.production.dam.preview.json5
+      widgets-configuration/
+        configuration.widget.activePreview.json5
+  project/                                ← project overrides (empty by default)
+    .gitkeep
+```
+
+External ID = filename without `.json5` extension. Subdirectories are for organization only.
+
+**201 config files total**: 187 product defaults (from gong/desk + gong/content/common) + 14 P-Series flavor overrides (from adm-starterkit).
+
+### Config Sync Scripts
+
+Python scripts in `scripts/` automate re-syncing config files from the original source codebases.
+
+**`scripts/config-mapping.txt`** — Pipe-delimited mapping file (201 entries) tracing every config file back to its source. Format:
+```
+type|source_base|source_path|dest_tier|dest_subdir|external_id
+```
+
+Columns:
+- `type`: `xml-cdata` (extract JSON from XML component CDATA), `json-ref` (XML references separate JSON file), `json` (direct copy), `manual` (no source)
+- `source_base`: `gong-desk`, `gong-common`, `adm-starterkit-pseries`, `none`
+- `source_path`: relative path within source_base
+- `dest_tier`: `defaults` or `flavor/pseries`
+- `dest_subdir`: subdirectory under the tier
+- `external_id`: output filename without `.json5`
+
+To add a new config: append a line to this file and run the sync script.
+
+**`scripts/config-sync.py`** — Reads the mapping and extracts/copies configs:
+```bash
+python scripts/config-sync.py              # Dry run (show what would change)
+python scripts/config-sync.py --apply      # Actually write files
+python scripts/config-sync.py --check      # Exit 1 if out of sync (CI-friendly)
+python scripts/config-sync.py --verbose    # Show all entries including unchanged
+python scripts/config-sync.py --filter X   # Only process entries matching X
+```
+
+Handles three XML component patterns (`data/value`, `contentData/contentData`, `model/pojo`), file-reference resolution (locale `.json5` files, template JSON via `file=` attributes), and direct JSON copies. Idempotent — re-running after `--apply` shows `201 unchanged, 0 errors`.
+
+Source base directories (relative to project parent):
+| Shorthand | Path |
+|---|---|
+| `gong-desk` | `../gong/desk/content/src/main/content` |
+| `gong-common` | `../gong/content/common/src/main/content` |
+| `adm-starterkit` | `../adm-starterkit/content/custom-content/src/main/content` |
+| `adm-starterkit-pseries` | `../adm-starterkit/content/custom-pseries-content/src/main/content` |
+
+### Configuration Admin REST API
+
+`ConfigurationController` at `/admin/config` (auth required via `AuthFilter`):
+
+| Method | Path | Behaviour |
+|--------|------|-----------|
+| GET | `/admin/config` | List all known config IDs with source tier (product/project/plugin/live) |
+| GET | `/admin/config/{externalId}` | Get effective config JSON (merged precedence) |
+| GET | `/admin/config/{externalId}/sources` | Get all tiers separately (for diff/audit) |
+| PUT | `/admin/config/{externalId}` | Save live override to DB |
+| DELETE | `/admin/config/{externalId}` | Delete live override (reverts to resource defaults) |
+| GET | `/admin/config/export` | Export all live (DB) overrides as a JSON bundle |
+| GET | `/admin/config/patch` | Unified diff of DB overrides against resource defaults (text/plain) |
+
+### Configuration (`application.properties`)
+
+```properties
+desk.config.enabled=true
+# Flavor overlay: hseries or pseries (empty = no flavor overlay)
+desk.config.flavor=
+```
+
+### New Files
+
+| File | Description |
+|---|---|
+| `config/ConfigProperties.java` | `@ConfigurationProperties(prefix = "desk.config")`: `enabled` (boolean), `flavor` (String) |
+| `config/ConfigurationService.java` | 5-tier config lookup, classpath + plugin scanning, cache, synthetic ContentResult |
+| `config/Json5Reader.java` | JSON5 → JSON converter (strip comments, trailing commas, Gson lenient) |
+| `controller/ConfigurationController.java` | Admin REST API for config management |
+| `resources/config/defaults/**/*.json5` | 187 product default config files (migrated from gong/desk + gong/content/common XML) |
+| `resources/config/flavor/pseries/**/*.json5` | 14 P-Series flavor override files (from adm-starterkit) |
+| `resources/config/flavor/hseries/.gitkeep` | H-Series flavor directory (empty — H-Series is the default) |
+| `resources/config/project/.gitkeep` | Empty project override directory |
+| `scripts/config-mapping.txt` | Source mapping file (201 entries): source path → dest path + extraction type |
+| `scripts/config-sync.py` | Python sync script: reads mapping, extracts JSON from XML, copies to config dirs |
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `LocalContentManager.java` | Add `ConfigurationService` injection; intercept `resolve(externalId)` and `get()` for synthetic config IDs |
+| `ContentController.java` | Add `ConfigurationService` injection; fallback in `getContentByExternalId()` |
+| `DemoApplication.java` | Add `ConfigProperties.class` to `@EnableConfigurationProperties` |
+| `AuthConfig.java` | Add `/admin/*` to auth filter URL patterns |
+| `application.properties` | Add `desk.config.enabled=true`, `desk.config.flavor=` |

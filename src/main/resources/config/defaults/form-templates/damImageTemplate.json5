@@ -1,0 +1,185 @@
+{
+  "id": "atex.dam.standard.Image",
+  "type": "atex.dam.standard.Image",
+  "label": "Dam Image",
+  "namePath": ["contentData", "headline"],
+  "hidden":true,
+  
+  "aspects": {
+    "atex.Files": {
+    },
+
+    "atex.ImageEditInfo": {
+    },
+
+    "atex.Image": {
+    },
+
+    "atex.Metadata": {
+    },
+
+    "p.InsertionInfo":{
+    },
+    "atex.ImageMetadata": {
+ 	}
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["securityParent", "status", "headline", "caption", "description", "image"]
+      },
+  
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "Exif/Xmp/Iptc",
+        "fields": ["exifMetadata"]
+      },
+      {
+        "label": "Planning",
+        "fields": ["planning"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "Security Parent",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.common.d"
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+     {
+       "name": "status",
+       "label": "Status",
+       "widget": "pContentStatus",
+       "config": {
+         "commentPlaceholder" : "Comment"
+       },
+       "domainObjects": {
+         "contentStatus": "atex.WFContentStatus",
+         "contentData": "contentData"
+       }
+     },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "commentPlaceholder" : "Comment"
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "headline",
+      "label": "Headline",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Image Headline"
+      },
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "widget": "pTextArea",
+      "config": {
+        "placeholder": "The Image Caption"
+      },
+      "domainObjects": {
+        "data": ["contentData", "caption"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "widget": "pTextArea",
+      "config": {
+        "placeholder": "The Image Description"
+      },
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "image",
+      "label": "Image",
+      "widget": "pImageEditor",
+
+      "config": {
+
+      },
+
+      "domainObjects": {
+        "files": ["atex.Files"],
+        "editInfo": ["atex.ImageEditInfo"],
+        "image": ["atex.Image"]
+      }
+    },
+    {
+      "name": "metadata",
+  	  "label": "Metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+
+        "caption": "contentData/caption",
+        "description": "contentData/description"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["caption", "description"]
+      }
+    },
+    {
+      "name": "exifMetadata",
+  	  "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+       	"tags": {
+		  "general": ["title", "byline", "description", "imageHeight", "imageWidth"],
+		  "general_types":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String"],
+		  "IPTC": ["Test","By-line", "Caption-Abstract", "City", "Credit", "Headline", "ObjectName", "Source"],
+		  "IPTC_types":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String"]
+		}
+      }
+    },
+    {
+      "name": "planning",
+      "widget": "pDamTask",
+
+      "config": {
+        "editable":false,
+        "types" : [{"label":"Article","value":"article"},{"label":"Image","value":"image"},{"label":"Images","value":"images"},{"label":"Video","value":"video"}],
+        "ratios": [{"label":"4:3 standard","value":"4:3 standard"},{"label":"16:9 standard","value":"16:9 standard"},{"label":"21:9","value":"21:9"},{"label":"18:9 (2:1)","value":"18:9 (2:1)"}],
+        "measurementUnit":"characters"
+      },
+
+      "domainObjects": {
+        "data": "atex.Planning"
+      }
+    }
+  ]
+}

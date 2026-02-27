@@ -1,0 +1,51 @@
+{
+  "disable-publish-rules":[
+    {
+      "id":"default-disable-publish-rules",
+      "description":"Disable Publish Rules",
+      "config": {
+        "rules":[
+          {
+            "field": "aspects/p.InsertionInfo/data/insertParentId",
+            "condition": "IS-NULL"
+          },
+          {
+            "field": "aspects/atex.WFContentStatus/data/status/statusID",
+            "values": ["draft", "private"]
+          },
+          {
+            "field": "aspects/atex.WebContentStatus/data/status/statusID",
+            "values": ["draft", "private"]
+          },
+          {
+            "field": "dimension.partition",
+            "values": ["archive", "incoming"]
+          },
+          {
+             "subRules": [{
+                   "field": "aspects/contentData/data/headline/text",
+                   "condition": "EMPTY-STRING"
+                },
+                {
+                   "field": "aspects/contentData/data/inputTemplate",
+                   "values": ["p.NosqlArticle", "p.EventArticle"]
+                }
+             ]
+          }
+        ]
+      }
+    },
+    {
+      "id":"nopublish-disable-publish-rules",
+      "description":"Disable Publish Rules",
+      "config": {
+        "rules":[
+          {
+            "field": "dimension.partition",
+            "values": ["archive", "incoming", "production", "contributors", "trash"]
+          }
+        ]
+      }
+    }
+  ]
+}

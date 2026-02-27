@@ -1,0 +1,12 @@
+{
+	  "id":"processor.configuration.xsl.conf",
+	  "name":"XSL Transform Processor",
+	  "classPath":"com.atex.onecms.app.dam.camel.processor.folder.XSLProcessor",
+	  "method":"process",
+	  "type":"1",
+	  "label":["XSL File Path","Output Directory"],
+      "_type": "com.atex.onecms.app.dam.camel.configuration.DamProcessorConfigurationBean",
+	  "objectType": "DamProcessorConfiguration",
+	  "inputTemplate": "p.DamProcessorConfiguration",
+	  "contentType": "parentDocument"
+	}

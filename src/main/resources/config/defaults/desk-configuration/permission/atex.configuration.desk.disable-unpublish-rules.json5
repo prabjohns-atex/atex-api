@@ -1,0 +1,12 @@
+{
+  "disable-unpublish-rules":[
+    {
+      "id":"default-disable-unpublish-rules",
+      "description":"Disable Un-Publish Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

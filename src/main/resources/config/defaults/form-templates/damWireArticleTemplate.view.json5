@@ -1,0 +1,72 @@
+{
+  "id": "atex.dam.standard.WireArticle.dam.preview",
+  "type": "atex.dam.standard.WireArticle",
+  "label": "Dam Wire",
+  "namePath": ["contentData", "headline"],
+  "aspects": {
+    "atex.Metadata": {
+    }
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["source", "creationdate", "headline", "body"]
+      },
+  
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "source",
+      "label": "Source",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "source"]
+      }
+    },
+    {
+      "name": "creationdate",
+      "label": "Date",
+      "widget": "pDateTimePicker",
+      "domainObjects": {
+        "data": ["contentData", "creationdate"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "Headline",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "damFieldView",
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "disable-folders-panel-rules":[
+    {
+      "id":"default-disable-folders-panel-rules",
+      "description":"Disable Folders Panel",
+      "config": {
+        "always": false
+      }
+    }
+  ]
+}

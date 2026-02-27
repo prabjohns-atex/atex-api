@@ -1,0 +1,31 @@
+{
+  "_type": "com.atex.gong.permission.PermissionConfigurationBean",
+  "groups": [
+    {
+      "name": "Custom",
+      "description": "Custom permission",
+      "permissions": [
+        {
+          "name": "ANALYTICSREAD",
+          "label": "Analytics READ",
+          "description": "Analytics READ description"
+        },
+        {
+          "name": "ANALYTICSWRITE",
+          "label": "Analytics WRITE",
+          "description": "Analytics WRITE description"
+        },
+        {
+          "name": "BANNERS",
+          "label": "com.atex.plugins.banners.permision.BANNERS.label",
+          "description": "com.atex.plugins.banners.permision.BANNERS.description"
+        },
+        {
+          "name": "QUERYEMAILALERT",
+          "label": "Query Email Alert",
+          "description": "Modify the query email alert"
+        }
+      ]
+    }
+  ]
+}

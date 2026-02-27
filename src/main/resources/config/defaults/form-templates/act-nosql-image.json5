@@ -1,0 +1,301 @@
+{
+  "id": "com.atex.nosql.image.ImageContentDataBean",
+
+  "type": "com.atex.nosql.image.ImageContentDataBean",
+  "hidden": false,
+  "label": "Image",
+  "namePath": "contentData/title",
+
+  "aspects": {
+    "atex.Metadata": {},
+    "atex.Files": {},
+    "atex.ImageEditInfo": {},
+    "atex.Image": {},
+    "atex.ImageMetadata": {},
+    "atex.Planning":{}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "General",
+        "fields": ["image", "name", "credit", "caption", "datePhotographTaken", "place", "byline", "section", "reporter", "instructions", "oneTimeUse", "noUsePrint","assignees", "status"]
+      },
+      {
+        "label": "Metadata",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "Exif/Xmp/Iptc",
+        "fields": ["exifMetadata"]
+      },
+      {
+        "label": "Planning",
+        "fields":["planning"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "Security Parent",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.production.d"
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "image",
+      "label": "Image",
+      "widget": "pImageEditor",
+
+      "config": {
+        "imageMetadata": {
+          "extraction": true,
+          "fieldMappings": [
+            {
+              "source": "title",
+              "target": "title"
+            },
+            {
+              "source": "tags/EXIF/Copyright",
+              "target": "description",
+              "overwrite": true
+            },
+            {
+              "source": "byline",
+              "target": "byline",
+              "overwrite": true
+
+            }
+          ]
+        }
+      },
+
+      "domainObjects": {
+        "files": "atex.Files",
+        "editInfo": "atex.ImageEditInfo",
+        "image": "atex.Image",
+        "metadata": "atex.ImageMetadata",
+        "title": "contentData/title",
+        "description": "contentData/description",
+        "byline": "contentData/byline"
+      }
+    },
+    {
+      "name": "name",
+      "label": "Slug",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Leave empty to use name from the image file"
+      },
+
+      "domainObjects": {
+        "data": "contentData/title"
+      }
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "Caption of image goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/caption"
+      }
+    },
+    {
+      "name": "byline",
+      "label": "Photographer/byline",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Photographer of image goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/byline"
+      }
+    },
+    {
+      "label": "Date taken",
+      "name": "datePhotographTaken",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "No date/time selected"
+      },
+
+      "domainObjects": {
+        "data": "contentData/datePhotographTaken"
+      }
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "commentPlaceholder" : "Comment"
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "place",
+      "label": "Place/location",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Place/location goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/place"
+      }
+    },
+    {
+      "name": "credit",
+      "label": "Source/byline",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Source goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/credit"
+      }
+    },
+    {
+      "name": "section",
+      "label": "Section",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Section goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/section"
+      }
+    },
+    {
+      "name": "reporter",
+      "label": "Reporter",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Reporter goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/reporter"
+      }
+    },
+    {
+      "name": "instructions",
+      "label": "Special instructions",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Special instructions go here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/instructions"
+      }
+    },
+    {
+      "name": "oneTimeUse",
+      "label": "One-time use only",
+      "widget": "pCheckbox",
+      "domainObjects": {
+        "data": "contentData/oneTimeUse"
+      }
+    },
+    {
+      "name": "noUsePrint",
+      "label": "No use for print",
+      "widget": "pCheckbox",
+      "domainObjects": {
+        "data": "contentData/noUsePrint"
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "Metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "caption": "contentData/caption"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["caption"],
+        "dimensions" : ["dimension.Topic", "dimension.Company","dimension.Organisation", "dimension.Location", "dimension.Person", "dimension.Tag", "dimension.sendto.Users" ],
+        "extraDimensions":["dimension.sendto.Users"]
+      }
+    },
+    {
+      "name": "exifMetadata",
+      "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "full":true,
+        "tags": {
+          "general": ["title", "byline", "description", "imageHeight", "imageWidth"],
+          "general_types":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String"]
+
+        }
+      }
+    },
+    {
+      "name": "planning",
+      "widget": "pDamTask",
+
+      "config": {
+        "editable":false,
+        "types" : [{"label":"Article","value":"article"},{"label":"Image","value":"image"},{"label":"Images","value":"images"},{"label":"Video","value":"video"}],
+        "ratios": [{"label":"4:3 standard","value":"4:3 standard"},{"label":"16:9 standard","value":"16:9 standard"},{"label":"21:9","value":"21:9"},{"label":"18:9 (2:1)","value":"18:9 (2:1)"}],
+        "measurementUnit":"characters"
+      },
+
+      "domainObjects": {
+        "data": "atex.Planning"
+      }
+    },
+    {
+      "name": "assignees",
+      "label": "Assignees",
+      "widget": "pUsersList",
+
+      "config": {
+        "editable":true,
+        "placeholder":"Insert assignees...",
+        "dimension": "dimension.sendto.Users"
+      },
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    }
+  ]
+}

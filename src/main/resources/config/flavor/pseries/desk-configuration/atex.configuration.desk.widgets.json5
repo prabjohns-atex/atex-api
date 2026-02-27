@@ -1,0 +1,1129 @@
+{
+  "widgets": [
+    {
+      "id": "default-widgets-configuration",
+      "description": "Widgets Configuration - Default Configuration",
+      "config": {
+        "sequential" : {
+          "componentId": "desk-sequential",
+          "css":"auto",
+          "type": "sequential-widget",
+          "title": {
+            "value": "__NUMBER__"
+          }
+        },
+
+        "info": {
+          "componentId": "desk-info",
+          "css":"auto",
+          "type": "configuration-widget",
+          "fields":[{
+            "path": "_data/aspects/contentData/data/objectType",
+            "configuration": {
+              "name": "type",
+              "id": "desk-type"
+            }
+          },
+          {
+            "path":"_data/aspects/atex.Metadata/data/metadata/dimensions",
+            "dimension": "dimension.partition",
+            "configuration": {
+              "name": "partition",
+              "id": "desk-partition"
+            }
+          },
+          {
+            "path": "_data/aspects/p.InsertionInfo/data/securityParentId",
+            "configuration": {
+              "name": "hidden-type",
+              "id": "desk-hidden-type"
+            }
+          }
+          ],
+
+          "title": {
+            "value": "_TYPE_"
+          }
+        },
+
+        "type": {
+          "componentId": "desk-type",
+          "css":"auto",
+          "type": "configuration-widget",
+          "fields":[{
+            "path": "_data/aspects/contentData/data/objectType",
+            "configuration": {
+              "name": "type",
+              "id": "desk-type"
+            }
+          }],
+          "title": {
+            "value": "_TYPE_"
+          }
+        },
+
+        "hidden-type": {
+          "componentId": "desk-hidden-type",
+          "css":"auto",
+          "type": "configuration-widget",
+          "fields":[{
+            "path": "_data/aspects/p.InsertionInfo/data/securityParentId",
+            "getExternalId": true,
+            "configuration": {
+              "name": "hidden-type",
+              "id": "desk-hidden-type"
+            }
+          }],
+          "title": {
+            "value": "__RESTRICTED_CONTENT__"
+          }
+        },
+
+        "partition": {
+          "componentId": "desk-partition",
+          "css":"auto",
+          "type": "configuration-widget",
+          "fields":[{
+            "path":"_data/aspects/atex.Metadata/data/metadata/dimensions",
+            "dimension": "dimension.partition",
+            "configuration": {
+              "name": "partition",
+              "id": "desk-partition"
+            }
+          }],
+          "title": {
+            "value": "__PARTITION__"
+          }
+        },
+
+        "trash": {
+          "componentId": "desk-trash",
+          "css":"auto",
+          "type": "trash-widget",
+          "field": {
+            "icon": "fa fa-trash",
+            "path": "_data/aspects/p.InsertionInfo/data/securityParentId"
+          }
+        },
+
+        "color-categorization": {
+          "componentId": "desk-color-categorization",
+          "css":"auto",
+          "type": "select-widget",
+          "field": {
+            "path":"_data/aspects/atex.Metadata/data/metadata/dimensions",
+            "dimension": "dimension.markas-colorcoding",
+            "hide-label": false,
+            "editable": true
+          },
+          "field-configuration": {
+            "name": "color-categorization",
+            "id": "desk-color-categorization",
+            "default": {
+              "id": "0"
+            }
+          },
+          "title": {
+             "value": "_MARK_AS_COLOR_CODING_"
+          }
+        },
+
+        "icon-categorization": {
+          "componentId": "desk-icon-categorization",
+          "css":"auto",
+          "type": "select-widget",
+          "field": {
+            "path":"_data/aspects/atex.Metadata/data/metadata/dimensions",
+            "dimension": "dimension.markas-multiiconcoding",
+            "hide-label": false,
+            "editable": true
+          },
+          "field-configuration": {
+            "name": "icon-categorization",
+            "id": "desk-icon-categorization",
+            "default": {
+              "id": "0"
+            }
+          },
+          "title": {
+             "value": "_MARK_AS_COLOR_CODING_"
+          }
+        },
+
+        "status": {
+          "componentId": "desk-status",
+          "css":"auto",
+          "type": "status-widget",
+          "display-if-empty":true,
+          "field": {
+            "path": "_data/aspects/atex.WFContentStatus/data/status",
+            "comment": "_data/aspects/atex.WFContentStatus/data/comment",
+            "statusList": "atex.WFStatusList"
+          },
+          "title": {
+            "value": "_WF_STATUS_LABEL_"
+          }
+        },
+
+        "web-status": {
+          "componentId": "desk-web-status",
+          "css":"auto",
+          "type": "status-widget",
+          "display-if-empty":true,
+          "field": {
+            "path": "_data/aspects/atex.WebContentStatus/data/status",
+            "comment": "_data/aspects/atex.WebContentStatus/data/comment",
+            "statusList": "atex.WebStatusList"
+          },
+          "title": {
+            "value": "_WEB_STATUS_LABEL_"
+          }
+        },
+
+        "editable-status": {
+          "componentId": "desk-editable-status",
+          "css":"auto",
+          "type": "editable-status-widget",
+          "display-if-empty":true,
+          "field": {
+            "path": "_data/aspects/atex.WFContentStatus/data/status",
+            "comment": "_data/aspects/atex.WFContentStatus/data/comment",
+            "statusList": "atex.WFStatusList"
+          },
+          "title": {
+            "value": "_WF_STATUS_LABEL_"
+          }
+        },
+
+        "editable-web-status": {
+          "componentId": "desk-editable-web-status",
+          "css":"auto",
+          "type": "editable-status-widget",
+          "display-if-empty":true,
+          "field": {
+            "path": "_data/aspects/atex.WebContentStatus/data/status",
+            "comment": "_data/aspects/atex.WebContentStatus/data/comment",
+            "statusList": "atex.WebStatusList"
+          },
+          "title": {
+            "value": "_WEB_STATUS_LABEL_"
+          }
+        },
+        
+        "has-resources": {
+          "componentId": "desk-has-resources",
+          "css":"auto",
+          "type": "conditional-widget",
+          "visible": {
+            "fields": [
+              {
+                "path": "_data/aspects/contentData/data/images",
+                "condition":"NOT-EMPTY",
+                "icon": {
+                  "value":"fa fa-picture-o",
+                  "title": "__RESOURCES__"
+                },
+                "label": {
+                  "value":"__RESOURCES__",
+                  "display-size": true,
+                  "link": true
+                }
+              },
+              {
+                "path": "_data/aspects/contentData/data/resources",
+                "condition":"NOT-EMPTY",
+                "icon": {
+                  "value":"fa fa-picture-o",
+                  "title": "__RESOURCES__"
+                },
+                "label": {
+                  "value":"__RESOURCES__",
+                  "display-size": true,
+                  "link": true
+                }
+              }
+            ],
+            "operator": "OR"
+          }
+        },
+
+        "publication-icon": {
+          "componentId": "desk-publication-icon",
+          "css":"auto",
+          "type": "conditional-widget",
+          "icon": {
+            "value": "fa fa-newspaper-o",
+            "css": "publication-icon",
+            "title": {
+              "translations": "__PAGINATED_IN__",
+              "keys": [
+                {
+                  "id": "page",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/page"
+                },
+                {
+                  "id": "pubdate",
+                  "date": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pubdate",
+                  "format":"DD-MM-YYYY"
+                },
+                {
+                  "id": "pub",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/publication"
+                },
+                {
+                  "id": "edition",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/edition"
+                },
+                {
+                  "id": "pagelevel",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pagelevel"
+                },
+                {
+                  "id": "zone",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/zone"
+                },
+                {
+                  "id": "section",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/section"
+                },
+                {
+                  "id": "position",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/position"
+                }
+              ]
+            }
+          },
+          "visible": {
+            "fields": [
+              {
+                "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/page",
+                "condition":"NOT-NULL"
+              },
+              {
+                "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pending",
+                "condition":"NOT-EQUALS",
+                "to": true
+              },
+              {
+                "path": "_data/aspects/contentData/data/objectType",
+                "condition":"NOT-EQUALS",
+                "to": "page"
+              }
+            ],
+            "operator": "AND"
+          }
+        },
+
+        "unplaced-icon": {
+          "componentId": "desk-unplaced-icon",
+          "css":"auto",
+          "type": "conditional-widget",
+          "icon": {
+            "value": "fa fa-newspaper-o",
+            "css": "unplaced-icon",
+            "title": {
+              "translations": "__PAGINATED_IN__",
+              "keys": [
+                {
+                  "id": "page",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/page"
+                },
+                {
+                  "id": "pubdate",
+                  "date": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pubdate",
+                  "format":"DD-MM-YYYY"
+                },
+                {
+                  "id": "pub",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/publication"
+                },
+                {
+                  "id": "edition",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/edition"
+                },
+                {
+                  "id": "pagelevel",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pagelevel"
+                },
+                {
+                  "id": "zone",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/zone"
+                },
+                {
+                  "id": "section",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/section"
+                },
+                {
+                  "id": "position",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/position"
+                }
+              ]
+            }
+          },
+          "visible": {
+            "fields": [
+              {
+                "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/page",
+                "condition":"EQUALS",
+                "to": ""
+              },
+              {
+                "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pending",
+                "condition":"NOT-EQUALS",
+                "to": true
+              },
+              {
+                "path": "_data/aspects/contentData/data/objectType",
+                "condition":"NOT-EQUALS",
+                "to": "page"
+              }
+            ],
+            "operator": "AND"
+          }
+        },
+
+        "candidate-icon": {
+          "componentId": "desk-candidate-icon",
+          "css":"auto",
+          "type": "conditional-widget",
+          "icon": {
+            "value": "fa fa-newspaper-o",
+            "css": "candidate-icon",
+            "title": {
+              "translations": "__PAGINATED_IN__",
+              "keys": [
+                {
+                  "id": "page",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pendingPage"
+                },
+                {
+                  "id": "pubdate",
+                  "date": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pubdate",
+                  "format":"DD-MM-YYYY"
+                },
+                {
+                  "id": "pub",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/publication"
+                },
+                {
+                  "id": "edition",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/edition"
+                },
+                {
+                  "id": "pagelevel",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pagelevel"
+                },
+                {
+                  "id": "zone",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/zone"
+                },
+                {
+                  "id": "section",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/section"
+                },
+                {
+                  "id": "position",
+                  "prefix": "-",
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/position"
+                }
+              ]
+            }
+          },
+          "visible": {
+            "fields": [
+              {
+                "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pending",
+                "condition":"EQUALS",
+                "to": true
+              },
+              {
+                "path": "_data/aspects/contentData/data/objectType",
+                "condition":"NOT-EQUALS",
+                "to": "page"
+              }
+            ],
+            "operator": "AND"
+          }
+        },
+
+        "non-plan-icon": {
+          "componentId": "desk-non-plan-icon",
+          "css":"auto",
+          "type": "conditional-widget",
+          "icon": {
+            "value": "fa fa-book",
+            "css": "non-plan-icon",
+            "title": "__PAGINATED_IN__"
+          },
+          "visible": {
+            "fields": [
+              {
+                "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/nonPlan",
+                "condition":"EQUALS",
+                "to": true
+              },
+              {
+                "path": "_data/aspects/contentData/data/objectType",
+                "condition":"EQUALS",
+                "to": "page"
+              }
+            ],
+            "operator": "AND"
+          }
+        },
+
+        "out-of-date-icon": {
+          "componentId": "desk-out-of-date-icon",
+          "css":"auto",
+          "type": "conditional-widget",
+          "icon": {
+            "value": "fa fa-book",
+            "css": "out-of-date-icon",
+            "title": "__PAGINATED_IN__"
+          },
+          "visible": {
+            "fields": [
+              {
+                "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/outOfDate",
+                "condition":"EQUALS",
+                "to": true
+              },
+              {
+                "path": "_data/aspects/contentData/data/objectType",
+                "condition":"EQUALS",
+                "to": "page"
+              }
+            ],
+            "operator": "AND"
+          }
+        },
+
+        "edition-child-icon": {
+          "componentId": "desk-edition-child-icon",
+          "css":"auto",
+          "type": "conditional-widget",
+          "icon": {
+            "value": "fa fa-child",
+            "css": "edition-child-icon",
+            "title": {
+              "translations": "__EDITION_PARENT__",
+              "keys": [
+                {
+                  "id": "parentname",
+                  "path": "_data/aspects/atex.ChannelContentData/data/channels/Print/parentName"
+                }
+              ]
+            }
+          },
+          "visible": {
+            "fields": [
+              {
+                "path": "_data/aspects/atex.ChannelContentData/data/channels/Print/parentName",
+                "condition":"NOT-NULL"
+              },
+              {
+                "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/page",
+                "condition":"NOT-NULL"
+              }
+            ],
+            "operator": "AND"
+          }
+        },
+
+        "attributes-icon":{
+          "componentId":"desk-attributes-icon",
+          "css":"auto",
+          "type":"attributes-widget",
+          "display-if-empty":true,
+          "field": {
+            "path":"_data/aspects/atex.WFContentStatus/data/status/attributes"
+          },
+          "title": {
+            "value": "__ATTRIBUTES__"
+          }
+        },
+
+        "engage-icon": {
+          "componentId": "desk-engage-icon",
+          "css":"auto",
+          "type": "engagement-widget",
+          "display-if-empty":true,
+          "status": {
+            "character": "E",
+            "color": "#f0ad4e"
+          },
+          "visible": {
+            "fields": [
+              {
+                "path": "_data/aspects/engagementAspect/data/engagementList",
+                "condition":"NOT-EMPTY"
+              }
+            ]
+          }
+        },
+
+        "engage-label": {
+          "componentId": "desk-engage-label",
+          "css":"auto",
+          "type": "engagement-widget",
+          "display-if-empty":false,
+          "status": {
+            "label":"__ENGAGED__",
+            "color": "#f0ad4e"
+          },
+          "visible": {
+            "fields": [
+              {
+                "path": "_data/aspects/engagementAspect/data/engagementList",
+                "condition":"NOT-EMPTY"
+              }
+            ]
+          },
+          "title": {
+            "value": "__ENGAGEMENT__"
+          }
+        },
+
+        "link-to-page": {
+            "componentId": "desk-link-to-page",
+            "css":"auto",
+            "type": "link-to-page-widget",
+            "display-if-empty": true,
+            "field": {
+              "title": "__LINK_TO_PAGE__",
+              "config": {
+                "create": false,
+                "types": ["article", "text", "image", "photo"],
+                "profile": true,
+                "publication":true,
+                "edition":true,
+                "zone":true,
+                "section": false,
+                "pageNumber": false,
+                "pagePosition": true,
+                "pubdate": true
+              }
+            }
+        },
+
+        "auto-link-to-page": {
+            "componentId": "desk-auto-link-to-page",
+            "css":"auto",
+            "type": "link-to-page-widget",
+            "display-if-empty": true,
+            "field": {
+              "title": "__LINK_TO_PAGE__",
+              "config": {
+                "shapeMode": 7,
+                "create": false,
+                "types": ["article", "text", "image", "photo"],
+                "profile": true,
+                "publication":true,
+                "edition":true,
+                "zone":true,
+                "section": false,
+                "pageNumber": false,
+                "pagePosition": true,
+                "pubdate": true
+              }
+            }
+        },
+
+        "lock-entry": {
+          "componentId": "desk-lock-entry",
+          "css":"auto",
+          "type": "lock-entry-widget",
+          "display-at-startup":false,
+          "icon": {
+            "value" : "fa fa-lock",
+            "title": {
+              "translations": "__LOCK_MESSAGE__",
+              "keys": [
+                {
+                  "id": "user",
+                  "function": "getUserName"
+                },
+                {
+                  "id": "date",
+                  "date": "timestamp",
+                  "format":"DD-MM-YYYY @ HH:mm"
+                },
+                {
+                  "id": "application",
+                  "path": "app"
+                }
+              ]
+            }
+          }
+        },
+
+        "collect-entry": {
+          "componentId": "desk-collect-entry",
+          "css":"auto",
+          "type": "collect-entry-widget",
+          "icon": {
+            "value": "fa fa-plus-circle",
+            "title": {
+              "translations": "__ITEM_CAN_BE_COLLECTED_TOOLTIP__"
+            }
+          }
+        },
+
+        "select-entry": {
+          "componentId": "desk-select-entry",
+          "css":"auto",
+          "type": "select-entry-widget",
+          "icon": {
+            "checked": "fa fa-check-square-o",
+            "unchecked": "fa fa-square-o"
+          },
+          "title": {
+            "icon": {
+              "checked": "fa fa-check-square-o",
+              "unchecked": "fa fa-square-o"
+            }
+          }
+        },
+
+        "name": {
+          "componentId": "desk-name",
+          "css":"auto",
+          "type": "configuration-widget",
+          "fields":[{
+            "path": "_data/aspects/contentData/data/name",
+            "css":"link",
+            "display": {
+              "label": "_NOT_DEFINED_LABEL_"
+            },
+            "operation": {
+              "component-name": "edit",
+              "id":"desk-edit"
+            }
+          }],
+          "title": {
+            "value": "_NAME_"
+          }
+        },
+
+        "editable-name": {
+          "componentId": "desk-editable-name",
+          "css":"auto",
+          "type": "editable-text-widget",
+          "fields":[{
+            "path": "_data/aspects/contentData/data/name",
+            "css":"link",
+            "display": {
+              "label": "_NOT_DEFINED_LABEL_"
+            }
+          }],
+          "title": {
+            "value": "_NAME_"
+          }
+        },
+
+        "deadline-status":{
+          "componentId": "desk-deadline-status",
+          "css":"auto",
+          "type": "deadline-status-widget",
+          "display-if-empty":true,
+          "fields":[{
+            "path": "_data/aspects/contentData/data/timeState/ontime",
+            "format": "dd-MM-yyyy HH:mm:ss",
+            "configuration":{
+              "thresholds": [0,1,4]
+            }
+          }],
+          "title": {
+            "value": "Deadline Date"
+          },
+          "label": {
+            "value":"__DATE_LABEL__",
+            "style": "font-weight: bold;"
+          }
+        },
+
+        "schedule-notes": {
+		      "componentId": "desk-schedule-notes",
+ 		      "css":"auto",
+		      "type": "editable-text-widget",
+		      "fields":[{
+		        "path": "_data/aspects/atex.dam.standard.Scheduling/data/notes",
+		        "css":"link",
+    		    "display": {
+		    	    "label": "_NOT_DEFINED_LABEL_"
+		  	      }
+	          }],
+	          "title": {
+		        "value": "_NOTES_LABEL_"
+		      }
+		    },
+
+        "headline": {
+          "componentId": "desk-headline",
+
+          "type": "configuration-widget",
+
+          "fields":[
+            {
+              "path": "_data/aspects/contentData/data/headline",
+              "strip-html": true
+            },
+            {
+              "path": "_data/aspects/contentData/data/title",
+              "strip-html": true
+            }
+          ],
+          "title": {
+            "value": "_HEADLINE_"
+          }
+        },
+
+        "table-insertion-date": {
+          "componentId": "desk-table-insertion-date",
+          "css":"auto",
+          "type": "configuration-widget",
+          "hide-label": false,
+          "fields":[{
+            "path": "_data/meta/originalCreationTime",
+            "format": "dd-MM HH:mm:ss",
+            "display": {
+              "hide": {
+                "fields": [{
+                  "dimension": "dimension.partition",
+                  "condition":"CONTAINS",
+                  "to": "production"
+                },
+                {
+                  "dimension": "dimension.partition",
+                  "condition":"CONTAINS",
+                  "to": "all video"
+                },
+                {
+                  "dimension": "dimension.partition",
+                  "condition":"CONTAINS",
+                  "to": "archive"
+                },
+                {
+                  "dimension": "dimension.partition",
+                  "condition":"CONTAINS",
+                  "to": "trash"
+                }],
+                "operator": "OR"
+              }
+            }
+          },
+          {
+            "path": "_data/aspects/contentData/data/creationdate",
+            "format": "dd-MM-yy HH:mm:ss",
+            "display": {
+              "hide": {
+                "fields": [
+                {
+                  "dimension": "dimension.partition",
+                  "condition":"CONTAINS",
+                  "to": "incoming"
+                },
+                {
+                  "path": "_data/aspects/contentData/data/creationdate",
+                  "condition":"IS-NULL"
+                }],
+                "operator": "OR"
+              }
+            }
+          },
+          {
+            "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pubdate",
+            "format": "dd-MM-yy",
+            "display": {
+              "hide": {
+                "fields": [
+                {
+                  "dimension": "dimension.partition",
+                  "condition":"CONTAINS",
+                  "to": "incoming"
+                },
+                {
+                  "path": "_data/aspects/contentData/data/creationdate",
+                  "condition":"NOT-NULL"
+                },
+                {
+                  "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pubdate",
+                  "condition": "IS-NULL"
+                }],
+                "operator": "OR"
+              }
+            }
+          }
+          ],
+          "title": {
+            "value": "__INSERTION__"
+          },
+          "label": {
+            "value":"__INSERTION__",
+            "style": "font-weight: bold;"
+          }
+        },
+
+        "insertion-date": {
+          "componentId": "desk-insertion-date",
+          "css":"auto",
+          "type": "configuration-widget",
+          "hide-label": false,
+          "fields":[{
+            "path": "_data/meta/originalCreationTime",
+            "format": "dd-MM-yyyy HH:mm:ss"
+          }],
+          "title": {
+            "value": "_INSERTION_DATE_"
+          },
+          "label": {
+            "value":"__DATE_LABEL__",
+            "style": "font-weight: bold;"
+          }
+        },
+
+        "publication-date": {
+          "componentId": "desk-publication-date",
+          "css":"auto",
+          "type": "configuration-widget",
+          "hide-label": false,
+          "fields":[{
+            "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pubdate",
+            "format": "dd-MM-yyyy"
+          }],
+          "title": {
+            "value": "_PUBLICATION_DATE_"
+          },
+          "label": {
+            "value":"__DATE_LABEL__",
+            "style": "font-weight: bold;"
+          }
+        },
+
+       "table-publication-date": {
+          "componentId": "desk-table-publication-date",
+          "css":"auto",
+          "type": "configuration-widget",
+          "hide-label": false,
+          "fields":[{
+            "path": "_data/aspects/atex.dam.standard.Publevents/data/publevents/0/pubdate",
+            "format": "dd-MM-yyyy",
+            "display": {
+              "hide": {
+                "fields": [
+                {
+                  "dimension": "dimension.partition",
+                  "condition":"CONTAINS",
+                  "to": "all video"
+                },
+                {
+                  "dimension": "dimension.partition",
+                  "condition":"CONTAINS",
+                  "to": "incoming"
+                },
+                {
+                  "dimension": "dimension.partition",
+                  "condition":"CONTAINS",
+                  "to": "trash"
+                }],
+                "operator": "OR"
+              }
+            }
+          }],
+          "title": {
+            "value": "_PUBLICATION_DATE_SHORT_"
+          },
+          "label": {
+            "value":"_PUBLICATION_DATE_SHORT_",
+            "style": "font-weight: bold;"
+          }
+        },
+
+        "source": {
+          "componentId": "desk-source",
+          "css":"auto",
+          "type": "configuration-widget",
+          "hide-label": false,
+          "fields":[{
+            "path": "_data/aspects/contentData/data/source",
+            "limit": "20"
+          }],
+          "title": {
+            "value": "_SOURCE_"
+          },
+          "label": {
+            "value":"_SOURCE_",
+            "style": "font-weight: bold;"
+          }
+        },
+
+         "source-icon": {
+          "componentId": "desk-source-icon",
+          "css":"auto",
+          "type": "configuration-widget",
+          "hide-label": false,
+          "fields":[{
+            "path": "_data/aspects/contentData/data/source",
+            "use-icon": true
+          }]
+        },
+
+        "priority": {
+          "componentId": "desk-priority",
+          "css":"auto",
+          "type": "configuration-widget",
+          "fields":[{
+            "path": "_data/aspects/contentData/data/priority"
+          }],
+          "title": {
+            "value": "_PRIORITY_"
+          }
+        },
+
+        "words": {
+          "componentId": "desk-words",
+          "css":"auto",
+          "type": "configuration-widget",
+          "fields":[{
+            "path": "_data/aspects/contentData/data/words"
+          }],
+          "title": {
+            "value": "__WORDS_COUNT__"
+          }
+        },
+
+        "deadline": {
+          "componentId": "desk-deadline",
+          "type": "configuration-widget",
+          "css":"auto",
+          "fields":[
+            {
+              "path": "_data/aspects/contentData/data/deadline",
+              "format": "dd MMM yyyy  HH:mm",
+              "css": "label planning-label"
+            },
+            {
+              "path": "_data/aspects/atex.Planning/data/deadline",
+              "format": "dd MMM yyyy  HH:mm",
+              "css": "label planning-label"
+            }
+          ]
+        },
+
+        "assignees": {
+          "componentId": "desk-assignees",
+          "type": "assignees-widget",
+          "css":"auto",
+          "fields":[
+            {
+              "path":"_data/aspects/atex.Metadata/data/metadata/dimensions",
+              "dimension": "dimension.sendto.Users",
+              "index":"ALL"
+            }
+          ]
+        },
+
+        "publication-info": {
+          "componentId": "desk-user-info",
+          "type": "user-info-widget",
+          "label": {
+            "value": "__CREATED_BY__",
+            "style": "font-weight: bold;"
+          },
+          "user": {
+            "icon": {
+              "value":"fa fa-user"
+            }
+          }
+        },
+
+        "publication-info2": {
+          "componentId": "desk-user-info-mod",
+          "type": "user-info-widget",
+          "path":"_data/aspects/p.ContentMetadata/data/modifierId",
+          "label": {
+            "value": "__MODIFIED_BY__",
+            "style": "font-weight: bold;"
+          },
+          "user": {
+            "icon": {
+              "value":"fa fa-user"
+            }
+          }
+        },
+
+        "history": {
+          "componentId": "desk-history",
+          "type": "history-widget",
+          "date": {
+            "format": "yyyy-MM-dd HH:mm:ss",
+            "icon": {
+              "value": "fa fa-calendar"
+            }
+          },
+          "user": {
+            "icon": {
+              "value":"fa fa-user"
+            }
+          }
+        },
+        "security-parent":{
+          "componentId": "desk-security-parent",
+          "css":"auto",
+          "type": "security-parent-widget",
+          "display-if-empty": true,
+          "fields":[{
+            "path":"_data/aspects/p.InsertionInfo/data/securityParentId",
+            "insertParentIdPath": "_data/aspects/p.InsertionInfo/data/insertParentId",
+            "excludedSites": ["dam.d"]
+          }],
+          "title": {
+            "value": "Primary Site"
+          }
+        },
+
+        "associated-sites":{
+          "componentId": "desk-associated-sites",
+          "css":"auto",
+          "type": "associated-sites-widget",
+          "display-if-empty": true,
+          "field":{
+            "path":"_data/aspects/p.InsertionInfo/data/associatedSites",
+            "excludedSites": ["dam.d"]
+          },
+          "title": {
+            "value": "Associated Sites"
+          }
+        },
+
+        "metadata":{
+          "componentId": "desk-metadata",
+          "css":"auto",
+          "type": "metadata-widget",
+          "display-if-empty": true,
+          "field":{
+            "path":"_data/aspects/atex.Metadata/data/metadata/dimensions",
+            "dimension": "dimension.primarytopic"
+          },
+          "title": {
+            "value": "Topics"
+          }
+        }
+      }
+    }
+  ]
+}

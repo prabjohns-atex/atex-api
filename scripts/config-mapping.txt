@@ -1,0 +1,345 @@
+# Config Source Mapping for desk-api
+# =============================================================================
+#
+# Traces every JSON config file in desk-api back to its source in the original
+# Polopoly/Gong/ADM codebase.
+#
+# Format (pipe-delimited):
+#   type|source_base|source_path|dest_tier|dest_subdir|external_id
+#
+# Column definitions:
+#   type         - Extraction method:
+#                    xml-cdata  = JSON embedded in XML <component> element (with or without CDATA wrapper)
+#                    json-ref   = XML references a separate JSON/JSON5 file via <file> or file= attribute
+#                    json       = Direct JSON file copy (no XML wrapper)
+#                    manual     = No source; manually created for desk-api
+#
+#   source_base  - Source codebase shorthand:
+#                    gong-desk            = ../gong/desk/content/src/main/content
+#                    gong-common          = ../gong/content/common/src/main/content
+#                    adm-starterkit       = ../adm-starterkit/content/custom-content/src/main/content
+#                    adm-starterkit-pseries = ../adm-starterkit/content/custom-pseries-content/src/main/content
+#                    none                 = No external source
+#
+#   source_path  - Relative path within source_base to the primary source file
+#                  (the XML containing the <externalid> tag, or the JSON file itself)
+#
+#   dest_tier    - Target tier: defaults | flavor/pseries
+#
+#   dest_subdir  - Subdirectory under the tier
+#
+#   external_id  - External ID = output filename without .json5 extension
+#
+# Notes:
+#   - "xml-cdata" covers both <![CDATA[{...}]]> and bare inline JSON in <component> elements
+#   - "json-ref" sources have companion JSON/JSON5 files relative to the XML location
+#   - For desk locale files, the XML references .json5 files in a locales/ subdirectory
+#   - For custom locale files, the XML parent content has <file> elements referencing locale/*.json
+#   - For form-templates (dam*Template*), the XML is dam-json-template-list.xml and JSON files are in files/
+#   - Some files exist in multiple sources (gong-desk, adm-starterkit); the first source listed is
+#     the primary/original, the second is the starterkit override layer
+#   - Entries are sorted by dest_tier, then dest_subdir, then external_id
+#
+# Generated: 2026-02-27
+# =============================================================================
+#
+# type|source_base|source_path|dest_tier|dest_subdir|external_id
+#
+# --- defaults/audioai ---
+json-ref|gong-desk|audioai/audioai-configuration.xml|defaults|audioai|com.atex.onecms.audioAI.Configuration
+#
+# --- defaults/ayrshare ---
+json-ref|gong-desk|ayrshare/ayrshare-configuration.xml|defaults|ayrshare|com.atex.onecms.ayrshare.Configuration
+#
+# --- defaults/camel-routes ---
+xml-cdata|gong-desk|camel-routes/camel-routes-conf.xml|defaults|camel-routes|dam.camelroutes.conf
+#
+# --- defaults/cfg ---
+xml-cdata|gong-desk|cfg/bean-mapper-conf.xml|defaults|cfg|com.atex.onecms.beanmapper.Configuration
+xml-cdata|gong-desk|cfg/third-parties-conf.xml|defaults|cfg|dam.thirdpartiescfg.conf
+#
+# --- defaults/chains-list ---
+xml-cdata|gong-desk|chains-list/0-chain-configuration.demo.content.xml|defaults|chains-list|chain.configuration.demo.content.conf
+xml-cdata|gong-desk|chains-list/1-chain-configuration.image.conf.xml|defaults|chains-list|chain.configuration.image.conf
+xml-cdata|gong-desk|chains-list/3-chain-configuration.newsml.conf.xml|defaults|chains-list|chain.configuration.newsml.conf
+xml-cdata|gong-desk|chains-list/2-chain-configuration.reuters.conf.xml|defaults|chains-list|chain.configuration.reuters.conf
+xml-cdata|gong-desk|chains-list/4-chain-configuration.video.conf.xml|defaults|chains-list|chain.configuration.video.conf
+xml-cdata|gong-desk|chains-list/chains-list-conf.xml|defaults|chains-list|dam.chains.list.conf
+#
+# --- defaults/desk-configuration ---
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.configurations.xml|defaults|desk-configuration|atex.configuration.desk.configurations
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.copyfit.xml|defaults|desk-configuration|atex.configuration.desk.copyfit-configurations
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.css.xml|defaults|desk-configuration|atex.configuration.desk.css
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.domain.xml|defaults|desk-configuration|atex.configuration.desk.domain
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.facets.xml|defaults|desk-configuration|atex.configuration.desk.facets
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.field-configurations.xml|defaults|desk-configuration|atex.configuration.desk.field-configurations
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.fields.xml|defaults|desk-configuration|atex.configuration.desk.fields
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.grid-state.xml|defaults|desk-configuration|atex.configuration.desk.grid-state
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.menus.xml|defaults|desk-configuration|atex.configuration.desk.menus
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.operations.xml|defaults|desk-configuration|atex.configuration.desk.operations
+json-ref|gong-desk|desk-configuration/atex.configuration.desk.print.xml|defaults|desk-configuration|atex.configuration.desk.print
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.print.data.xml|defaults|desk-configuration|atex.configuration.desk.print-data
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.profiles.xml|defaults|desk-configuration|atex.configuration.desk.profiles
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.search-options.xml|defaults|desk-configuration|atex.configuration.desk.search-options
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.toolbars.xml|defaults|desk-configuration|atex.configuration.desk.toolbars
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.widget-configurations.xml|defaults|desk-configuration|atex.configuration.desk.widget-configurations
+xml-cdata|gong-desk|desk-configuration/atex.configuration.desk.widgets.xml|defaults|desk-configuration|atex.configuration.desk.widgets
+#
+# --- defaults/desk-configuration/form ---
+xml-cdata|gong-desk|desk-configuration/form/atex.configuration.desk.folder-filters.xml|defaults|desk-configuration/form|atex.configuration.desk.folder-filters
+xml-cdata|gong-desk|desk-configuration/form/atex.configuration.desk.form.xml|defaults|desk-configuration/form|atex.configuration.desk.forms
+xml-cdata|gong-desk|desk-configuration/form/atex.configuration.desk.page-browser.xml|defaults|desk-configuration/form|atex.configuration.desk.page-browser
+xml-cdata|gong-desk|desk-configuration/form/atex.configuration.desk.search-fields.xml|defaults|desk-configuration/form|atex.configuration.desk.search-fields
+xml-cdata|gong-desk|desk-configuration/form/atex.configuration.desk.search-forms.xml|defaults|desk-configuration/form|atex.configuration.desk.search-forms
+xml-cdata|gong-desk|desk-configuration/form/atex.configuration.desk.smart-folder-filters.xml|defaults|desk-configuration/form|atex.configuration.desk.smart-folder-filters
+#
+# --- defaults/desk-configuration/permission ---
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-clear-engagements-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-clear-engagements-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable.collect-panel-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-collect-panel-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-collections-panel-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-collections-panel-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-copy-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-copy-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-create-job-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-create-job-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-delete-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-delete-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-duplicate-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-duplicate-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-edit-authors-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-edit-authors-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-edit-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-edit-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-engage-copy-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-engage-copy-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-engage-edit-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-engage-edit-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-engage-edit-with-template-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-engage-edit-with-template-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-engage-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-engage-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable.facets-panel-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-facets-panel-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable.folders-panel-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-folders-panel-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-manage-authors-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-manage-authors-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-publish-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-publish-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable.queries-panel-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-queries-panel-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable.queues-panel-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-queues-panel-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-redirect-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-redirect-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-restrict-content-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-restrict-content-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable.scheduling-panel-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-scheduling-panel-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-send-to-archive-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-send-to-archive-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-unlock-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-unlock-rules
+xml-cdata|gong-desk|desk-configuration/permission/atex.configuration.desk.permissions.disable-unpublish-rules.xml|defaults|desk-configuration/permission|atex.configuration.desk.disable-unpublish-rules
+#
+# --- defaults/desk-configuration/result-set ---
+xml-cdata|gong-desk|desk-configuration/result-set/atex.configuration.desk.budget-view.xml|defaults|desk-configuration/result-set|atex.configuration.desk.budget-view
+xml-cdata|gong-desk|desk-configuration/result-set/atex.configuration.desk.grid-list.xml|defaults|desk-configuration/result-set|atex.configuration.desk.grid-list
+xml-cdata|gong-desk|desk-configuration/result-set/atex.configuration.desk.job-list.xml|defaults|desk-configuration/result-set|atex.configuration.desk.job-list
+xml-cdata|gong-desk|desk-configuration/result-set/atex.configuration.desk.result-set.xml|defaults|desk-configuration/result-set|atex.configuration.desk.result-set
+xml-cdata|gong-desk|desk-configuration/result-set/atex.configuration.desk.table-list.xml|defaults|desk-configuration/result-set|atex.configuration.desk.table-list
+xml-cdata|gong-desk|desk-configuration/result-set/atex.configuration.desk.thumbnail-list.xml|defaults|desk-configuration/result-set|atex.configuration.desk.thumbnail-list
+#
+# --- defaults/desk-system-configuration ---
+json-ref|gong-common|content/desk-system-configuration/atex.configuration.desk-system-configuration.xml|defaults|desk-system-configuration|atex.configuration.desk-system-configuration
+#
+# --- defaults/distributionlist ---
+xml-cdata|gong-desk|distributionlist/distribution-list-conf.xml|defaults|distributionlist|dam.distributionlist.conf
+#
+# --- defaults/editor-configuration ---
+xml-cdata|gong-common|content/editor-configuration/ui-configuration/atex.configuration.act.configurations.xml|defaults|editor-configuration|atex.configuration.act.configurations
+xml-cdata|gong-common|content/editor-configuration/ui-configuration/atex.configuration.act.profiles.xml|defaults|editor-configuration|atex.configuration.act.profiles
+xml-cdata|gong-common|content/editor-configuration/ui-configuration/atex.configuration.act.template-list.xml|defaults|editor-configuration|atex.configuration.act.templates-list
+xml-cdata|gong-common|content/editor-configuration/ui-configuration/atex.configuration.act.toolbar-configurations.xml|defaults|editor-configuration|atex.configuration.act.toolbar-configurations
+xml-cdata|gong-common|content/editor-configuration/ui-configuration/atex.configuration.act.widget-configurations.xml|defaults|editor-configuration|atex.configuration.act.widget-configurations
+xml-cdata|gong-common|content/editor-configuration/com.atex.onecms.texteditor.EditorConfigurationContent.xml|defaults|editor-configuration|com.atex.onecms.texteditor.EditorConfigurationContent
+#
+# --- defaults/editor-configuration/permission ---
+xml-cdata|gong-common|content/editor-configuration/ui-configuration/permission/atex.configuration.act.permissions.disable-publish-rules.xml|defaults|editor-configuration/permission|atex.configuration.act.disable-publish-rules
+#
+# --- defaults/export ---
+xml-cdata|gong-desk|export/dam-export-conf.xml|defaults|export|dam.export.conf
+#
+# --- defaults/form-templates (JSON file references from dam-json-template-list.xml) ---
+json|gong-desk|files/act-nosql-image.json|defaults|form-templates|act-nosql-image
+json|gong-desk|files/act-nosql-image.view.json|defaults|form-templates|act-nosql-image.view
+json-ref|gong-common|content/onecms-templates/article/atex.onecms.Template-act.template.Article.xml|defaults|form-templates|atex.onecms.Template-act.template.Article
+json-ref|gong-common|content/onecms-templates/configuration/atex.onecms.Template-act.template.EditorConfiguration.edit.xml|defaults|form-templates|atex.onecms.Template-act.template.EditorConfiguration.edit
+json-ref|gong-common|content/onecms-templates/configuration/atex.onecms.Template-act.template.EditorConfiguration.view.xml|defaults|form-templates|atex.onecms.Template-act.template.EditorConfiguration.view
+json-ref|gong-common|content/onecms-templates/image/atex.onecms.Template-act.template.Image.edit.xml|defaults|form-templates|atex.onecms.Template-act.template.Image.edit
+json-ref|gong-common|content/onecms-templates/image/atex.onecms.Template-act.template.Image.view.xml|defaults|form-templates|atex.onecms.Template-act.template.Image.view
+json-ref|gong-common|content/onecms-templates/permission/atex.onecms.Template-act.template.PermissionConfiguration.edit.xml|defaults|form-templates|atex.onecms.Template-act.template.PermissionConfiguration.edit
+json-ref|gong-common|content/onecms-templates/permission/atex.onecms.Template-act.template.PermissionConfiguration.view.xml|defaults|form-templates|atex.onecms.Template-act.template.PermissionConfiguration.view
+json|gong-desk|files/damArticleTemplate.json|defaults|form-templates|damArticleTemplate
+json|gong-desk|files/damArticleTemplate.view.json|defaults|form-templates|damArticleTemplate.view
+json|gong-desk|files/damChainConfigurationTemplate.json|defaults|form-templates|damChainConfigurationTemplate
+json|gong-desk|files/damChainConfigurationTemplate.view.json|defaults|form-templates|damChainConfigurationTemplate.view
+json|gong-desk|files/damChainsListTemplate.json|defaults|form-templates|damChainsListTemplate
+json|gong-desk|files/damChainsListTemplate.view.json|defaults|form-templates|damChainsListTemplate.view
+json|gong-desk|files/damDistributionListTemplate.edit.json|defaults|form-templates|damDistributionListTemplate.edit
+json|gong-desk|files/damDistributionListTemplate.view.json|defaults|form-templates|damDistributionListTemplate.view
+json|gong-desk|files/damExportTemplate.json|defaults|form-templates|damExportTemplate
+json|gong-desk|files/damExportTemplate.view.json|defaults|form-templates|damExportTemplate.view
+json|gong-desk|files/damImageTemplate.json|defaults|form-templates|damImageTemplate
+json|gong-desk|files/damImageTemplate.view.json|defaults|form-templates|damImageTemplate.view
+json|gong-desk|files/damJobTemplate.json|defaults|form-templates|damJobTemplate
+json|gong-desk|files/damJobTemplate.view.json|defaults|form-templates|damJobTemplate.view
+json|gong-desk|files/damProcessorConfigurationTemplate.json|defaults|form-templates|damProcessorConfigurationTemplate
+json|gong-desk|files/damProcessorConfigurationTemplate.view.json|defaults|form-templates|damProcessorConfigurationTemplate.view
+json|gong-desk|files/damProcessorsListTemplate.json|defaults|form-templates|damProcessorsListTemplate
+json|gong-desk|files/damProcessorsListTemplate.view.json|defaults|form-templates|damProcessorsListTemplate.view
+json|gong-desk|files/damRenderTemplateListTemplate.edit.json|defaults|form-templates|damRenderTemplateListTemplate.edit
+json|gong-desk|files/damRenderTemplateListTemplate.view.json|defaults|form-templates|damRenderTemplateListTemplate.view
+json|gong-desk|files/damRouteConfigurationTemplate.json|defaults|form-templates|damRouteConfigurationTemplate
+json|gong-desk|files/damRouteConfigurationTemplate.security.parent.json|defaults|form-templates|damRouteConfigurationTemplate.security.parent
+json|gong-desk|files/damRouteConfigurationTemplate.view.json|defaults|form-templates|damRouteConfigurationTemplate.view
+json|gong-desk|files/damRoutesListTemplate.json|defaults|form-templates|damRoutesListTemplate
+json|gong-desk|files/damRoutesListTemplate.view.json|defaults|form-templates|damRoutesListTemplate.view
+json|gong-desk|files/damSendContentTemplate.json|defaults|form-templates|damSendContentTemplate
+json|gong-desk|files/damSendContentTemplate.view.json|defaults|form-templates|damSendContentTemplate.view
+json|gong-desk|files/damTaskTemplate.json|defaults|form-templates|damTaskTemplate
+json|gong-desk|files/damTaskTemplate.view.json|defaults|form-templates|damTaskTemplate.view
+json|gong-desk|files/damThirdPartiesCfgTemplate.json|defaults|form-templates|damThirdPartiesCfgTemplate
+json|gong-desk|files/damWireArticleTemplate.json|defaults|form-templates|damWireArticleTemplate
+json|gong-desk|files/damWireArticleTemplate.view.json|defaults|form-templates|damWireArticleTemplate.view
+json|gong-desk|files/damWireGraphicTemplate.json|defaults|form-templates|damWireGraphicTemplate
+json|gong-desk|files/damWireGraphicTemplate.view.json|defaults|form-templates|damWireGraphicTemplate.view
+json|gong-desk|files/damWireImageTemplate.json|defaults|form-templates|damWireImageTemplate
+json|gong-desk|files/damWireImageTemplate.view.json|defaults|form-templates|damWireImageTemplate.view
+#
+# --- defaults/gallery-configurations ---
+xml-cdata|gong-desk|gallery-configurations/gallery-configurations-conf.xml|defaults|gallery-configurations|dam.galleryconfigurations.conf
+#
+# --- defaults/image-service ---
+xml-cdata|gong-common|content/image-service/com.atex.onecms.image.ImageFormatConfigurationContent.xml|defaults|image-service|com.atex.onecms.image.ImageFormatConfigurationContent
+#
+# --- defaults/importer ---
+xml-cdata|gong-desk|importer/com.atex.onecms.dam.bean-importer.Configuration.xml|defaults|importer|com.atex.onecms.dam.beanImporter.Configuration
+#
+# --- defaults/index ---
+xml-cdata|gong-desk|index/desk.content.indexing.indexComposer.xml|defaults|index|desk.content.indexing.indexComposer
+xml-cdata|gong-desk|index/desk.content.indexing.liveblog-indexcomposer.xml|defaults|index|desk.content.indexing.liveblog.indexComposer
+#
+# --- defaults/localization/desk ---
+# Desk locale: XML references .json5 files in locales/ subdirectory
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-de.xml|defaults|localization/desk|atex.onecms.desk.locale.de
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-dk.xml|defaults|localization/desk|atex.onecms.desk.locale.dk
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-en.xml|defaults|localization/desk|atex.onecms.desk.locale.en
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-es.xml|defaults|localization/desk|atex.onecms.desk.locale.es
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-it.xml|defaults|localization/desk|atex.onecms.desk.locale.it
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-nl.xml|defaults|localization/desk|atex.onecms.desk.locale.nl
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-no.xml|defaults|localization/desk|atex.onecms.desk.locale.no
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-sv.xml|defaults|localization/desk|atex.onecms.desk.locale.sv
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-tr.xml|defaults|localization/desk|atex.onecms.desk.locale.tr
+json-ref|gong-common|content/localization/desk/atex.onecms.desk.locale-vi.xml|defaults|localization/desk|atex.onecms.desk.locale.vi
+#
+# --- defaults/localization/locale ---
+# Custom locale: Parent XML (atex.onecms.custom-locale-imports.xml) has <file> elements
+# referencing individual locale/*.json files. In desk-api, each is a separate content item.
+json|gong-common|content/localization/locale/locale-de.json|defaults|localization/locale|atex.onecms.custom.locale.de
+json|gong-common|content/localization/locale/locale-dk.json|defaults|localization/locale|atex.onecms.custom.locale.dk
+json|gong-common|content/localization/locale/locale-en.json|defaults|localization/locale|atex.onecms.custom.locale.en
+json|gong-common|content/localization/locale/locale-es.json|defaults|localization/locale|atex.onecms.custom.locale.es
+json|gong-common|content/localization/locale/locale-it.json|defaults|localization/locale|atex.onecms.custom.locale.it
+json|gong-common|content/localization/locale/locale-nl.json|defaults|localization/locale|atex.onecms.custom.locale.nl
+json|gong-common|content/localization/locale/locale-no.json|defaults|localization/locale|atex.onecms.custom.locale.no
+json|gong-common|content/localization/locale/locale-sv.json|defaults|localization/locale|atex.onecms.custom.locale.sv
+json|gong-common|content/localization/locale/locale-tr.json|defaults|localization/locale|atex.onecms.custom.locale.tr
+json|gong-common|content/localization/locale/locale-vi.json|defaults|localization/locale|atex.onecms.custom.locale.vi
+#
+# --- defaults/mail-service ---
+xml-cdata|gong-common|content/mail-service/com.atex.onecms.mail-service.Configuration.xml|defaults|mail-service|com.atex.onecms.mail-service.Configuration
+#
+# --- defaults/markas ---
+xml-cdata|gong-desk|markas/color-coding-conf.xml|defaults|markas|dam.colorcoding.conf
+xml-cdata|gong-desk|markas/icon-coding-conf.xml|defaults|markas|dam.iconcoding.conf
+xml-cdata|gong-desk|markas/multi-icon-coding-conf.xml|defaults|markas|dam.multiiconcoding.conf
+#
+# --- defaults/partition ---
+xml-cdata|gong-desk|partition/partitions-conf.xml|defaults|partition|dam.partitions.conf
+#
+# --- defaults/permissions ---
+xml-cdata|gong-common|content/permissions/com.atex.onecms.permission.PermissionConfigurationContent.xml|defaults|permissions|com.atex.onecms.permission.PermissionConfigurationContent
+#
+# --- defaults/processors-list ---
+xml-cdata|gong-desk|processors-list/processors-list-conf.xml|defaults|processors-list|dam.processors.list.conf
+xml-cdata|gong-desk|processors-list/4-processor-configuration-desk-folder.conf.xml|defaults|processors-list|processor.configuration.desk.folder.conf
+xml-cdata|gong-desk|processors-list/2-processor-configuration-image.conf.xml|defaults|processors-list|processor.configuration.image.conf
+xml-cdata|gong-desk|processors-list/1-processor-configuration-json.conf.xml|defaults|processors-list|processor.configuration.json.conf
+xml-cdata|gong-desk|processors-list/5-processor-configuration-rss-feed.conf.xml|defaults|processors-list|processor.configuration.rss.feed.conf
+xml-cdata|gong-desk|processors-list/0-processor-configuration-unzip.conf.xml|defaults|processors-list|processor.configuration.unzip.conf
+xml-cdata|gong-desk|processors-list/6-processor-configuration-video-importer.conf.xml|defaults|processors-list|processor.configuration.video.conf
+xml-cdata|gong-desk|processors-list/3-processor-configuration-xsl.conf.xml|defaults|processors-list|processor.configuration.xsl.conf
+#
+# --- defaults/publish ---
+xml-cdata|gong-desk|publish/ace-publish-configuration.xml|defaults|publish|com.atex.onecms.ace.publish.Configuration
+xml-cdata|gong-desk|publish/com.atex.onecms.dam.bean-publisher.Configuration.xml|defaults|publish|com.atex.onecms.dam.beanPublisher.Configuration
+xml-cdata|gong-common|content/publish/publish-page-configuration.xml|defaults|publish|publish.page.configuration
+#
+# --- defaults/remotes ---
+xml-cdata|gong-desk|remotes/com.atex.onecms.dam.remotes.Configuration.xml|defaults|remotes|com.atex.onecms.dam.remotes.Configuration
+#
+# --- defaults/reset-password ---
+xml-cdata|gong-common|content/reset-password/com.atex.onecms.reset-password.Configuration.xml|defaults|reset-password|com.atex.onecms.reset-password.Configuration
+#
+# --- defaults/restrictContent ---
+json-ref|gong-desk|restrictContent/atex.configuration.desk.restrictContent.xml|defaults|restrictContent|atex.configuration.desk.restrictContent
+#
+# --- defaults/routes-list ---
+xml-cdata|gong-desk|routes-list/routes-list-conf.xml|defaults|routes-list|dam.routes.list.conf
+xml-cdata|gong-desk|routes-list/2-route-configuration.image.conf.xml|defaults|routes-list|route.configuration.image.conf
+xml-cdata|gong-desk|routes-list/1-route-configuration.json.conf.xml|defaults|routes-list|route.configuration.json.conf
+xml-cdata|gong-desk|routes-list/4-route-configuration.newsml.conf.xml|defaults|routes-list|route.configuration.newsml.conf
+xml-cdata|gong-desk|routes-list/3-route-configuration.reuters.conf.xml|defaults|routes-list|route.configuration.reuters.conf
+xml-cdata|gong-desk|routes-list/0-route-configuration.unzip.conf.xml|defaults|routes-list|route.configuration.unzip.conf
+xml-cdata|gong-desk|routes-list/5-route-configuration.video.conf.xml|defaults|routes-list|route.configuration.video.conf
+#
+# --- defaults/sendcontent ---
+xml-cdata|gong-desk|sendcontent/send-content-conf.xml|defaults|sendcontent|dam.sendcontent.conf
+#
+# --- defaults/settings ---
+xml-cdata|gong-desk|settings/general-default-configuration.xml|defaults|settings|com.atex.onecms.general.default.Configuration
+#
+# --- defaults/smartupdates ---
+xml-cdata|gong-desk|smartupdates/smart-updates-conf.xml|defaults|smartupdates|dam.smartupdates.conf
+#
+# --- defaults/tag-manager ---
+xml-cdata|gong-desk|tag-manager-configuration/atex.configuration.tag-manager-configuration.xml|defaults|tag-manager|atex.configuration.tag-manager-configuration
+#
+# --- defaults/widgets-configuration ---
+xml-cdata|gong-common|content/widgets-configuration/configuration.widget.activePreview.xml|defaults|widgets-configuration|configuration.widget.activePreview
+xml-cdata|gong-common|content/widgets-configuration/configuration.widget.pCKEditor.xml|defaults|widgets-configuration|configuration.widget.pCKEditor
+xml-cdata|gong-common|content/widgets-configuration/configuration.widget.pGoogleMaps.xml|defaults|widgets-configuration|configuration.widget.pGoogleMaps
+xml-cdata|gong-common|content/widgets-configuration/configuration.widget.pGoogleMapsPicker.xml|defaults|widgets-configuration|configuration.widget.pGoogleMapsPicker
+xml-cdata|gong-common|content/widgets-configuration/configuration.widget.pImageEditor.xml|defaults|widgets-configuration|configuration.widget.pImageEditor
+xml-cdata|gong-common|content/widgets-configuration/configuration.widget.pMetadata.xml|defaults|widgets-configuration|configuration.widget.pMetadata
+xml-cdata|gong-common|content/widgets-configuration/configuration.widget.pResourceArea.xml|defaults|widgets-configuration|configuration.widget.pResourceArea
+xml-cdata|gong-common|content/widgets-configuration/configuration.widget.slmSelectElement.xml|defaults|widgets-configuration|configuration.widget.slmSelectElement
+xml-cdata|gong-common|content/widgets-configuration/configuration.widget.xLayoutPreview.xml|defaults|widgets-configuration|configuration.widget.xLayoutPreview
+#
+# --- defaults/workflow ---
+# Workflow status lists are manually maintained in desk-api (no source in gong/adm codebases)
+manual|none||defaults|workflow|dam.webstatuslist.d
+manual|none||defaults|workflow|dam.wfstatuslist.d
+#
+# =============================================================================
+# flavor/pseries tier — overrides from adm-starterkit custom-pseries-content
+# =============================================================================
+#
+# --- flavor/pseries/desk-configuration ---
+xml-cdata|adm-starterkit-pseries|desk-configuration/atex.configuration.desk.copyfit.xml|flavor/pseries|desk-configuration|atex.configuration.desk.copyfit-configurations
+xml-cdata|adm-starterkit-pseries|desk-configuration/atex.configuration.desk.menus.xml|flavor/pseries|desk-configuration|atex.configuration.desk.menus
+xml-cdata|adm-starterkit-pseries|desk-configuration/atex.configuration.desk.toolbars.xml|flavor/pseries|desk-configuration|atex.configuration.desk.toolbars
+xml-cdata|adm-starterkit-pseries|desk-configuration/atex.configuration.desk.widgets.xml|flavor/pseries|desk-configuration|atex.configuration.desk.widgets
+#
+# --- flavor/pseries/desk-configuration/form ---
+xml-cdata|adm-starterkit-pseries|desk-configuration/form/atex.configuration.desk.search-forms.xml|flavor/pseries|desk-configuration/form|atex.configuration.desk.search-forms
+xml-cdata|adm-starterkit-pseries|desk-configuration/form/atex.configuration.desk.smart-folder-filters.xml|flavor/pseries|desk-configuration/form|atex.configuration.desk.smart-folder-filters
+#
+# --- flavor/pseries/desk-configuration/permission ---
+xml-cdata|adm-starterkit-pseries|desk-configuration/permission/atex.configuration.desk.permissions.disable.queues-panel-rules.xml|flavor/pseries|desk-configuration/permission|atex.configuration.desk.disable-queues-panel-rules
+#
+# --- flavor/pseries/desk-configuration/result-set ---
+xml-cdata|adm-starterkit-pseries|desk-configuration/result-set/atex.configuration.desk.thumbnail-list.xml|flavor/pseries|desk-configuration/result-set|atex.configuration.desk.thumbnail-list
+#
+# --- flavor/pseries/editor-configuration ---
+xml-cdata|adm-starterkit-pseries|editor-configuration/ui-configuration/atex.configuration.act.toolbar-configurations.xml|flavor/pseries|editor-configuration|atex.configuration.act.toolbar-configurations
+#
+# --- flavor/pseries/editor-configuration/permission ---
+xml-cdata|adm-starterkit-pseries|editor-configuration/ui-configuration/permission/atex.configuration.act.permissions.disable-publish-rules.xml|flavor/pseries|editor-configuration/permission|atex.configuration.act.disable-publish-rules
+#
+# --- flavor/pseries/form-templates ---
+json-ref|adm-starterkit-pseries|onecms-templates/article/act/atex.onecms.Template-atex.onecms.article.print.xml|flavor/pseries|form-templates|atex.onecms.Template-atex.onecms.article.print
+json-ref|adm-starterkit-pseries|onecms-templates/article/act/atex.onecms.Template-atex.onecms.article.print.preview.xml|flavor/pseries|form-templates|atex.onecms.Template-atex.onecms.article.print.preview
+json-ref|adm-starterkit-pseries|onecms-templates/article/desk/atex.onecms.Template-atex.onecms.article.production.dam.preview.xml|flavor/pseries|form-templates|atex.onecms.Template-atex.onecms.article.production.dam.preview
+#
+# --- flavor/pseries/widgets-configuration ---
+xml-cdata|adm-starterkit-pseries|widgets-configuration/configuration.widget.activePreview.xml|flavor/pseries|widgets-configuration|configuration.widget.activePreview

@@ -1,0 +1,20 @@
+{
+  "id": "atex.onecms.Template-com.atex.onecms.app.dam.distribution.list.DistributionListAspectBean.view",
+  "type": "com.atex.onecms.app.dam.distribution.list.DistributionListAspectBean",
+  "label": "Distribution Emails",
+
+  "dataBindings": [
+    {
+      "label": "Configuration",
+      "widget": "pDamDistributionList",
+
+      "config": {
+        "editable": false
+      },
+
+      "domainObjects": {
+        "data": "contentData"
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "atex.onecms.Template-com.atex.onecms.app.dam.render.template.RenderTemplateListBean.edit",
+  "type": "com.atex.onecms.app.dam.render.template.RenderTemplateListBean",
+  "label": "Render Templates List",
+
+  "dataBindings": [
+    {
+      "label": "Configuration",
+      "widget": "pDamRenderTemplateList",
+      
+      "config": {
+        "editable": true,
+        "engines": [
+          "hbs"
+        ]
+      },
+      
+      "domainObjects": {
+        "data": "contentData"
+      }
+    }
+  ]
+}

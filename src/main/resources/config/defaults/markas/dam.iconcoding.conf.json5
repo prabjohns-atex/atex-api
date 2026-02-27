@@ -1,0 +1,11 @@
+{
+	  "field": "icon-coding",
+	  "icon": "fa fa-star-o",
+	  "selected": "fa fa-star",
+	  "range": "5",
+	  "_type": "com.atex.onecms.app.dam.markas.iconcoding.DamIconCodingBean",
+	  "objectType": "IconCoding",
+	  "inputTemplate": "p.DamIconCoding",
+	  "contentType": "parentDocument",
+	  "name": "iconcoding_conf"  
+	}

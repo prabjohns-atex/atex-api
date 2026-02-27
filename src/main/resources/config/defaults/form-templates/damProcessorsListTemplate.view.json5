@@ -1,0 +1,20 @@
+{
+  "id": "com.atex.onecms.app.dam.camel.configuration.DamProcessorsListBean",
+  "type": "com.atex.onecms.app.dam.camel.configuration.DamProcessorsListBean",
+  "label": "Dam Processors List Configuration",
+
+  "dataBindings": [
+    {
+      "label": "Processors List Configuration",
+      "widget": "pDamProcessorsList",
+      
+      "config": {
+      	 "editable":false
+      },
+      
+      "domainObjects": {
+         "data": "contentData/processors"
+      }
+    }
+  ]
+}

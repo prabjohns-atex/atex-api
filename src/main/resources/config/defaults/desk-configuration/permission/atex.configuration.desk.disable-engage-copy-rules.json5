@@ -1,0 +1,12 @@
+{
+  "disable-engage-copy-rules":[
+    {
+      "id":"default-disable-engage-copy-rules",
+      "description":"Disable Engage and Copy Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+	  "id":"route.configuration.reuters.conf",
+	  "name":"Reuters Wire Importer",
+	  "errorHandler":"file:{{polopoly.work-dir}}/reuters-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
+	  "threadsPoolSize":"10",
+	  "from":"file:{{polopoly.work-dir}}/feeds/newsml/reuters-in?delete=true&recursive=true&readLock=changed&include=.*\.xml|.*\.XML",
+	  "parameters":["desk/desk-loader/src/main/resources/newsml/reuters2json.xsl","work/inbox"],
+      "processor":"processor.configuration.xsl.conf",  
+      "run":"true",	  
+      "securityParent":"externalid/dam.assets.common.d",
+      "_type": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean",
+	  "objectType": "DamRouteConfiguration",
+	  "inputTemplate": "p.DamRouteConfiguration",
+	  "contentType": "parentDocument"
+	}

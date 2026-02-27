@@ -1,0 +1,28 @@
+{
+  "configurations": [
+    {
+      "id": "Default",
+      "extend": null,
+      "config": {
+        "templates-list": "default-templates-list",
+        "widget-configurations": "default-widget-configurations",
+        "toolbar-configurations":"default-toolbar-configurations",
+        "disable-publish-rules":"default-disable-publish-rules"
+      }
+    }
+
+    /*
+    {
+      "id": "Set1",
+      "extend": "Default",
+      "config": {}
+    },
+
+    {
+      "id": "Set2",
+      "extend": null,
+      "config": {}
+    }
+    */
+  ]
+}

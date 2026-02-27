@@ -1,0 +1,10 @@
+{
+    "mimeTypeMap": {
+        "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+    },
+      "allowedTypes": [
+        "atex.dam.standard.Image",
+        "atex.dam.standard.WireImage",
+        "atex.onecms.image"
+    ]
+}

@@ -1,0 +1,91 @@
+{
+  "print": [
+    {
+      "id": "default-print-configuration",
+      "config": {
+        "template": "<div ng-repeat='article in articles' check-end>\
+          <div ng-if='article._data.aspects.contentData.data.source'>\
+            <p><strong>{{'_SOURCE_' | translate}}:</strong>\
+            <span ng-if='article._data.aspects.contentData.data.source !== undefined' ng-bind-html='article._data.aspects.contentData.data.source'></span>\
+            </p>\
+          </div>\
+          <div ng-if='article._data.aspects.contentData.data.author'>\
+            <p><strong>{{'__BYLINE__' | translate}}:</strong>\
+            <span ng-if='article._data.aspects.contentData.data.author !== undefined' ng-bind-html='article._data.aspects.contentData.data.author'></span>\
+            </p>\
+          </div>\
+          <div ng-if='article._data.aspects.contentData.data.lastPubdate'>\
+            <p><strong>{{'_PUBLICATION_DATE_' | translate}}:&nbsp;</strong><span>{{article._data.aspects.contentData.data.lastPubdate | date:'dd MM yyyy'}}</span>\
+            </p>\
+          </div>\
+          <div ng-if='article._data.aspects.contentData.data.creationdate'>\
+            <p><strong>{{'_CREATION_DATE_' | translate}}:&nbsp;</strong><span>{{article._data.aspects.contentData.data.creationdate | date:'dd MM yyyy'}}</span>\
+            </p>\
+          </div>\
+          <div ng-if='article._data.aspects.contentData.data.section'>\
+            <p><strong>{{'section_atex_desk_ss' | translate}}:</strong>\
+              <span ng-if='article._data.aspects.contentData.data.section !== undefined' ng-bind-html='article._data.aspects.contentData.data.section'></span>\
+            </p>\
+          </div>\
+          <div ng-if='article._data.aspects.contentData.data.headline'>\
+            <p><strong>{{'_HEADLINE_' | translate}}:</strong>\
+            <span ng-if='article._data.aspects.contentData.data.headline.text !== undefined' ng-bind-html='article._data.aspects.contentData.data.headline.text'></span>\
+            <span ng-if='article._data.aspects.contentData.data.headline.text === undefined' ng-bind-html='article._data.aspects.contentData.data.headline'></span>\
+            </p>\
+          </div>\
+          <div ng-if='article._data.aspects.contentData.data.body'>\
+            <p><strong>{{'_BODY_' | translate}}:</strong></p>\
+            <p ng-if='article._data.aspects.contentData.data.body.text !== undefined' class='text-content' ng-bind-html='article._data.aspects.contentData.data.body.text'></p>\
+            <p ng-if='article._data.aspects.contentData.data.body.text === undefined' class='text-content' ng-bind-html='article._data.aspects.contentData.data.body'></p>\
+          </div>\
+          <hr>\
+          </div>\
+          <div class='images-box'>\
+            <div ng-repeat='image in images' class='image-box'>\
+              <img ng-if='image.id' ng-src='/image/{{image.id}}/image.jpg' ng-class='{{image.htmlCssClass}}'>\
+              <img ng-if='!image.id && image._data.aspects.contentData.data.thumbUrl' ng-src='{{image._data.aspects.contentData.data.thumbUrl}}' class='img-print-thumbnail'>\
+              <div ng-if='image._data.aspects.contentData.data.source'>\
+                <p><strong>{{'_SOURCE_' | translate}}:</strong>\
+                  <span ng-if='image._data.aspects.contentData.data.source !== undefined' ng-bind-html='image._data.aspects.contentData.data.source'></span>\
+                </p>\
+              </div>\
+              <div ng-if='image._data.aspects.contentData.data.author'>\
+                <p><strong>{{'__BYLINE__' | translate}}:</strong>\
+                  <span ng-if='image._data.aspects.contentData.data.author !== undefined' ng-bind-html='image._data.aspects.contentData.data.author'></span>\
+                </p>\
+              </div>\
+              <div ng-if='image._data.aspects.contentData.data.lastPubdate'>\
+                <p><strong>{{'_PUBLICATION_DATE_' | translate}}:&nbsp;</strong><span>{{image._data.aspects.contentData.data.lastPubdate | date:'dd MM yyyy'}}</span>\
+                </p>\
+              </div>\
+              <div ng-if='image._data.aspects.contentData.data.creationdate'>\
+                <p><strong>{{'_CREATION_DATE_' | translate}}:&nbsp;</strong><span>{{image._data.aspects.contentData.data.creationdate | date:'dd MM yyyy'}}</span>\
+                </p>\
+              </div>\
+              <div ng-if='image._data.aspects.contentData.data.section'>\
+                <p><strong>{{'section_atex_desk_ss' | translate}}:</strong>\
+                  <span ng-if='image._data.aspects.contentData.data.section !== undefined' ng-bind-html='image._data.aspects.contentData.data.section'></span>\
+                </p>\
+              </div>\
+              <div ng-if='image._data.aspects.contentData.data.headline'>\
+                <p><strong>{{'_HEADLINE_' | translate}}:</strong>\
+                  <span ng-if='image._data.aspects.contentData.data.headline.text !== undefined' ng-bind-html='image._data.aspects.contentData.data.headline.text'></span>\
+                  <span ng-if='image._data.aspects.contentData.data.headline.text === undefined' ng-bind-html='image._data.aspects.contentData.data.headline'></span>\
+                </p>\
+              </div>\
+              <div ng-if='image._data.aspects.contentData.data.caption'>\
+                <p><strong>{{'_CAPTION_' | translate}}:</strong></p>\
+                <p ng-if='image._data.aspects.contentData.data.caption.text !== undefined' class='text-content' ng-bind-html='image._data.aspects.contentData.data.caption.text'></p>\
+                <p ng-if='image._data.aspects.contentData.data.caption.text === undefined' class='text-content' ng-bind-html='image._data.aspects.contentData.data.caption'></p>\
+              </div>\
+            </div>\
+          </div>\
+          <hr ng-if='missing.length>0'>\
+          <span ng-repeat='miss in missing' check-end>\
+            <span>Missing print template for object</span>\
+            <hr ng-if='missing.length>0'>\
+          </span>"
+      }
+    }
+  ]
+}

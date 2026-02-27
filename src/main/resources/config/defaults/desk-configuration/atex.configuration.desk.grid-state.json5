@@ -1,0 +1,93 @@
+{
+  "grid-state": [
+    {
+      "id": "default-grid-state",
+      "description": "Grid State - Default Configuration",
+      "config": {
+        "gridEnabled": true,
+        "maxRecords": 1000,
+        "fixedColumns": [
+          "desk-deadline-status",
+          "desk-editable-name"
+        ],
+        "filterMapping": {
+          "desk-type": "modalFilter",
+          "desk-web-status": "modalFilter",
+          "desk-status": "modalFilter",
+          "desk-insertion-date": "dateFilter",
+          "desk-publication-date": "dateFilter",
+          "desk-table-publication-date": "dateFilter",
+          "desk-table-insertion-date": "dateFilter",
+          "desk-editable-name": "textFilter",
+          "desk-schedule-notes": "textFilter",
+          "desk-headline": "textFilter",
+          "desk-assignees": "textFilter",
+          "desk-priority": "numberFilter",
+          "desk-words": "numberFilter",
+          "desk-deadline-status": "deadlineFilter",
+          "desk-deadline": "deadlineFilter"
+        },
+        "widgetMapping": {
+          "desk-type": "atex_desk_objectType",
+          "desk-web-status": "web_status_id_s",
+          "desk-status": "content_status_id_s",
+          "desk-editable-name": "name_atex_desk_ts",
+          "desk-schedule-notes": "notes_atex_desk_ts",
+          "desk-headline": "headline_atex_desk_ts",
+          "desk-table-insertion-date": "originalCreationTime_dt",
+          "desk-insertion-date": "originalCreationTime_dt",
+          "desk-table-publication-date": "lpubdate_atex_desk_dt",
+          "desk-publication-date": "lpubdate_atex_desk_dt",
+          "desk-deadline-status": "deadline_atex_desk_dt",
+          "desk-deadline": "deadline_atex_desk_dt"
+        },
+        "deadlineOptions": [
+          {
+            "label": "__NEXTHOUR__",
+            "value": "NextHour"
+          },
+          {
+            "label": "_TODAY_",
+            "value": "Today"
+          },
+          {
+            "label": "__NEXT24H__",
+            "value": "Next24H"
+          },
+          {
+            "label": "_NEXT_7_DAYS",
+            "value": "Next7D"
+          },
+          {
+            "label": "__CUSTOM_DATE_RANGE__",
+            "value": "Custom"
+          }
+        ],
+        "dateOptions": [
+          {
+            "label": "__LASTHOUR__",
+            "value": "NOW-1HOUR TO NOW"
+          },
+          {
+            "label": "_TODAY_",
+            "value": "NOW/DAY TO NOW"
+          },
+          {
+            "label": "__LAST24H__",
+            "value": "NOW-24HOUR TO NOW"
+          },
+          {
+            "label": "__SEARCH_LAST_DAYS__",
+            "value": "NOW/DAY-7DAYS TO NOW/DAY+1DAY"
+          },
+          {
+            "label": "__CUSTOM_DATE_RANGE__",
+            "value": "Custom"
+          }
+        ],
+        "dateFormat": "DD/MM/YYYY HH:mm",
+        "state": {}
+      }
+    }
+  ]
+}

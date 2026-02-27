@@ -1,0 +1,10 @@
+{
+  "disable-redirect-rules": [
+    {
+      "id":"default-disable-redirect-rules",
+      "config": {
+        "always": true
+      }
+    }
+  ]
+}

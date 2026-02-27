@@ -1,0 +1,28 @@
+{
+  "id": "atex.Planning.view",
+  "type": "atex.Planning",
+
+  "label": "Dam Task Configuration",
+
+  "aspects": {
+    "atex.Metadata": {}
+  },
+
+  "dataBindings": [
+    {
+      "label": "Task Type",
+      "widget": "pDamTask",
+
+      "config": {
+        "editable":false,
+        "types" : [{"label":"Article","value":"article"},{"label":"Image","value":"image"},{"label":"Images","value":"images"},{"label":"Video","value":"video"}],
+        "ratios": [{"label":"4:3 standard","value":"4:3 standard"},{"label":"16:9 standard","value":"16:9 standard"},{"label":"21:9","value":"21:9"},{"label":"18:9 (2:1)","value":"18:9 (2:1)"}],
+        "measurement":"characters"
+      },
+
+      "domainObjects": {
+        "data": "contentData"
+      }
+    }
+  ]
+}

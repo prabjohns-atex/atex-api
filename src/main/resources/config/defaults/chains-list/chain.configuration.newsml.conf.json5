@@ -1,0 +1,11 @@
+{
+	  "id":"chain.configuration.newsml.conf",
+	  "routes": [
+	    "route.configuration.newsml.conf"
+	 	],
+	  "_type": "com.atex.onecms.app.dam.camel.configuration.DamChainConfigurationBean",
+	  "objectType": "DamChainConfiguration",
+	  "inputTemplate": "p.DamChainConfiguration",
+	  "contentType": "parentDocument",
+	  "name": "Newsml Wire Importer"  
+	}

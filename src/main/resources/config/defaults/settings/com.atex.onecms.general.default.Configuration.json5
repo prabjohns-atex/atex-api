@@ -1,0 +1,9 @@
+{
+  "sourceProviders": {
+    "default": [
+      "Finance",
+      "Sport",
+      "Culture"
+    ]
+  }
+}

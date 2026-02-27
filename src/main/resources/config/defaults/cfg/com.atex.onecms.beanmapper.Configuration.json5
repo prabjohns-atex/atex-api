@@ -1,0 +1,35 @@
+{
+  "enabled": true,
+  "handlers": {
+    "atex.onecms.article": {
+      "className": "com.atex.onecms.app.dam.mapping.handlers.BeanMapperArticleHandler"
+    },
+    "atex.dam.standard.LiveBlog.article": {
+      "className": "com.atex.onecms.app.dam.mapping.handlers.BeanMapperArticleHandler"
+    }
+  },
+  "config": {
+    "setAuthor": true,
+    "author2Article": [
+      {
+        "source": "fullName",
+        "target": "byline"
+      },
+      {
+        "source": "description",
+        "target": "authorBio"
+      }
+    ],
+    "metadata": {
+      "remove": [
+        "dimension.partition",
+        "dimension.sendto.Users"
+      ]
+    },
+    "aspects": {
+      "remove": [
+        "p.ContentAccess"
+      ]
+    }
+  }
+}

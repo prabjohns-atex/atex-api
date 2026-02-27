@@ -1,0 +1,16 @@
+{
+  "disable-edit-authors-rules": [
+    {
+      "id":"always-enable-edit-authors-rules",
+      "config": {
+        "always": false
+      }
+    },
+    {
+      "id":"always-disable-edit-authors-rules",
+      "config": {
+        "always": true
+      }
+    }
+  ]
+}

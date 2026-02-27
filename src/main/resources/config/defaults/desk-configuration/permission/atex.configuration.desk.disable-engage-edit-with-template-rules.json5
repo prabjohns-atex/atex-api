@@ -1,0 +1,12 @@
+{
+  "disable-engage-edit-with-template-rules":[
+    {
+      "id":"default-disable-engage-edit-with-template-rules",
+      "description":"Disable Engage and Edit with template Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

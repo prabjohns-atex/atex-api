@@ -1,0 +1,20 @@
+{
+  "id": "com.atex.onecms.app.dam.camel.configuration.DamRoutesListBean",
+  "type": "com.atex.onecms.app.dam.camel.configuration.DamRoutesListBean",
+  "label": "Dam Routes List Configuration",
+
+  "dataBindings": [
+    {
+      "label": "Routes List",
+      "widget": "pDamRoutesList",
+      
+      "config": {
+      	 "editable":true
+      },
+      
+      "domainObjects": {
+         "data": "contentData/configurations"
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "disable-collections-panel-rules":[
+    {
+      "id":"default-disable-collections-panel-rules",
+      "description":"Disable Collections Panel",
+      "config": {
+        "always": false
+      }
+    }
+  ]
+}

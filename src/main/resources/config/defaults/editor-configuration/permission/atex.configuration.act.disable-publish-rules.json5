@@ -1,0 +1,20 @@
+{
+  "disable-publish-rules":[
+    {
+      "id":"default-disable-publish-rules",
+      "description":"Disable Publish Rules",
+      "config": {
+        "rules":[
+          {
+            "field": "aspects/contentData/data/headline/text",
+            "values": [""]
+          },
+          {
+            "field": "aspects/atex.WebContentStatus/data/status/statusID",
+            "values": ["draft", "private"]
+          }
+        ]
+      }
+    }
+  ]
+}

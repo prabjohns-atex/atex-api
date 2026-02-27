@@ -1,0 +1,12 @@
+{
+  "disable-clear-engagements-rules":[
+    {
+      "id":"default-disable-clear-engagements-rules",
+      "description":"Disable Clear engagements Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

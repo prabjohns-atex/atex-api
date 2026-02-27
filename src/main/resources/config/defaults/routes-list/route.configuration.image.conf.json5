@@ -1,0 +1,14 @@
+{
+	  "id":"route.configuration.image.conf",
+	  "name":"Image Importer",
+	  "errorHandler":"file:{{polopoly.work-dir}}/image-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
+	  "threadsPoolSize":"10",
+	  "from":"file:{{polopoly.work-dir}}/images?delete=true&recursive=true&readLock=changed&include=.*\.jpg|.*\.JPG",
+	  "processor":"processor.configuration.image.conf",
+      "run":"true",
+      "securityParent":"externalid/dam.assets.common.d",  	  
+      "_type": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean",
+	  "objectType": "DamRouteConfiguration",
+	  "inputTemplate": "p.DamRouteConfiguration",
+	  "contentType": "parentDocument"
+	}

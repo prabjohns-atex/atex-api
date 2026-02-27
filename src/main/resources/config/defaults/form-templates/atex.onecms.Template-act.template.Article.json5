@@ -1,0 +1,298 @@
+{
+  "id": "act.template.Article",
+
+  "type": "com.atex.standard.article.ArticleBean",
+
+  "label": "Article",
+  "namePath": "contentData/title",
+
+  "hidden": "false",
+
+  "aspects": {
+    "atex.Metadata": {},
+    "com.atex.plugins.social.manager.SocialManagerAspect": {},
+    "p.ContentState": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["title", "lead", "priority", "body", "associated-sites"]
+      },
+      {
+        "label": "Media Files",
+        "fields": ["images", "resources"]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["securityParent", "metadata", "timeStateOnTime", "timeStateOffTime", "onlineState"]
+      },
+      {
+        "label": "Social Manager",
+        "fields": ["social-manager", "facebookPreview", "ogTitle", "ogDescription", "ogImages"]
+      },
+      {
+        "label": "Analytics",
+        "fields": ["analytics"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "label": "Title",
+      "name": "title",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Title of article goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/title"
+      }
+    },
+    {
+      "label": "Open graph title",
+      "name": "ogTitle",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Open graph title of article goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/ogTitle"
+      }
+    },
+    {
+      "label": "Lead",
+      "name": "lead",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "Lead of article goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/lead"
+      }
+    },
+    {
+      "label": "Open graph description",
+      "name": "ogDescription",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "Open graph description of article goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/ogDescription"
+      }
+    },
+    {
+       "label": "Priority (1 = highest, 5 = lowest)",
+       "name": "priority",
+       "widget": "newsValue",
+       "config": {
+         "defaultValue" : 3,
+         "values": {
+           "1": 1,
+           "2": 2,
+           "3": 3,
+           "4": 4,
+           "5": 5
+         }
+       },
+
+       "domainObjects": {
+         "data": "contentData/priority"
+       }
+    },
+    {
+      "label": "Body",
+      "name": "body",
+      "widget": "gongCKEditor",
+
+      "config": {
+        "ckConfig": {
+          "height": 400
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/body"
+      }
+    },
+     {
+      "label": "Schedule to publish at:",
+      "name": "timeStateOnTime",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "Select a date and time...",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "p.ContentState/timeState/onTime"
+      }
+    },
+    {
+      "label": "Schedule to unpublish at:",
+      "name": "timeStateOffTime",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "Select a date and time...",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "p.ContentState/timeState/offTime"
+      }
+    },
+    {
+      "name": "onlineState",
+      "widget": "pCheckbox",
+
+      "domainObjects": {
+        "data": "p.ContentState/online"
+      },
+      "config": {
+        "checkboxLabel": "Is Online ?",
+        "defaultValue": true
+      }
+    },
+    {
+       "name": "images",
+       "label": "Images",
+       "widget": "pResourceArea",
+       "config": {
+         "mimeTypeMap": {
+           "image/*": "com.atex.standard.image.ImageContentDataBean"
+         }
+       },
+       "domainObjects": {
+         "data": "contentData/images"
+       }
+     },
+     {
+       "name": "resources",
+       "label": "Other Media Files",
+       "widget": "pResourceArea",
+       "config": {
+         "mimeTypeMap": {
+           "image/*": "com.atex.standard.image.ImageContentDataBean",
+           "video/quicktime": "com.atex.plugins.video.VideoContentDataBean",
+           "video/mp4": "com.atex.plugins.video.VideoContentDataBean"
+         }
+       },
+       "domainObjects": {
+         "data": "contentData/resources"
+       }
+     },
+    {
+      "label": "Associated Sites",
+      "name": "associated-sites",
+      "widget": "pAssociatedSites",
+
+      "domainObjects": {
+        "associatedSites": "p.InsertionInfo/associatedSites",
+        "taxonomyIds": "atex.Metadata/taxonomyIds"
+      }
+    },
+    {
+       "name": "ogImages",
+       "label": "Open graph image",
+       "widget": "pResourceArea",
+       "config": {
+         "mimeTypeMap": {
+           "image/*": "com.atex.standard.image.ImageContentDataBean"
+         }
+       },
+       "domainObjects": {
+         "data": "contentData/ogImages"
+       }
+     },
+    {
+       "label": "Facebook preview",
+       "name": "facebookPreview",
+       "widget": "facebookPreview",
+
+      "domainObjects": {
+        "title": "contentData/title",
+        "lead": "contentData/lead",
+        "body": "contentData/body",
+        "socialTitle": "contentData/ogTitle",
+        "socialLead": "contentData/ogDescription",
+        "associatedSites": "p.InsertionInfo/associatedSites",
+        "socialImages": "contentData/ogImages",
+        "images": "contentData/images"
+      }
+     },
+    {
+      "label": "TEMPLATE.FIELD.WEBSECTION",
+      "name": "securityParent",
+      "widget": "pSecurityParent",
+
+      "config": {
+        "editable": true
+      },
+
+      "domainObject": "p.InsertionInfo/securityParentId",
+      "validators" : {
+        "required": { "message": "You must select a Web Section" }
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.METADATA",
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    },
+    {
+      "label": "Social Manager",
+      "name": "social-manager",
+      "widget": "socialManagerWidget",
+      
+      "config": {
+        "selectFirstAccount": true
+      },
+
+      "domainObjects": {
+        "data": "com.atex.plugins.social.manager.SocialManagerAspect"
+      }
+    },
+    {
+      "label": "Analytics",
+      "name": "analytics",
+      "widget": "pAnalytics",
+
+      "config": {
+        "dimension": "dimension4",
+        "title": "Page views since creation"
+      }
+
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "page-browser":[
+    {
+      "id":"default-page-browser",
+      "description":"Page Browser - Default Configuration",
+      "config":{
+        "page-browser":{
+          "componentId":"desk-smart-folder",
+          "allowDownloadSinglePdf": true,
+          "allowDownloadFullPdf": false,
+          "zones": []
+        }
+      }
+    },
+    {
+      "id":"dev-page-browser",
+      "description":"Page Browser - Dev Configuration",
+      "config":{
+        "page-browser":{
+          "componentId":"desk-smart-folder",
+          "allowDownloadSinglePdf": true,
+          "allowDownloadFullPdf": true
+        }
+      }
+    },
+  ]
+}

@@ -1,0 +1,81 @@
+{
+   "partitions": [
+        {
+          "partition":"common",
+          "icon":"fa fa-archive",
+          "color":"green",
+          "templates": [],
+          "securityParent": "dam.assets.common.d",
+          "label":"__COMMON_PARTITION__"
+        },
+        {
+          "partition":"trash",
+          "icon":"fa fa-trash",
+          "color":"red",
+          "templates": [],
+          "securityParent": "dam.assets.trash.d",
+          "label":"__TRASH_PARTITION__"
+        },
+        {
+          "partition":"incoming",
+          "icon":"fa fa-rss",
+          "color":"blue",
+          "templates": ["p.DamWireArticle","p.DamWireImage","p.DamTweet","p.DamInstagram"],
+          "securityParent": "dam.assets.incoming.d",
+          "label":"__INCOMING_PARTITION__"
+        },
+        {
+          "partition":"archive",
+          "icon":"fa fa-archive",
+          "color":"green",
+          "templates": ["p.DamArticle","p.DamImage", "p.DamPage","p.DamGraphic"],
+          "securityParent": "dam.assets.archive.d",
+          "label":"__ARCHIVE_PARTITION__"
+        },
+        {
+          "partition":"production",
+          "icon":"fa fa-globe",
+          "color":"black",
+          "templates": ["p.NosqlArticle","p.NosqlImage","p.DamJob","p.Collection","p.OnePage","p.Embed","p.Document","p.DamVideo","p.DamAudio","p.DamAudioAI","p.LiveBlogArticle","p.EventArticle"],
+          "securityParent": "dam.assets.production.d",
+          "label":"__PRODUCTION_PARTITION__"
+        },
+        {
+          "partition":"images for review",
+          "icon":"fa fa-exclamation-triangle",
+          "color":"red",
+          "templates": [],
+          "securityParent": "dam.assets.images4review.d",
+          "label":"__IMAGES_FOR_REVIEW_PARTITION__"
+        },
+        {
+          "partition":"archived images for review",
+          "icon":"fa fa-archive",
+          "color":"red",
+          "templates": [],
+          "securityParent": "dam.assets.migratedarchive.d",
+          "label":"__MIGRATED_ARCHIVE_PARTITION__"
+        },
+        {
+          "partition":"all video",
+          "icon":"fa fa-video-camera",
+          "color":"black",
+          "templates": [],
+          "securityParent": "dam.assets.allvideo.d",
+          "label":"__ALL_VIDEO_PARTITION__"
+        },
+        {
+          "partition":"video in use",
+          "icon":"fa fa-video-camera",
+          "color":"red",
+          "templates": [],
+          "securityParent": "dam.assets.videoinuse.d",
+          "label":"__VIDEO_IN_USE_PARTITION__"
+        }
+      ],
+    "_type": "com.atex.onecms.app.dam.partition.DamPartitionsBean",
+    "objectType": "DamPartitions",
+    "inputTemplate": "p.DamPartitions",
+    "contentType": "parentDocument",
+    "name": "Desk Partitions Configuration"
+  }

@@ -1,0 +1,142 @@
+{
+  "_type": "com.atex.gong.configuration.EditorConfigurationBean",
+  "contentTypes": [
+    {
+      "beans": [
+        "com.atex.standard.image.ImageContentDataBean",
+        "com.atex.nosql.image.ImageContentDataBean",
+        "atex.dam.standard.Image",
+        "atex.dam.standard.WireImage",
+        "atex.onecms.image"
+      ],
+      "contentType": "image",
+      "defaultSecurityParentId": "externalid/p.siteengine.Sites.d",
+      "defaults": [
+        {
+          "name": "f",
+          "value": "3x2"
+        },
+        {
+          "name": "w",
+          "value": "400"
+        },
+        {
+          "name": "q",
+          "value": "0.3"
+        }
+      ],
+      "newInstanceBean": "com.atex.standard.image.ImageContentDataBean"
+    },
+    {
+      "beans": [
+        "com.atex.plugins.video.VideoContentDataBean",
+        "atex.dam.standard.Video"
+      ],
+      "contentType": "video",
+      "defaults": []
+    },
+    {
+      "beans": [
+        "atex.dam.standard.Audio"
+      ],
+      "contentType": "audio",
+      "defaults": []
+    },
+    {
+      "beans": [
+        "atex.dam.standard.Document"
+      ],
+      "contentType": "document",
+      "defaults": [{
+          "name": "f",
+          "value": ""
+        },
+        {
+          "name": "w",
+          "value": "400"
+        },
+        {
+          "name": "q",
+          "value": "0.3"
+        }]
+    },
+    {
+      "beans": [
+        "com.atex.standard.html.HtmlBean",
+        "atex.dam.standard.Embed"
+      ],
+      "contentType": "html",
+      "defaults": []
+    },
+    {
+      "beans": [
+        "com.atex.plugins.file.FileContentDataBean"
+      ],
+      "contentType": "file",
+      "defaults": []
+    },
+    {
+      "beans": [
+        "com.atex.plugins.imagegallery.ImageGalleryBean",
+        "atex.dam.standard.Collection"
+      ],
+      "contentType": "gallery",
+      "defaults": [
+        {
+          "name": "f",
+          "value": "3x2"
+        },
+        {
+          "name": "w",
+          "value": "400"
+        },
+        {
+          "name": "q",
+          "value": "0.3"
+        }
+      ]
+    },
+    {
+      "beans": [
+        "com.atex.standard.article.ArticleBean",
+        "com.atex.nosql.article.ArticleBean",
+        "atex.onecms.article"
+      ],
+      "contentType": "article",
+      "defaults": []
+    },
+    {
+      "beans": [
+        "atex.dam.standard.LiveBlog.article"
+      ],
+      "contentType": "liveblog",
+      "defaults": []
+    },
+    {
+      "beans": [
+        "com.atex.onecms.app.dam.remote.RemoteContentRefBean",
+        "ace.articleContent",
+        "ace.imageContent",
+        "ace.imageGalleryContent",
+        "ace.videoContent",
+        "ace.audioContent"
+      ],
+      "contentType": "remote",
+      "defaults": [
+        {
+          "name": "imageContent",
+          "value": "w=400&a=3:2"
+        },
+        {
+          "name": "videoContent",
+          "value": "w=400&a=3:2"
+        },
+        {
+          "name": "imageGalleryContent",
+          "value": "w=400&1:1"
+        }
+      ]
+    }
+  ]
+
+}

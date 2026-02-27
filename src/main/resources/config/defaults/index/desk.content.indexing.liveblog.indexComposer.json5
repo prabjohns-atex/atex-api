@@ -1,0 +1,21 @@
+{
+  "_type":"com.atex.onecms.content.mapping.MappingConfigBean",
+  "converterClass":"com.atex.onecms.app.dam.indexing.LiveBlogIndexComposer",
+  "customConfig":{
+    "_type":"com.atex.onecms.app.dam.indexing.DamIndexComposerConfiguration",
+    "indexInsertParentId":true,
+    "indexOriginalCreationTime":true,
+    "indexRelatedSections":true,
+    "charsFilter": {
+      "\uFFFE": "",
+      "\uFEFF": ""
+    },
+    "skipIds":["PolopolyPost.d"],
+    "shardKeyName": "shardkey_s",
+    "defaultShardKey": "defaultShard",
+    "shardingStrategy": ""
+    // comment the previous line and uncomment one of the next lines if you want to enable a sharding strategy (solrcloud must be enabled).
+    // "shardingStrategy": "com.atex.onecms.solr.PartitionShardingStrategy"
+    // "shardingStrategy": "com.atex.onecms.solr.ImplicitRouterPartitionShardingStrategy"
+   }
+}

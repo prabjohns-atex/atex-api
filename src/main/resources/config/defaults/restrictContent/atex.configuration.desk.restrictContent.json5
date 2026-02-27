@@ -1,0 +1,24 @@
+{
+  "securityParentIds": {
+
+    // example configuration
+    "dam.assets.production.d": {
+      "restrict": {
+        "id": "dam.assets.restricted.d",      // the securityParentId that will be used to move the content
+        "associatedSiteId": "dam.d",          // optional, the externalId of a site to be used in the p.InsertionInfo.associatedSites array
+        "statusId": "restricted",             // optional, change the atex.WFContentStatus status (the print status).
+        "webStatusId": "restricted",          // optional, change the atex.WebContentStatus status (the web status).
+        "forceChangeInsertionParentId": false // optional, if the insertionParentId is different than the securityParentId we will change it to empty.
+      }
+    },
+
+    "dam.assets.restricted.d": {
+      "unrestrict": {
+        "id": "dam.assets.production.d",
+        "associatedSiteId": "dam.d",
+        "statusId": "review",
+        "webStatusId": "draft"
+      }
+    }
+  }
+}

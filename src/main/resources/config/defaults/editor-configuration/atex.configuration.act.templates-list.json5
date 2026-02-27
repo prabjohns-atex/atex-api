@@ -1,0 +1,36 @@
+{
+  "templates-list": [
+    {
+      "id": "default-templates-list",
+      "description": "ACT Templates List - Default Configuration",
+
+       "config": {
+        "templates": {
+          "componentId": "act-templates",
+          "templates": [
+            "act.template.Article",
+            "act.template.Image.edit",
+            "act.template.nosql.Article.preview",
+            "act.template.nosql.Article.print",
+            "act.template.nosql.Article.web",
+            "act.template.nosql.Image",
+            "atex.dam.standard.Article",
+            "atex.dam.standard.Audio",
+            "atex.dam.standard.Collection.act",
+            "atex.dam.standard.BulkImages.act",
+            "atex.dam.standard.Collection.readonly",
+            "atex.dam.standard.Image",
+            "atex.onecms.article.preview",
+            "atex.onecms.article.print",
+            "atex.onecms.article.web",
+            "atex.onecms.image",
+            "com.atex.nosql.image.ImageContentDataBean.dam.preview",
+            "com.atex.plugins.video.Video.edit",
+            "atex.dam.standard.Embed",
+            "atex.dam.standard.Document"
+          ]
+        }
+      }
+    }
+  ]
+}

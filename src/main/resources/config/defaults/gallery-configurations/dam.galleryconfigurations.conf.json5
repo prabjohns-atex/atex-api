@@ -1,0 +1,25 @@
+{
+	  "field": "gallery-configurations",
+	  "configurations": [ 
+	  	{
+	  		"id"   :"0",
+	  		"color":"btn-default",
+       	  	"label":"Not Defined"
+    	},
+    	{
+	  		"id"   :"1",
+	  		"color":"btn-danger",
+       	  	"label":"Pending"
+    	},
+    	{
+	  		"id"   :"2",
+	  		"color":"btn-success",
+       	  	"label":"Completed"
+    	} 	
+	 	],      
+	  "_type": "com.atex.onecms.app.dam.gallery.DamGalleryConfigurationBean",
+	  "objectType": "GalleryConfiguration",
+	  "inputTemplate": "p.DamGalleryConfiguration",
+	  "contentType": "parentDocument",
+	  "name": "gallery-configurations_conf"  
+	}

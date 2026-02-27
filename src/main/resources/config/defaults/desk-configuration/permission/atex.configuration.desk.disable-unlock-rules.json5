@@ -1,0 +1,12 @@
+{
+  "disable-unlock-rules":[
+    {
+      "id":"default-disable-unlock-rules",
+      "description":"Disable UnLock Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "disable-send-to-archive-rules":[
+    {
+      "id":"default-disable-send-to-archive-rules",
+      "description":"Disable Send to Archive Rules",
+      "config": {
+        "rules":[
+          {
+            "field": "aspects/contentData/data/objectType",
+            "values": ["article", "liveblog", "page"]
+          },
+          {
+            "field": "dimension.partition",
+            "values": ["archive"]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "imageTaggingService": {
+    "enable": false,
+    "tags": "dimension.Tag",
+    "celebrities": "dimension.Person"
+  }
+}

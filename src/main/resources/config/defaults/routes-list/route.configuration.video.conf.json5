@@ -1,0 +1,15 @@
+{
+	  "id":"route.configuration.video.conf",
+	  "name":"Video Importer",
+	  "errorHandler":"file:{{polopoly.work-dir}}/video-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
+	  "threadsPoolSize":"10",
+	  "from":"file:{{polopoly.work-dir}}/video-in?delete=true&recursive=true&readLock=changed&include=.*\.*",
+	  "parameters":["3"],
+      "processor":"processor.configuration.video.conf", 
+      "run":"true", 
+      "securityParent":"externalid/dam.assets.common.d", 
+      "_type": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean",
+	  "objectType": "DamRouteConfiguration",
+	  "inputTemplate": "p.DamRouteConfiguration",
+	  "contentType": "parentDocument"
+	}

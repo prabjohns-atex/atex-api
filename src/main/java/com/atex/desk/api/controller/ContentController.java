@@ -1,5 +1,6 @@
 package com.atex.desk.api.controller;
 
+import com.atex.desk.api.config.ConfigurationService;
 import com.atex.desk.api.dto.ContentHistoryDto;
 import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ContentWriteDto;
@@ -30,10 +31,13 @@ public class ContentController
     private static final String DEFAULT_USER = "system";
 
     private final ContentService contentService;
+    private final ConfigurationService configurationService;
 
-    public ContentController(ContentService contentService)
+    public ContentController(ContentService contentService,
+                              ConfigurationService configurationService)
     {
         this.contentService = contentService;
+        this.configurationService = configurationService;
     }
 
     /**
@@ -95,6 +99,17 @@ public class ContentController
         Optional<String> contentId = contentService.resolveExternalId(id);
         if (contentId.isEmpty())
         {
+            // Fall back to resource-based configuration
+            if (configurationService.isConfigId(id))
+            {
+                ContentResultDto configResult = configurationService.toContentResultDto(id);
+                if (configResult != null)
+                {
+                    return ResponseEntity.ok()
+                        .eTag(configResult.getVersion())
+                        .body(configResult);
+                }
+            }
             return notFound("External ID not found: " + id);
         }
 

@@ -1,0 +1,67 @@
+{
+  "global": {
+
+    "operations": {
+      "default": "com.atex.gong.app.operations.CreateContentOperation"
+    },
+
+    "containersMapping": {
+      "components": {
+        "inheritSetting": "component:pageLayout/selected/%SLOT%/inheritSetting:selected_0"
+      }
+    },
+
+    "containers": [],
+
+    "contents": {
+      "teaser": {
+        "type": "com.atex.plugins.teaser.Teaser",
+        "major": "LayoutElement",
+        "mapping": {
+          "fields": {
+            "teaserHeadline": "name"
+          },
+          "components": {
+            "teaserSummary": "component:text:value",
+            "teaserImgID": "contentlist:images",
+            "teaserArticleId": "contentlist:teaserables",
+            "teaserVideoID": "contentlist:videos"
+          }
+        }
+      },
+      "embed": {
+        "type": "standard.HtmlElement",
+        "major": "LayoutElement",
+        "mapping": {
+          "fields": {
+            "html": "code"
+          }
+        }
+      },
+      "video": {
+        "type": "com.atex.plugins.video.Video",
+        "major": "Article",
+        "mapping": {
+          "fields": {
+            "videoHeadline": "name"
+          },
+          "components": {
+            "videoSummary": "component:lead:value",
+            "videoUrlEmbed": "component:videoUrlEmbed:value",
+            "headline_videoRRTV": "component:videoRRTV:value",
+            "headline_thumbUrl": "component:thumbUrl:value",
+            "headline_thumbSocialPlayUrl": "component:thumbSocialPlayUrl:value",
+            "videoCategory": "component:videoCategory:value",
+            "assetId": "component:assetId:value",
+            "joinId": "component:joinId:value"
+          }
+        }
+      }
+    }
+
+  },
+
+  "pages": {
+
+  }
+}

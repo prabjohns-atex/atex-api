@@ -1,0 +1,19 @@
+{
+	 "updates": [ 
+        {
+          "value":"AtexTimes Default",
+          "field":"headline",
+          "label":"Headline=AtexTimes Default"
+        },
+        {
+          "value":"New York",
+          "field":"dimension.Location",
+          "label":"Location=New York"
+        }
+      ],
+	  "_type": "com.atex.onecms.app.dam.smartupdates.DamSmartUpdatesBean",
+	  "objectType": "SmartUpdates",
+	  "inputTemplate": "p.DamSmartUpdates",
+	  "contentType": "parentDocument",
+	  "name": "smartupdates_conf"  
+	}

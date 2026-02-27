@@ -1,0 +1,12 @@
+{
+  "disable-engage-edit-rules":[
+    {
+      "id":"default-disable-engage-edit-rules",
+      "description":"Disable Engage and Edit Rules",
+      "config": {
+        "rules":[
+        ]
+      }
+    }
+  ]
+}

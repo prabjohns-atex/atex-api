@@ -1,0 +1,12 @@
+{
+	  "id":"processor.configuration.video.conf",
+      "name":"Video Importer Processor",
+      "classPath":"com.atex.onecms.app.dam.camel.processor.VideoProcessor",
+      "method":"importVideo",
+      "type":"1",
+      "label":["Video Status Id when done"],
+      "_type": "com.atex.onecms.app.dam.camel.configuration.DamProcessorConfigurationBean",
+	  "objectType": "DamProcessorConfiguration",
+	  "inputTemplate": "p.DamProcessorConfiguration",
+	  "contentType": "parentDocument"
+	}

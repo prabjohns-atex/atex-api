@@ -1,0 +1,13 @@
+{
+  // This is the Ayrshare API key
+  "apiKey": "",
+
+  // This is the Ayrshare profile key (customer-based)
+  "profileKey": "",
+
+  // This is the default ayrshare api url
+  "apiUrl": "https://app.ayrshare.com/api",
+
+  // set it to true to debug the response from Ayrshare
+  "dumpResponse": false
+}
