@@ -1,0 +1,31 @@
+-- ADM Content Service default data
+-- Derived from adm-content-service sql.properties (mysql.cm_insertDefaults)
+
+INSERT IGNORE INTO `idtype` (`name`) VALUES ('onecms');
+INSERT IGNORE INTO `idtype` (`name`) VALUES ('draft');
+
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('deleted');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('created_at');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('created_by');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('insertParentId');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('securityParentId');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('objectType');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('inputTemplate');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('partition');
+
+INSERT IGNORE INTO `views` (`name`, `created_by`) VALUES ('p.latest', '98');
+INSERT IGNORE INTO `views` (`name`, `created_by`) VALUES ('p.public', '98');
+INSERT IGNORE INTO `views` (`name`, `created_by`) VALUES ('p.deleted', '98');
+
+INSERT IGNORE INTO `aliases` (`name`, `created_by`) VALUES ('externalId', '98');
+
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('CREATE');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('UPDATE');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('REMOVE');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('ASSIGN_VIEW');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('REMOVE_VIEW');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('SCHEDULED_PURGE_VERSION');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('PURGE_VERSION');
+
+-- Default users (password is SHA-256 hash of the username for dev convenience)
+INSERT IGNORE INTO `users` (`username`, `password_hash`) VALUES ('sysadmin', 'd577adc54e95f42f15de2e7c134669888b7d6fb74df97bd62cb4f5b73c281db4');

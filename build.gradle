@@ -1,0 +1,60 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.3'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.hibernate.orm' version '7.2.4.Final'
+    id 'org.graalvm.buildtools.native' version '0.11.4'
+}
+
+group = 'com.atex.cloud'
+version = '0.0.1-SNAPSHOT'
+description = 'Desk API - OneCMS-compatible REST layer'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-restclient'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+
+    // JWT authentication (JJWT with Gson backend — avoids Jackson 2 vs 3 conflict)
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-gson:0.12.6'
+
+    // Plugin system
+    implementation 'org.pf4j:pf4j:3.15.0'
+
+    // DAM dependencies
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.google.guava:guava:33.4.0-jre'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+    implementation 'org.apache.pdfbox:pdfbox:2.0.32'
+    implementation 'org.apache.solr:solr-solrj:9.8.0'
+    implementation 'org.jsoup:jsoup:1.18.3'
+
+    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-restclient-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+hibernate {
+    enhancement {
+        enableAssociationManagement = false
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
