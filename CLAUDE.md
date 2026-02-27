@@ -564,3 +564,241 @@ DamPublisherFactory.create(contentId, caller)
 | Camel engine | `CamelEngine` | Empty stub (route management) |
 | Workspace/draft | ContentManager workspace methods | Throw UnsupportedOperationException |
 | Group storage | `LocalUserServer.findGroup()` | Returns null |
+
+## Increment 5 — PF4J Plugin System
+
+Adds a modular plugin architecture using PF4J 3.15.0 for loading external JAR plugins at runtime. Plugins can extend content lifecycle behavior without modifying desk-api core.
+
+### Architecture
+
+```
+desk-api startup
+  ├─ PluginConfig (@Configuration)
+  │    └─ JarPluginManager → loads + starts JARs from plugins/ directory
+  ├─ BuiltInHookRegistrar (@PostConstruct) — registers built-in hooks first
+  └─ PluginLoader (@PostConstruct, @DependsOn("builtInHookRegistrar"))
+       ├─ discovers DeskPreStoreHook extensions → registers with LocalContentManager
+       └─ discovers DeskContentComposer extensions → logged (not yet wired)
+```
+
+### Extension Points
+
+**`DeskPreStoreHook`** (`extends ExtensionPoint`) — modify content before persistence:
+- `String[] contentTypes()` — content types this hook applies to
+- `ContentWrite<Object> preStore(input, existing, contentManager, subject)` — transform content write; throw `CallbackException` to abort
+
+**`DeskContentComposer`** (`extends ExtensionPoint`) — transform content for variants:
+- `String variant()` — variant name this composer handles
+- `ContentResult<Object> compose(source, params)` — transform content result
+- Discovered at startup but not yet exposed via REST API
+
+### Plugin Infrastructure
+
+| Class | Package | Description |
+|---|---|---|
+| `PluginConfig` | `c.a.d.a.plugin` | `@Configuration`: creates `JarPluginManager` bean (or no-op when disabled), auto-creates plugins directory |
+| `PluginProperties` | `c.a.d.a.plugin` | `@ConfigurationProperties(prefix = "desk.plugins")`: `enabled` (default true), `directory` (default "plugins") |
+| `PluginLoader` | `c.a.d.a.plugin` | `@Component @DependsOn("builtInHookRegistrar")`: discovers PF4J extensions, adapts `DeskPreStoreHook` to `LifecyclePreStore` interface, registers with `LocalContentManager` |
+| `DeskPreStoreHook` | `c.a.d.a.plugin` | PF4J `ExtensionPoint` interface for pre-store hooks |
+| `DeskContentComposer` | `c.a.d.a.plugin` | PF4J `ExtensionPoint` interface for content composers |
+
+### Hook Execution in LocalContentManager
+
+`LocalContentManager` maintains a `Map<String, List<LifecyclePreStore<?, ?>>>` keyed by content type. The `registerPreStoreHook(contentType, hook)` method appends to this map. During `create()` and `update()`, `runPreStoreHooks()` chains all matching hooks in registration order, passing each a `LifecycleContextPreStore` with `ContentManager`, `Subject`, and optional `FileService`.
+
+### Configuration
+
+```properties
+desk.plugins.enabled=true
+desk.plugins.directory=plugins
+```
+
+**Gradle dependency:** `implementation 'org.pf4j:pf4j:3.15.0'`
+
+## Increment 6 — Built-in PreStoreHooks + Index Composer Pipeline
+
+Ports the built-in PreStoreHooks and post-store index composition from the original gong/onecms-common codebase into desk-api. These are core behaviors every installation needs — the PF4J plugin system (Increment 5) handles customer-specific additions on top.
+
+The original system maps content types to ordered hook chains via XML config (`callbacks.xml`). In desk-api, `BuiltInHookRegistrar` programmatically registers hooks in the correct order at startup.
+
+### Architecture
+
+```
+LocalContentManager
+  ├─ create()/update() → runPreStoreHooks()
+  │    ├─ Wildcard hooks (all types):
+  │    │    ├─ OneContentPreStore         (creation date, name, author)
+  │    │    └─ HandleItemStatePreStore    (spike/unspike)
+  │    ├─ Image types:
+  │    │    ├─ OneImagePreStore           (metadata extraction)
+  │    │    ├─ SecParentPreStoreHook      (partition sync)
+  │    │    ├─ SetStatusPreStoreHook      (workflow status)
+  │    │    └─ AddEngagementPreStoreHook  (engagement tracking)
+  │    ├─ Article types:
+  │    │    ├─ SecParentPreStoreHook
+  │    │    ├─ SetStatusPreStoreHook
+  │    │    ├─ OneWordCountPreStoreHook   (word count)
+  │    │    ├─ OneCharCountPreStoreHook   (char count)
+  │    │    └─ AddEngagementPreStoreHook
+  │    ├─ Audio/Collection types: (similar chains)
+  │    └─ [PF4J plugin hooks]            (appended after built-ins)
+  │
+  ├─ create()/update() → ContentIndexer.index()  [post-store]
+  │    └─ DamIndexComposer → SolrService.index() → Solr
+  │
+  └─ delete() → ContentIndexer.delete()
+       └─ SolrService.delete() → Solr
+```
+
+### Bean Inheritance Fix (prerequisite)
+
+The original OneCMS beans have an inheritance chain that hooks depend on (`instanceof OneContentBean` checks). Fixed the desk-api stubs to match:
+
+| Bean | Change |
+|---|---|
+| `OneArticleBean` | Now `extends OneContentBean`; added `headline`, `lead`, `body` |
+| `OneImageBean` | Now `extends OneContentBean`; added `description`, `caption`, `title`, `byline`, `credit`, `width`, `height` |
+| `DamCollectionAspectBean` | Now `extends OneContentBean`; added `headline`, `description`, `getContentIdList()` helper |
+| `DamArticleAspectBean` | Simplified to `extends OneArticleBean` (inherits all fields) |
+| `DamImageAspectBean` | Simplified to `extends OneImageBean` (inherits all fields) |
+| `DamAudioAspectBean` | New class `extends OneContentBean`; `audioLink`, `duration`, `description` |
+
+### Phase 1: Infrastructure
+
+**New classes:**
+
+| Class | Package | Description |
+|---|---|---|
+| `CachingFetcher` | `c.a.o.content` | Per-request cache wrapping `ContentManager` with HashMap-based caching for `get()` and `resolve()` operations. Factory: `CachingFetcher.create(contentManager, subject)` |
+| `SetStatusOperation` | `c.a.o.content` | `implements ContentOperation`: `statusId`, `comment`, `attributes` map |
+| `AddEngagement` | `c.a.o.content` | `implements ContentOperation`: `sourceId`, `EngagementDesc`, `addOriginalContent` flag |
+| `PrestigeItemStateAspectBean` | `c.a.o.a.d.standard.aspects` | Item state aspect: `ItemState` enum (PRODUCTION, SPIKED), `previousSecParent` |
+| `DamContentAccessAspectBean` | `c.a.o.a.d.standard.aspects` | Content access control: `creator`, `assignees` list |
+| `OneWordCountPreStoreConfig` | `c.a.o.a.d.lifecycle.wordcount` | Config bean with `fields` list (default: `["body"]`) |
+| `OneCharCountPreStoreConfig` | `c.a.o.a.d.lifecycle.charcount` | Config bean with `fields` list (default: `["body"]`) |
+| `PartitionProperties` | `c.a.d.a.plugin` | `@ConfigurationProperties(prefix = "desk.partitions")`: `Map<String, String> mapping` (partition ID → security parent external ID) with bidirectional lookup |
+
+**Modified classes:**
+
+| Class | Change |
+|---|---|
+| `LifecycleContextPreStore` | Added optional `FileService` field with second constructor |
+| `LocalContentManager` | Added `FileService` + `ContentIndexer` constructor params (both `@Nullable`); `runPreStoreHooks()` merges wildcard `"*"` hooks with type-specific hooks; post-store `indexAsync()` and `delete()` call `ContentIndexer` |
+
+### Phase 2: PreStoreHook Implementations
+
+All hooks implement `LifecyclePreStore<Object, ?>` and are plain classes (not Spring components) — instantiated by `BuiltInHookRegistrar`.
+
+| Hook | Package | Behaviour |
+|---|---|---|
+| `OneContentPreStore` | `c.a.o.a.d.lifecycle.onecontent` | Sets creation date if null, derives name from headline/title/caption, sets author from subject |
+| `HandleItemStatePreStore` | `c.a.o.a.d.lifecycle.handleItemState` | SPIKED → moves to trash security parent + "trash" partition; PRODUCTION → restores previous security parent |
+| `OneImagePreStore` | `c.a.o.a.d.lifecycle.onecontent` | Sets name from filename; stub for image metadata service extraction (configurable via `desk.image-metadata-service.*`) |
+| `SecParentPreStoreHook` | `c.a.o.a.d.lifecycle.partition` | Bidirectional partition ↔ security parent sync using `PartitionProperties` mapping |
+| `SetStatusPreStoreHook` | `c.a.o.a.d.lifecycle.status` | Processes `SetStatusOperation` from ContentWrite operations; resolves status via `WFStatusUtils`; updates `WFContentStatusAspectBean` + `WebContentStatusAspectBean` |
+| `OneWordCountPreStoreHook` | `c.a.o.a.d.lifecycle.wordcount` | Strips HTML, counts words via `split("\\s+")`, sets `bean.setWords()` |
+| `OneCharCountPreStoreHook` | `c.a.o.a.d.lifecycle.charcount` | Strips HTML, counts characters, sets `bean.setChars()` |
+| `AddEngagementPreStoreHook` | `c.a.o.a.d.lifecycle.engagement` | Processes `AddEngagement` operations via `DamEngagementUtils` |
+| `DamAudioPreStoreHook` | `c.a.o.a.d.lifecycle.audio` | Sets name and `audioLink` from `FilesAspectBean` file path if empty |
+| `CollectionPreStore` | `c.a.o.a.d.lifecycle.collection` | Sets name from headline, initializes `DamContentAccessAspectBean` for new collections |
+
+### Phase 3: Hook Registration
+
+**`BuiltInHookRegistrar`** (`com.atex.desk.api.plugin`) — `@Component` with `@PostConstruct` that registers all built-in hooks with `LocalContentManager` in the correct order, matching the original `callbacks.xml` configuration.
+
+**Content type → hook chain mapping:**
+
+| Content Type | Hook Chain (in order) |
+|---|---|
+| `*` (wildcard, all types) | OneContentPreStore → HandleItemStatePreStore |
+| Image (`atex.dam.standard.Image`, `DamImageAspectBean`, `OneImageBean`) | OneImagePreStore → SecParentPreStoreHook → SetStatusPreStoreHook → AddEngagementPreStoreHook |
+| WireImage (`atex.dam.standard.WireImage`) | OneImagePreStore → SecParentPreStoreHook → SetStatusPreStoreHook |
+| Article (`atex.dam.standard.Article`, `DamArticleAspectBean`, `OneArticleBean`) | SecParentPreStoreHook → SetStatusPreStoreHook → OneWordCountPreStoreHook → OneCharCountPreStoreHook → AddEngagementPreStoreHook |
+| WireArticle (`atex.dam.standard.WireArticle`) | SecParentPreStoreHook → SetStatusPreStoreHook → OneWordCountPreStoreHook → OneCharCountPreStoreHook |
+| Audio (`DamAudioAspectBean`) | DamAudioPreStoreHook → SecParentPreStoreHook → SetStatusPreStoreHook → AddEngagementPreStoreHook |
+| Collection (`DamCollectionAspectBean`) | CollectionPreStore → SecParentPreStoreHook → SetStatusPreStoreHook → AddEngagementPreStoreHook |
+
+Hooks registered for both original Polopoly type names (`atex.dam.standard.*`) and Java class-based type names (`com.atex.onecms.app.dam.standard.aspects.*`).
+
+**Ordering guarantee**: `@DependsOn("builtInHookRegistrar")` on `PluginLoader` ensures built-in hooks register first, PF4J plugin hooks append after.
+
+**Wildcard merging**: `LocalContentManager.runPreStoreHooks()` merges hooks from `"*"` key first, then appends type-specific hooks. All hooks chain in registration order.
+
+### Phase 4: Index Composer Pipeline
+
+Post-store indexing that converts content to Solr documents and pushes to Solr after create/update/delete.
+
+**New classes:**
+
+| Class | Package | Description |
+|---|---|---|
+| `ContentIndexer` | `c.a.d.a.indexing` | `@Component`: receives pre-built `ContentResult` from `LocalContentManager` (avoids circular dependency), composes Solr JSON via `DamIndexComposer`, pushes to `SolrService`. `@Nullable SolrService` — silently skips if Solr not configured. Methods: `index(ContentResult, ContentVersionId)`, `delete(ContentId)` |
+| `DamIndexComposer` | `c.a.d.a.indexing` | `@Component`: combines IndexComposer + DamIndexComposer + SystemFieldComposer into one class. Produces Solr JSON with: system fields (`id`, `version`, `type`, timestamps), aspect fields (auto-detected Solr type suffixes: `_b`, `_l`, `_dt`, `_ss`, `_t`), hierarchy fields (`page_ss`), DAM-specific fields (`originalCreationTime_dt`, full-text fields) |
+| `SolrConfig` | `c.a.d.a.config` | `@Configuration`: provides `SolrService` bean via `@ConditionalOnProperty(name = "desk.solr-url")` |
+
+**Modified classes:**
+
+| Class | Change |
+|---|---|
+| `SolrService` | Added `index(String collection, JsonObject solrDoc)` — converts JSON to `SolrInputDocument`, adds + commits. Added `delete(String collection, String id)` — deletes by ID + commits. Added private `jsonToSolrDoc()` helper |
+| `LocalContentManager` | After `create()`/`update()`: calls `ContentIndexer.index()` with the already-built `ContentResult` (fire-and-forget, logs errors but doesn't fail the content operation). After `delete()`: calls `ContentIndexer.delete()` |
+
+**Circular dependency resolution**: `ContentIndexer` does NOT depend on `ContentManager`. Instead, `LocalContentManager` passes the already-fetched `ContentResult` directly to `ContentIndexer.index()`, breaking the cycle.
+
+### Configuration
+
+```properties
+# Partition → security parent mapping (for SecParentPreStoreHook)
+# desk.partitions.mapping.default=site.default.d
+
+# Content indexing (requires desk.solr-url to be set)
+desk.indexing.enabled=true
+
+# Image metadata service (for OneImagePreStore)
+desk.image-metadata-service.url=
+desk.image-metadata-service.enabled=false
+```
+
+**Gradle dependency added:** `implementation 'org.jsoup:jsoup:1.18.3'`
+
+### Files Summary
+
+**New files (22):**
+
+| File | Description |
+|---|---|
+| `content/CachingFetcher.java` | Per-request content cache |
+| `content/SetStatusOperation.java` | Status change operation |
+| `content/AddEngagement.java` | Engagement add operation |
+| `standard/aspects/PrestigeItemStateAspectBean.java` | Spike/unspike state |
+| `standard/aspects/DamContentAccessAspectBean.java` | Content access control |
+| `standard/aspects/DamAudioAspectBean.java` | Audio content bean |
+| `lifecycle/wordcount/OneWordCountPreStoreHook.java` | Word counter |
+| `lifecycle/wordcount/OneWordCountPreStoreConfig.java` | Word counter config |
+| `lifecycle/charcount/OneCharCountPreStoreHook.java` | Char counter |
+| `lifecycle/charcount/OneCharCountPreStoreConfig.java` | Char counter config |
+| `lifecycle/audio/DamAudioPreStoreHook.java` | Audio name/link setter |
+| `lifecycle/status/SetStatusPreStoreHook.java` | Workflow status handler |
+| `lifecycle/engagement/AddEngagementPreStoreHook.java` | Engagement tracking |
+| `lifecycle/onecontent/OneContentPreStore.java` | Content initialization |
+| `lifecycle/onecontent/OneImagePreStore.java` | Image metadata extraction |
+| `lifecycle/partition/SecParentPreStoreHook.java` | Partition ↔ security parent |
+| `lifecycle/handleItemState/HandleItemStatePreStore.java` | Spike/unspike |
+| `lifecycle/collection/CollectionPreStore.java` | Collection item processing |
+| `plugin/BuiltInHookRegistrar.java` | Registers hooks per content type |
+| `plugin/PartitionProperties.java` | Partition config properties |
+| `indexing/ContentIndexer.java` | Post-store Solr indexing |
+| `indexing/DamIndexComposer.java` | Content → Solr JSON |
+
+**Modified files (8):**
+
+| File | Change |
+|---|---|
+| `OneArticleBean.java` | Extend `OneContentBean`, add missing fields |
+| `OneImageBean.java` | Extend `OneContentBean`, add missing fields |
+| `DamCollectionAspectBean.java` | Extend `OneContentBean`, add missing fields |
+| `DamArticleAspectBean.java` | Simplified to extend `OneArticleBean` |
+| `DamImageAspectBean.java` | Simplified to extend `OneImageBean` |
+| `LifecycleContextPreStore.java` | Add optional `FileService` field |
+| `LocalContentManager.java` | Wildcard hook matching, post-store indexing, `FileService` + `ContentIndexer` injection |
+| `SolrService.java` | Add `index()` and `delete()` methods |
