@@ -7,6 +7,7 @@ import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ContentVersionInfoDto;
 import com.atex.desk.api.dto.ContentWriteDto;
 import com.atex.desk.api.indexing.ContentIndexer;
+import com.atex.desk.api.service.ChangeListService;
 import com.atex.desk.api.service.ContentService;
 import com.atex.desk.api.service.IdGenerator;
 import com.atex.onecms.content.Content;
@@ -71,6 +72,7 @@ public class LocalContentManager implements ContentManager {
     private final FileService fileService;
     private final ContentIndexer contentIndexer;
     private final ConfigurationService configurationService;
+    private final ChangeListService changeListService;
 
     /**
      * Registry of pre-store hooks keyed by content type name.
@@ -83,7 +85,8 @@ public class LocalContentManager implements ContentManager {
                                 WorkspaceStorage workspaceStorage, IdGenerator idGenerator,
                                 @Nullable FileService fileService,
                                 @Nullable ContentIndexer contentIndexer,
-                                @Nullable ConfigurationService configurationService) {
+                                @Nullable ConfigurationService configurationService,
+                                @Nullable ChangeListService changeListService) {
         this.contentService = contentService;
         this.objectMapper = objectMapper;
         this.workspaceStorage = workspaceStorage;
@@ -91,6 +94,7 @@ public class LocalContentManager implements ContentManager {
         this.fileService = fileService;
         this.contentIndexer = contentIndexer;
         this.configurationService = configurationService;
+        this.changeListService = changeListService;
     }
 
     // --- Pre-store hook registration ---
@@ -224,6 +228,9 @@ public class LocalContentManager implements ContentManager {
             // Post-store indexing (fire-and-forget)
             indexAsync(result, vid);
 
+            // Record change event (fire-and-forget)
+            recordChange("CREATE", result, vid, userId);
+
             return (ContentResult<OUT>) dtoToContentResult(result, vid, null, Object.class);
         } catch (CallbackException e) {
             throw e;
@@ -269,6 +276,9 @@ public class LocalContentManager implements ContentManager {
             // Post-store indexing (fire-and-forget)
             indexAsync(result.get(), vid);
 
+            // Record change event (fire-and-forget)
+            recordChange("UPDATE", result.get(), vid, userId);
+
             return (ContentResult<OUT>) dtoToContentResult(result.get(), vid, null, Object.class);
         } catch (CallbackException e) {
             throw e;
@@ -303,6 +313,11 @@ public class LocalContentManager implements ContentManager {
                 } catch (Exception e) {
                     LOG.log(Level.WARNING, "Post-delete indexing failed for " + contentId, e);
                 }
+            }
+
+            // Record delete event (fire-and-forget)
+            if (deleted) {
+                recordDelete(contentId, userId);
             }
 
             return new DeleteResult(deleted ? Status.REMOVED : Status.NOT_FOUND);
@@ -482,6 +497,29 @@ public class LocalContentManager implements ContentManager {
         resultDto.setVersion(IdUtil.toVersionedIdString(draft.draftVersionId()));
         resultDto.setAspects(draft.contentWrite().getAspects());
         return resultDto;
+    }
+
+    // --- Change feed recording ---
+
+    private void recordChange(String eventType, ContentResultDto result,
+                               ContentVersionId vid, String userId) {
+        if (changeListService == null) return;
+        try {
+            changeListService.recordEvent(eventType, result,
+                vid.getDelegationId(), vid.getKey(), vid.getVersion(), userId);
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Change feed recording failed for " + vid, e);
+        }
+    }
+
+    private void recordDelete(ContentId contentId, String userId) {
+        if (changeListService == null) return;
+        try {
+            changeListService.recordDelete(
+                contentId.getDelegationId(), contentId.getKey(), null, null, userId);
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Change feed recording failed for delete of " + contentId, e);
+        }
     }
 
     // --- Post-store indexing ---

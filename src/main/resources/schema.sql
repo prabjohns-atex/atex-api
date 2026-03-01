@@ -147,7 +147,8 @@ CREATE TABLE IF NOT EXISTS `changelist` (
     UNIQUE KEY `changelist_UNIQUE` (`idtype`, `contentid`, `version`),
     UNIQUE KEY `changelist_contentid_UNIQUE` (`contentid`),
     KEY `changelist_contenttype` (`contenttype`),
-    KEY `changelist_eventtype` (`eventtype`)
+    KEY `changelist_eventtype` (`eventtype`),
+    KEY `changelist_commit_at` (`commit_at`)
 ) ENGINE = INNODB;
 
 CREATE TABLE IF NOT EXISTS `changelistattributes` (

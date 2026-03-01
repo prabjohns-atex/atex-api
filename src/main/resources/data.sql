@@ -27,6 +27,12 @@ INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('REMOVE_VIEW');
 INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('SCHEDULED_PURGE_VERSION');
 INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('PURGE_VERSION');
 
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('DELETE');
+
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('modifier');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('modificationTime');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('creationTime');
+
 -- Default user (OLDSHA hash of 'sysadmin' — matches Polopoly default)
 INSERT IGNORE INTO `registeredusers` (`loginname`, `passwordhash`, `regtime`, `active`)
 VALUES ('sysadmin', 'bb40d977a94b02f2', 0, 1);
