@@ -1658,3 +1658,106 @@ The following composers from the gong codebase can be ported and registered in `
 | `DamJobExplorerComposer` | `jobExplorer` | gong/onecms-common | Medium — job explorer view |
 | `CustomDamComposer` | (base class) | gong/onecms-common | Required by DamContentPreviewComposer |
 
+## Increment 14 — Copyfit Layout Proxy
+
+Ports the copyfit layout module from `gong/desk` into desk-api as a Spring MVC reverse proxy. The layout proxy forwards requests to external HandJ/print layout servers and relays responses back — no business logic runs in the proxy itself.
+
+### Architecture
+
+```
+Desk UI / mytype-new
+  └─ /layout/handj/*  → LayoutResource (@RestController)
+       └─ LayoutService (@Service)
+            ├─ Config from ContentManager (atex.plugins.layout.LayoutServerConfiguration)
+            ├─ Server routing:
+            │    ├─ fieldType == "content" → print server
+            │    ├─ URL contains "-NewsRoom" → newsroom layout server
+            │    └─ default → layout server
+            ├─ Apache HttpClient with pooling + configurable timeouts
+            ├─ Streaming responses (StreamingResponseBody)
+            └─ Bidirectional header pass-through
+```
+
+### Configuration
+
+Default config file at `config/defaults/layout/atex.plugins.layout.LayoutServerConfiguration.json5`, loaded via `ConfigurationService` (Increment 7). Cached with 5-second Guava memoization.
+
+```properties
+desk.layout.enabled=true
+```
+
+### Domain Beans (7 POJOs, original packages preserved)
+
+| Class | Package | Description |
+|-------|---------|-------------|
+| `PrintVariantsAspectBean` | `com.atex.plugins.copyfit` | `@AspectDefinition("atex.PrintVariants")` — shape/doc IDs, poll time, attributes list, status |
+| `PrintAttribute` | `com.atex.plugins.copyfit` | 19-field print attribute (name, element, content, lock info, channel, flags, status) |
+| `PrintWorkflowStatus` | `com.atex.plugins.copyfit` | 7-field workflow status (statusId, name, sequence, colours, workflowId) |
+| `AttributeContent` | `com.atex.plugins.copyfit` | 5-field attribute content (name, channel, modification time, content) |
+| `ReconcileAttributesAspectBean` | `com.atex.plugins.copyfit` | `@AspectDefinition("atex.ReconcileAttributes")` — list of AttributeContent |
+| `PrintOperationsAspectBean` | `com.atex.plugins.copyfit.operations` | `@AspectDefinition("atex.PrintOperations")` — operations list + slots list |
+| `PrintSlotBean` | `com.atex.plugins.copyfit.operations` | Slot POJO (name, contentId, slot number, image flag, layoutTag, layoutCommand) |
+
+### LayoutService
+
+`com.atex.plugins.layout.LayoutService` — `@Service @ConditionalOnProperty(name = "desk.layout.enabled")`:
+
+| Original Pattern | Spring Conversion |
+|---|---|
+| `static getInstance()` singleton | `@Service` with constructor-injected `ContentManager` |
+| `Suppliers.memoizeWithExpiration(5s)` | Kept as-is (Guava already in deps) |
+| `javax.ws.rs.core.UriBuilder` | `java.net.URI.create()` |
+| `javax.ws.rs.core.Response` | `ResponseEntity<?>` |
+| `javax.ws.rs.core.StreamingOutput` | `StreamingResponseBody` (8KB buffer) |
+| `javax.ws.rs.core.HttpHeaders` | `HttpServletRequest` (read headers via `getHeaderNames()`) |
+| `javax.ws.rs.core.UriInfo` | `HttpServletRequest.getQueryString()` |
+| `ErrorResponseException` | `ContentApiException` |
+| `StringUtils.isNotBlank()` (commons-lang) | Inline null/empty check |
+
+Key methods preserved:
+- `executeHttpRequest()` — core HTTP proxy with streaming, error counting (max 25), header pass-through
+- `buildUrl()` / `buildServerUrl()` / `buildNewsRoomServerUrl()` — server routing logic
+- `getClient()` — Apache HttpClient with configurable pool size and timeouts
+- `getPerRequestConfig()` — per-request timeout with slow URL regex multipliers (2x/4x)
+- `passOnHeaders()` / `passOnReturnHeaders()` — bidirectional header proxying (skips hop-by-hop headers)
+- `previewURL()` — preview image proxy with NewsRoom detection
+- `decodeUriString()` — URI decoding for embedded URLs
+
+### LayoutResource
+
+`com.atex.plugins.layout.LayoutResource` — `@RestController @RequestMapping("/layout/handj")`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `preview-url/{id}` | Preview image proxy (routes to layout or newsroom server) |
+| GET | `{type}/{id}` | GET proxy by type and content ID |
+| GET | `{type}/{subtype}/{id}` | GET proxy by type, subtype, and content ID |
+| POST | `{type}/{id}` | POST proxy by type and content ID |
+| POST | `{type}/{subtype}/{id}` | POST proxy by type, subtype, and content ID |
+
+### New Files (12)
+
+| File | Description |
+|------|-------------|
+| `config/defaults/layout/atex.plugins.layout.LayoutServerConfiguration.json5` | Default layout server config |
+| `com/atex/plugins/copyfit/PrintVariantsAspectBean.java` | Print variants aspect bean |
+| `com/atex/plugins/copyfit/PrintAttribute.java` | Print attribute POJO |
+| `com/atex/plugins/copyfit/PrintWorkflowStatus.java` | Print workflow status POJO |
+| `com/atex/plugins/copyfit/AttributeContent.java` | Attribute content POJO |
+| `com/atex/plugins/copyfit/ReconcileAttributesAspectBean.java` | Reconcile attributes aspect |
+| `com/atex/plugins/copyfit/operations/PrintOperationsAspectBean.java` | Print operations aspect |
+| `com/atex/plugins/copyfit/operations/PrintSlotBean.java` | Print slot POJO |
+| `com/atex/plugins/layout/LayoutServerConfigurationBean.java` | Config POJO |
+| `com/atex/plugins/layout/PreviewResponse.java` | Preview response POJO |
+| `com/atex/plugins/layout/LayoutService.java` | Spring `@Service` — HTTP reverse proxy |
+| `com/atex/plugins/layout/LayoutResource.java` | Spring `@RestController` at `/layout/handj` |
+
+### Modified Files (4)
+
+| File | Change |
+|------|--------|
+| `auth/AuthConfig.java` | Added `/layout/*` to auth filter URL patterns |
+| `config/OpenApiConfig.java` | Added `"Layout"` tag |
+| `application.properties` | Added `desk.layout.enabled=true`, added `com.atex.plugins.layout` to SpringDoc scan packages |
+| `scripts/config-mapping.txt` | Added layout config mapping entry |
+
