@@ -51,6 +51,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.atex.desk.api.auth.PasswordService;
 import com.atex.desk.api.config.DeskProperties;
 import com.atex.desk.api.entity.AppUser;
 import com.atex.desk.api.repository.AppUserRepository;
@@ -162,6 +163,9 @@ import com.polopoly.search.solr.SolrServerUrl;
 import com.polopoly.metadata.Dimension;
 import com.polopoly.metadata.Metadata;
 import com.polopoly.user.server.Caller;
+import com.polopoly.user.server.Group;
+import com.polopoly.user.server.GroupId;
+import com.polopoly.user.server.UserServer;
 import com.polopoly.util.StringUtil;
 
 /**
@@ -210,6 +214,7 @@ public class DamDataResource {
     private final DamPublisherFactory damPublisherFactory;
     private final DeskProperties deskProperties;
     private final AppUserRepository appUserRepository;
+    private final PasswordService passwordService;
 
     private SolrService solrService = null;
     private SolrService solrServiceLatest = null;
@@ -221,13 +226,15 @@ public class DamDataResource {
                            CmClient cmClient,
                            DamPublisherFactory damPublisherFactory,
                            DeskProperties deskProperties,
-                           AppUserRepository appUserRepository) {
+                           AppUserRepository appUserRepository,
+                           PasswordService passwordService) {
         this.contentManager = contentManager;
         this.policyCMServer = policyCMServer;
         this.cmClient = cmClient;
         this.damPublisherFactory = damPublisherFactory;
         this.deskProperties = deskProperties;
         this.appUserRepository = appUserRepository;
+        this.passwordService = passwordService;
         initSolrConfig();
     }
 
@@ -935,17 +942,11 @@ public class DamDataResource {
 
     private void changeUserPassword(String userId, String newPassword) {
         try {
-            AppUser user = appUserRepository.findByUsername(userId).orElse(null);
+            AppUser user = appUserRepository.findByLoginName(userId).orElse(null);
             if (user == null) {
                 throw ContentApiException.notFound("User not found: " + userId);
             }
-            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(newPassword.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
-            }
-            user.setPasswordHash(sb.toString());
+            user.setPasswordHash(passwordService.hashOldSha(newPassword));
             appUserRepository.save(user);
         } catch (ContentApiException e) {
             throw e;
@@ -1100,7 +1101,7 @@ public class DamDataResource {
         try {
             JsonObject resp = (JsonObject) OBJECT_CACHE.get(
                 addGroupsToUsers ? "users-expanded" : "users",
-                () -> getUserListAsJSON());
+                () -> getUserListAsJSON(addGroupsToUsers));
             return ResponseEntity.ok()
                 .cacheControl(CACHE_SHORT_PRIVATE)
                 .body(GSON.toJson(resp));
@@ -1110,18 +1111,78 @@ public class DamDataResource {
         }
     }
 
-    private JsonObject getUserListAsJSON() {
+    private JsonObject getUserListAsJSON(boolean addGroupsToUsers) {
         JsonArray usersArray = new JsonArray();
         List<AppUser> allUsers = appUserRepository.findAll();
+
+        // Build group membership lookup when needed
+        Map<String, List<String>> userGroupNames = new HashMap<>();
+        UserServer userServer = cmClient.getUserServer();
+        GroupId[] allGroups = null;
+        try {
+            allGroups = userServer.getAllGroups();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Cannot retrieve groups: " + e.getMessage(), e);
+        }
+
+        if (allGroups != null) {
+            for (GroupId gid : allGroups) {
+                try {
+                    Group group = userServer.findGroup(gid);
+                    if (group != null) {
+                        for (AppUser user : allUsers) {
+                            if (group.isMember(user.getLoginName())) {
+                                userGroupNames.computeIfAbsent(user.getLoginName(), k -> new ArrayList<>())
+                                    .add(group.getName());
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Cannot find group " + gid + ": " + e.getMessage(), e);
+                }
+            }
+        }
+
         for (AppUser user : allUsers) {
+            if (!user.isActive()) continue;
             JsonObject userJson = new JsonObject();
             userJson.addProperty("type", "user");
-            userJson.addProperty("id", String.valueOf(user.getUserId()));
-            userJson.addProperty("name", user.getUsername());
-            userJson.addProperty("loginName", user.getUsername());
-            userJson.addProperty("principalId", String.valueOf(user.getUserId()));
+            userJson.addProperty("id", user.getLoginName());
+            userJson.addProperty("name", user.getLoginName());
+            userJson.addProperty("loginName", user.getLoginName());
+            userJson.addProperty("principalId", user.getLoginName());
+            if (addGroupsToUsers) {
+                JsonArray groupList = new JsonArray();
+                List<String> groups = userGroupNames.get(user.getLoginName());
+                if (groups != null) {
+                    for (String gn : groups) {
+                        groupList.add(gn);
+                    }
+                }
+                userJson.add("groupList", groupList);
+            }
             usersArray.add(userJson);
         }
+
+        // Append groups as entries in the Users array (original Polopoly behavior)
+        if (allGroups != null) {
+            for (GroupId gid : allGroups) {
+                try {
+                    Group group = userServer.findGroup(gid);
+                    if (group != null) {
+                        JsonObject groupJson = new JsonObject();
+                        groupJson.addProperty("type", "group");
+                        groupJson.addProperty("id", gid.getPrincipalIdString());
+                        groupJson.addProperty("name", group.getName());
+                        groupJson.addProperty("principalId", gid.getPrincipalIdString());
+                        usersArray.add(groupJson);
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Cannot find group " + gid + ": " + e.getMessage(), e);
+                }
+            }
+        }
+
         JsonObject resp = new JsonObject();
         resp.add("Users", usersArray);
         return resp;
@@ -1161,7 +1222,23 @@ public class DamDataResource {
         try {
             JsonObject resp = (JsonObject) OBJECT_CACHE.get("groups_json", () -> {
                 JsonObject r = new JsonObject();
-                r.add("Groups", new JsonArray());
+                JsonArray groupsArray = new JsonArray();
+                UserServer userServer = cmClient.getUserServer();
+                GroupId[] allGroups = userServer.getAllGroups();
+                if (allGroups != null) {
+                    for (GroupId gid : allGroups) {
+                        Group group = userServer.findGroup(gid);
+                        if (group != null) {
+                            JsonObject groupJson = new JsonObject();
+                            groupJson.addProperty("type", "group");
+                            groupJson.addProperty("id", gid.getPrincipalIdString());
+                            groupJson.addProperty("name", group.getName());
+                            groupJson.addProperty("principalId", gid.getPrincipalIdString());
+                            groupsArray.add(groupJson);
+                        }
+                    }
+                }
+                r.add("Groups", groupsArray);
                 return r;
             });
             return ResponseEntity.ok()

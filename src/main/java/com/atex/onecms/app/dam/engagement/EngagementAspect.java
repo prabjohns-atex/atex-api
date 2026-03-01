@@ -1,8 +1,11 @@
 package com.atex.onecms.app.dam.engagement;
 
+import com.atex.onecms.content.aspects.annotations.AspectDefinition;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@AspectDefinition({"atex.dam.engagement"})
 public class EngagementAspect {
     public static final String ASPECT_NAME = "atex.dam.engagement";
 

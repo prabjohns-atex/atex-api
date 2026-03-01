@@ -2,6 +2,8 @@ package com.atex.desk.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.util.List;
+
 @Schema(description = "User principal info")
 public class PrincipalDto
 {
@@ -14,6 +16,9 @@ public class PrincipalDto
     @Schema(description = "Account creation time (epoch milliseconds)")
     private String createdAt;
 
+    @Schema(description = "Group names this user belongs to (only present when addGroupsToUsers=true)")
+    private List<String> groupList;
+
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
@@ -22,4 +27,7 @@ public class PrincipalDto
 
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    public List<String> getGroupList() { return groupList; }
+    public void setGroupList(List<String> groupList) { this.groupList = groupList; }
 }

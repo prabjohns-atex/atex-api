@@ -1,7 +1,7 @@
 package com.polopoly.user.server;
 
 /**
- * User server interface stub.
+ * User server interface — Polopoly user management.
  */
 public interface UserServer {
 
@@ -10,4 +10,22 @@ public interface UserServer {
     String getUserIdByLoginName(String loginName) throws Exception;
 
     Group findGroup(GroupId groupId) throws Exception;
+
+    GroupId[] getAllGroups() throws Exception;
+
+    default GroupId[] findGroupsByMember(String principalId) throws Exception {
+        throw new UnsupportedOperationException("findGroupsByMember not implemented");
+    }
+
+    default boolean isConfiguredWithLdap() {
+        return false;
+    }
+
+    default boolean isConfiguredWithRemote() {
+        return false;
+    }
+
+    default String getRemoteOAuthUrl(String callbackUrl) {
+        return null;
+    }
 }

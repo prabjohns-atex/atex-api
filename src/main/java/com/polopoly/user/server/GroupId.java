@@ -24,6 +24,8 @@ public class GroupId implements Serializable {
     @Override
     public int hashCode() { return id; }
 
+    public String getPrincipalIdString() { return "group:" + id; }
+
     @Override
     public String toString() { return "group:" + id; }
 }

@@ -160,10 +160,64 @@ CREATE TABLE IF NOT EXISTS `changelistattributes` (
     KEY `changelistattributes_num_value` (`num_value`)
 ) ENGINE = INNODB;
 
-CREATE TABLE IF NOT EXISTS `users` (
-    `userid`        INTEGER AUTO_INCREMENT PRIMARY KEY NOT NULL,
-    `username`      VARCHAR(255) NOT NULL,
-    `password_hash` VARCHAR(255) NOT NULL,
-    `created_at`    TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
-    UNIQUE KEY `users_username_UNIQUE` (`username`)
+-- Polopoly user server tables
+
+CREATE TABLE IF NOT EXISTS `registeredusers` (
+    `loginname`        VARCHAR(64) NOT NULL,
+    `passwordhash`     VARCHAR(255) DEFAULT NULL,
+    `regtime`          INTEGER DEFAULT 0 NOT NULL,
+    `isldapuser`       INTEGER DEFAULT 0 NOT NULL,
+    `isremoteuser`     INTEGER DEFAULT 0 NOT NULL,
+    `remoteserviceid`  VARCHAR(255) DEFAULT NULL,
+    `remoteloginnames` VARCHAR(255) DEFAULT NULL,
+    `lastlogintime`    INTEGER DEFAULT 0 NOT NULL,
+    `numlogins`        INTEGER DEFAULT 0 NOT NULL,
+    `active`           INTEGER DEFAULT 1 NOT NULL,
+    UNIQUE KEY `registeredusers_loginname_UNIQUE` (`loginname`)
+) ENGINE = INNODB;
+
+CREATE TABLE IF NOT EXISTS `groupData` (
+    `id`              INTEGER AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    `name`            VARCHAR(64) NOT NULL,
+    `creationTime`    INTEGER DEFAULT 0 NOT NULL,
+    `firstOwnerId`   VARCHAR(32) DEFAULT NULL,
+    `ldapGroupDn`     VARCHAR(255) DEFAULT NULL,
+    `remoteGroupDn`   VARCHAR(255) DEFAULT NULL,
+    `remoteServiceId` VARCHAR(255) DEFAULT NULL
+) ENGINE = INNODB;
+
+CREATE TABLE IF NOT EXISTS `groupMember` (
+    `groupId`     INTEGER NOT NULL,
+    `principalId` VARCHAR(32) NOT NULL,
+    KEY `groupMember_groupId` (`groupId`),
+    KEY `groupMember_principalId` (`principalId`)
+) ENGINE = INNODB;
+
+CREATE TABLE IF NOT EXISTS `groupOwner` (
+    `groupId`     INTEGER NOT NULL,
+    `principalId` VARCHAR(32) NOT NULL,
+    KEY `groupOwner_groupId` (`groupId`),
+    KEY `groupOwner_principalId` (`principalId`)
+) ENGINE = INNODB;
+
+CREATE TABLE IF NOT EXISTS `aclData` (
+    `id`            INTEGER AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    `name`          VARCHAR(32) NOT NULL,
+    `creationTime`  INTEGER DEFAULT 0 NOT NULL,
+    `firstOwnerId`  VARCHAR(32) DEFAULT NULL
+) ENGINE = INNODB;
+
+CREATE TABLE IF NOT EXISTS `acl` (
+    `aclId`       INTEGER NOT NULL,
+    `principalId` VARCHAR(32) NOT NULL,
+    `permission`  VARCHAR(32) NOT NULL,
+    KEY `acl_aclId` (`aclId`),
+    KEY `acl_principalId` (`principalId`)
+) ENGINE = INNODB;
+
+CREATE TABLE IF NOT EXISTS `aclOwner` (
+    `aclId`       INTEGER NOT NULL,
+    `principalId` VARCHAR(32) NOT NULL,
+    KEY `aclOwner_aclId` (`aclId`),
+    KEY `aclOwner_principalId` (`principalId`)
 ) ENGINE = INNODB;

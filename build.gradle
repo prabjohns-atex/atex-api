@@ -33,6 +33,10 @@ dependencies {
     // Plugin system
     implementation 'org.pf4j:pf4j:3.15.0'
 
+    // AWS Cognito (conditional, only used when desk.cognito.enabled=true)
+    implementation platform('software.amazon.awssdk:bom:2.31.3')
+    implementation 'software.amazon.awssdk:cognitoidentityprovider'
+
     // DAM dependencies
     implementation 'com.google.code.gson:gson:2.11.0'
     implementation 'com.google.guava:guava:33.4.0-jre'

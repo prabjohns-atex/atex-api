@@ -8,8 +8,12 @@ import com.atex.onecms.content.ContentId;
 import com.atex.onecms.content.ContentManager;
 import com.atex.onecms.content.Subject;
 import com.polopoly.user.server.Caller;
+import com.polopoly.user.server.Group;
+import com.polopoly.user.server.GroupId;
+import com.polopoly.user.server.UserServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -20,9 +24,11 @@ public class DamPublisherFactory {
     private static final Subject SYSTEM_SUBJECT = new Subject("98", null);
 
     private final ContentManager contentManager;
+    private final UserServer userServer;
 
-    public DamPublisherFactory(ContentManager contentManager) {
+    public DamPublisherFactory(ContentManager contentManager, @Nullable UserServer userServer) {
         this.contentManager = contentManager;
+        this.userServer = userServer;
     }
 
     public DamPublisher create(ContentId contentId, Caller caller) {
@@ -107,9 +113,28 @@ public class DamPublisherFactory {
 
         // Match by user
         if (!rule.getUsers().isEmpty()) {
-            return rule.getUsers().contains(loginName);
+            if (rule.getUsers().contains(loginName)) {
+                return true;
+            }
         }
-        // Groups matching would require UserServer — simplified for now
+
+        // Match by group — use findGroupsByMember for efficiency
+        if (!rule.getGroups().isEmpty() && userServer != null) {
+            try {
+                GroupId[] memberGroups = userServer.findGroupsByMember(loginName);
+                if (memberGroups != null) {
+                    for (GroupId gid : memberGroups) {
+                        Group group = userServer.findGroup(gid);
+                        if (group != null && rule.getGroups().contains(group.getName())) {
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                LOG.warn("Error checking group membership for rule matching: {}", e.getMessage());
+            }
+        }
+
         return false;
     }
 
