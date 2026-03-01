@@ -222,3 +222,23 @@ CREATE TABLE IF NOT EXISTS `aclOwner` (
     KEY `aclOwner_aclId` (`aclId`),
     KEY `aclOwner_principalId` (`principalId`)
 ) ENGINE = INNODB;
+
+CREATE TABLE IF NOT EXISTS `indexer_state` (
+    `indexer_id`      VARCHAR(64) PRIMARY KEY NOT NULL,
+    `job_type`        VARCHAR(32) NOT NULL,
+    `status`          VARCHAR(16) NOT NULL DEFAULT 'REQUESTED',
+    `last_cursor`     BIGINT NOT NULL DEFAULT 0,
+    `config`          JSON,
+    `total_items`     BIGINT,
+    `processed_items` BIGINT NOT NULL DEFAULT 0,
+    `error_count`     INT NOT NULL DEFAULT 0,
+    `error_message`   TEXT,
+    `locked_by`       VARCHAR(255),
+    `locked_at`       TIMESTAMP(3),
+    `started_at`      TIMESTAMP(3),
+    `created_at`      TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
+    `updated_at`      TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
+    KEY `indexer_state_job_type` (`job_type`),
+    KEY `indexer_state_status` (`status`)
+) ENGINE = INNODB;
+

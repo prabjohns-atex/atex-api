@@ -397,13 +397,21 @@ public class SolrService extends SolrUtils {
      * Index a JSON document into a Solr collection.
      */
     public void index(String collection, com.google.gson.JsonObject solrDoc) throws Exception {
+        SolrInputDocument doc = jsonToSolrDoc(solrDoc);
+        indexBatch(collection, List.of(doc));
+    }
+
+    /**
+     * Index a batch of documents into a Solr collection with a single add + commit.
+     */
+    public void indexBatch(String collection, List<SolrInputDocument> docs) throws Exception {
+        if (docs == null || docs.isEmpty()) return;
         try {
-            SolrInputDocument doc = jsonToSolrDoc(solrDoc);
-            getSolrClient().add(collection, doc);
+            getSolrClient().add(collection, docs);
             getSolrClient().commit(collection);
         } catch (SolrServerException | IOException e) {
-            logger.log(Level.SEVERE, "Failed to index document: " + e.getMessage(), e);
-            throw new Exception("Solr index failed: " + e.getMessage(), e);
+            logger.log(Level.SEVERE, "Failed to index batch of " + docs.size() + " documents: " + e.getMessage(), e);
+            throw new Exception("Solr batch index failed: " + e.getMessage(), e);
         }
     }
 
@@ -411,12 +419,20 @@ public class SolrService extends SolrUtils {
      * Delete a document from a Solr collection by ID.
      */
     public void delete(String collection, String id) throws Exception {
+        deleteBatch(collection, List.of(id));
+    }
+
+    /**
+     * Delete a batch of documents from a Solr collection by ID with a single delete + commit.
+     */
+    public void deleteBatch(String collection, List<String> ids) throws Exception {
+        if (ids == null || ids.isEmpty()) return;
         try {
-            getSolrClient().deleteById(collection, id);
+            getSolrClient().deleteById(collection, ids);
             getSolrClient().commit(collection);
         } catch (SolrServerException | IOException e) {
-            logger.log(Level.SEVERE, "Failed to delete document: " + e.getMessage(), e);
-            throw new Exception("Solr delete failed: " + e.getMessage(), e);
+            logger.log(Level.SEVERE, "Failed to delete batch of " + ids.size() + " documents: " + e.getMessage(), e);
+            throw new Exception("Solr batch delete failed: " + e.getMessage(), e);
         }
     }
 

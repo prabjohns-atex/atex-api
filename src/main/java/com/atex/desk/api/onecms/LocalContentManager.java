@@ -6,8 +6,7 @@ import com.atex.desk.api.dto.ContentHistoryDto;
 import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ContentVersionInfoDto;
 import com.atex.desk.api.dto.ContentWriteDto;
-import com.atex.desk.api.indexing.ContentIndexer;
-import com.atex.desk.api.service.ChangeListService;
+import com.atex.desk.api.config.ConfigurationService;
 import com.atex.desk.api.service.ContentService;
 import com.atex.desk.api.service.IdGenerator;
 import com.atex.onecms.content.Content;
@@ -76,7 +75,6 @@ public class LocalContentManager implements ContentManager {
     private final WorkspaceStorage workspaceStorage;
     private final IdGenerator idGenerator;
     private final FileService fileService;
-    private final ContentIndexer contentIndexer;
     private final ConfigurationService configurationService;
     private final ChangeListService changeListService;
 
@@ -101,7 +99,6 @@ public class LocalContentManager implements ContentManager {
     public LocalContentManager(ContentService contentService, ObjectMapper objectMapper,
                                 WorkspaceStorage workspaceStorage, IdGenerator idGenerator,
                                 @Nullable FileService fileService,
-                                @Nullable ContentIndexer contentIndexer,
                                 @Nullable ConfigurationService configurationService,
                                 @Nullable ChangeListService changeListService) {
         this.contentService = contentService;
@@ -109,7 +106,6 @@ public class LocalContentManager implements ContentManager {
         this.workspaceStorage = workspaceStorage;
         this.idGenerator = idGenerator;
         this.fileService = fileService;
-        this.contentIndexer = contentIndexer;
         this.configurationService = configurationService;
         this.changeListService = changeListService;
     }
@@ -264,8 +260,6 @@ public class LocalContentManager implements ContentManager {
 
             ContentVersionId vid = IdUtil.fromVersionedString(result.getVersion());
 
-            // Post-store indexing (fire-and-forget)
-            indexAsync(result, vid);
 
             // Record change event (fire-and-forget)
             recordChange("CREATE", result, vid, userId);
@@ -312,8 +306,6 @@ public class LocalContentManager implements ContentManager {
 
             ContentVersionId vid = IdUtil.fromVersionedString(result.get().getVersion());
 
-            // Post-store indexing (fire-and-forget)
-            indexAsync(result.get(), vid);
 
             // Record change event (fire-and-forget)
             recordChange("UPDATE", result.get(), vid, userId);
@@ -345,14 +337,6 @@ public class LocalContentManager implements ContentManager {
             boolean deleted = contentService.deleteContent(
                 contentId.getDelegationId(), contentId.getKey(), userId);
 
-            // Post-delete: remove from index
-            if (deleted && contentIndexer != null) {
-                try {
-                    contentIndexer.delete(contentId);
-                } catch (Exception e) {
-                    LOG.log(Level.WARNING, "Post-delete indexing failed for " + contentId, e);
-                }
-            }
 
             // Record delete event (fire-and-forget)
             if (deleted) {
@@ -561,18 +545,6 @@ public class LocalContentManager implements ContentManager {
         }
     }
 
-    // --- Post-store indexing ---
-
-    @SuppressWarnings("unchecked")
-    private void indexAsync(ContentResultDto resultDto, ContentVersionId versionId) {
-        if (contentIndexer == null) return;
-        try {
-            ContentResult<Object> result = dtoToContentResult(resultDto, versionId, null, Object.class);
-            contentIndexer.index(result, versionId);
-        } catch (Exception e) {
-            LOG.log(Level.WARNING, "Post-store indexing failed for " + versionId, e);
-        }
-    }
 
     // --- Conversion helpers ---
 

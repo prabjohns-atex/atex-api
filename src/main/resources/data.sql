@@ -36,3 +36,8 @@ INSERT IGNORE INTO `attributes` (`name`) VALUES ('creationTime');
 -- Default user (OLDSHA hash of 'sysadmin' — matches Polopoly default)
 INSERT IGNORE INTO `registeredusers` (`loginname`, `passwordhash`, `regtime`, `active`)
 VALUES ('sysadmin', 'bb40d977a94b02f2', 0, 1);
+
+-- Live SOLR indexer state (cursor starts at 0, picks up all changelist entries)
+INSERT IGNORE INTO `indexer_state` (`indexer_id`, `job_type`, `status`, `last_cursor`)
+VALUES ('solr', 'LIVE', 'RUNNING', 0);
+

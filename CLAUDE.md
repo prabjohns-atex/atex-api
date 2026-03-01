@@ -748,8 +748,8 @@ Post-store indexing that converts content to Solr documents and pushes to Solr a
 
 | Class | Change |
 |---|---|
-| `SolrService` | Added `index(String collection, JsonObject solrDoc)` — converts JSON to `SolrInputDocument`, adds + commits. Added `delete(String collection, String id)` — deletes by ID + commits. Added private `jsonToSolrDoc()` helper |
-| `LocalContentManager` | After `create()`/`update()`: calls `ContentIndexer.index()` with the already-built `ContentResult` (fire-and-forget, logs errors but doesn't fail the content operation). After `delete()`: calls `ContentIndexer.delete()` |
+| `SolrService` | Added `indexBatch(collection, List<SolrInputDocument>)` and `deleteBatch(collection, List<String>)` — single `add()`/`deleteById()` + `commit()` call per batch. `index()` and `delete()` delegate to batch methods with singleton lists. |
+| `LocalContentManager` | Indexing is decoupled — see Increment 15. Content writes record to changelist only; background `SolrIndexProcessor` handles indexing. |
 
 **Circular dependency resolution**: `ContentIndexer` does NOT depend on `ContentManager`. Instead, `LocalContentManager` passes the already-fetched `ContentResult` directly to `ContentIndexer.index()`, breaking the cycle.
 
@@ -1760,4 +1760,151 @@ Key methods preserved:
 | `config/OpenApiConfig.java` | Added `"Layout"` tag |
 | `application.properties` | Added `desk.layout.enabled=true`, added `com.atex.plugins.layout` to SpringDoc scan packages |
 | `scripts/config-mapping.txt` | Added layout config mapping entry |
+
+## Increment 15 — Decoupled SOLR Indexing with Reindex Jobs
+
+Replaces the synchronous in-process indexing (where `LocalContentManager.indexAsync()` called `ContentIndexer` → `DamIndexComposer` → `SolrService.index()` inline on every create/update) with a decoupled background processor that polls the `changelist` table by cursor. Content writes become fully independent of Solr availability. Three types of reindex job (full, filtered, manual ID list) are supported via REST API, with resumable state persisted in a new `indexer_state` table. Multiple desk-api instances coordinate via lease-based row locking.
+
+### Architecture
+
+```
+Content Write Path (unchanged):
+  LocalContentManager.create()/update()/delete()
+    └─ ChangeListService.recordEvent()  →  changelist table (upsert by contentId)
+       (no more indexAsync() call — Solr is fully decoupled)
+
+Background Indexing (new):
+  SolrIndexProcessor (@Scheduled, ThreadPoolTaskScheduler poolSize=2)
+    ├─ Live Indexer Thread (every 2s):
+    │    ├─ Acquire lease on indexer_state row 'solr' (job_type=LIVE)
+    │    ├─ SELECT FROM changelist WHERE id > last_cursor ORDER BY id ASC LIMIT batch_size
+    │    ├─ For each entry: fetch content via ContentManager, compose via DamIndexComposer
+    │    ├─ SolrService.indexBatch() — single add() + commit()
+    │    └─ Advance last_cursor, release lease
+    │
+    └─ Reindex Worker Thread (every 5s):
+         ├─ Find oldest indexer_state row with status IN (REQUESTED, RUNNING)
+         │   and job_type IN (REINDEX_FULL, REINDEX_FILTERED, REINDEX_MANUAL)
+         ├─ Acquire lease
+         ├─ Process batch according to job_type:
+         │    ├─ REINDEX_FULL: walk idversions+idviews (p.latest), cursor on versionid
+         │    ├─ REINDEX_FILTERED: same + WHERE clauses from config JSON
+         │    └─ REINDEX_MANUAL: iterate content ID array from config JSON, cursor = array index
+         ├─ SolrService.indexBatch()
+         ├─ Advance last_cursor, increment processed_items, update updated_at
+         └─ On completion: status=COMPLETED. On failure: error_count++, cursor stays put
+
+Multi-Instance Coordination:
+  indexer_state row locking:
+    ├─ locked_by = instance identifier (hostname or desk.indexing.instance-id)
+    ├─ locked_at = timestamp when lease acquired
+    ├─ Lease expiry = desk.indexing.lease-seconds (default 60)
+    └─ If locked_at older than lease period, another instance can claim the row
+
+indexer_state table:
+    ├─ 'solr' row (LIVE) — permanent, cursor into changelist.id
+    └─ 'reindex-{timestamp}' rows — created via REST, deletable via REST
+```
+
+### New Table: `indexer_state`
+
+```sql
+CREATE TABLE IF NOT EXISTS indexer_state (
+    indexer_id      VARCHAR(64) PRIMARY KEY NOT NULL,
+    job_type        VARCHAR(32) NOT NULL,
+    status          VARCHAR(16) NOT NULL DEFAULT 'REQUESTED',
+    last_cursor     BIGINT NOT NULL DEFAULT 0,
+    config          JSON,
+    total_items     BIGINT,
+    processed_items BIGINT NOT NULL DEFAULT 0,
+    error_count     INT NOT NULL DEFAULT 0,
+    error_message   TEXT,
+    locked_by       VARCHAR(255),
+    locked_at       TIMESTAMP(3),
+    started_at      TIMESTAMP(3),
+    created_at      TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
+    updated_at      TIMESTAMP(3) DEFAULT NOW(3) NOT NULL
+);
+```
+
+Seeded with: `INSERT IGNORE INTO indexer_state (indexer_id, job_type, status, last_cursor) VALUES ('solr', 'LIVE', 'RUNNING', 0);`
+
+### SolrService Batch Methods
+
+Added `indexBatch(collection, List<SolrInputDocument>)` and `deleteBatch(collection, List<String>)` — single `add()`/`deleteById()` + `commit()` call per batch. Existing `index()` and `delete()` now delegate to batch methods with singleton lists.
+
+### SolrIndexProcessor
+
+`@Component @EnableScheduling @ConditionalOnProperty(desk.indexing.enabled)` with two `@Scheduled` methods:
+
+- **`processLiveIndex()`** — polls changelist by cursor, composes via `DamIndexComposer`, batch-sends to Solr. DELETE events trigger `deleteBatch()`.
+- **`processReindexJobs()`** — picks oldest actionable reindex job:
+  - `REINDEX_FULL`: walks `idversions` + `idviews` (p.latest) by `versionid` cursor
+  - `REINDEX_FILTERED`: same + WHERE from config JSON (`contentTypes`, `dateFrom`, `dateTo`)
+  - `REINDEX_MANUAL`: iterates content ID array from config JSON, `last_cursor` = array index
+- Sets `started_at` on first batch (for ETA). Checks `status` each tick (PAUSED stops).
+
+### Removed Synchronous Indexing
+
+- Removed `ContentIndexer` field and constructor parameter from `LocalContentManager`
+- Removed `indexAsync()` method and all three call sites (create, update, delete)
+- Content writes are fully independent of Solr availability
+- `ContentIndexer` class retained as helper (used by `SolrIndexProcessor`)
+
+### Reindex REST API
+
+`ReindexController` at `/admin/reindex`:
+
+| Endpoint | Description |
+|---|---|
+| `POST /admin/reindex` | Create job: `{"type":"full"}`, `{"type":"filtered","contentTypes":[...],"dateFrom":"...","dateTo":"..."}`, `{"type":"manual","contentIds":[...]}`. Returns 201 + `ReindexJobDto` |
+| `GET /admin/reindex` | List all reindex jobs (descending by created_at) |
+| `GET /admin/reindex/{id}` | Single job with progress + ETA |
+| `DELETE /admin/reindex/{id}` | Active jobs → PAUSED; inactive jobs → physically deleted (204) |
+
+**ETA calculation** (computed at read time, not stored):
+- `rate = processed_items / (now - started_at)`
+- `estimatedRemainingSeconds = (total_items - processed_items) / rate`
+- `estimatedCompletionTime = now + estimatedRemainingSeconds`
+- Null when not yet started or 0 items processed
+
+### Configuration
+
+| Property | Default | Description |
+|---|---|---|
+| `desk.indexing.poll-interval` | `2000` | Live indexer poll interval (ms) |
+| `desk.indexing.reindex-poll-interval` | `5000` | Reindex worker poll interval (ms) |
+| `desk.indexing.batch-size` | `100` | Documents per batch |
+| `desk.indexing.lease-seconds` | `60` | Lock lease expiry |
+| `desk.indexing.instance-id` | hostname | Instance identifier for lease |
+
+### New Files (6)
+
+| File | Description |
+|---|---|
+| `entity/IndexerState.java` | JPA entity for `indexer_state` |
+| `repository/IndexerStateRepository.java` | Repository with finder methods |
+| `indexing/SolrIndexProcessor.java` | Background processor with live + reindex scheduled methods |
+| `controller/ReindexController.java` | REST API for reindex job management |
+| `dto/ReindexRequestDto.java` | Reindex request body |
+| `dto/ReindexJobDto.java` | Reindex job response with progress and ETA |
+
+### Modified Files (6)
+
+| File | Change |
+|---|---|
+| `solr/SolrService.java` | Added `indexBatch()` and `deleteBatch()`, refactored `index()`/`delete()` to delegate |
+| `onecms/LocalContentManager.java` | Removed `ContentIndexer` field, constructor param, `indexAsync()` method and 3 call sites |
+| `schema.sql` | Added `indexer_state` table DDL |
+| `data.sql` | Seeded `solr` LIVE indexer row |
+| `application.properties` | Added `desk.indexing.*` properties |
+| `config/OpenApiConfig.java` | Added `"Reindex"` tag |
+
+### Design Notes
+
+- **Changelist upsert safety**: upserts by contentId (delete old row, insert new with higher `id`). Cursor always advances forward. Solr upserts are idempotent.
+- **One reindex at a time**: worker picks oldest REQUESTED/RUNNING job. Additional requests queue.
+- **Live indexing during reindex**: both threads run concurrently. Overlapping writes are harmless.
+- **Failure recovery**: on Solr failure, cursors stay put — next tick retries. On instance crash, lease expires and another instance takes over.
+- **DELETE semantics**: first DELETE on active job pauses it. Second DELETE on inactive job removes the row.
 
