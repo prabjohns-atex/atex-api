@@ -136,9 +136,10 @@ Auth: `X-AUTH-TOKEN` header (JWT, enforced by `AuthFilter`).
 | POST | `/security/oauth/callback` | Exchange OAuth code/token for desk-api JWT |
 
 ### User Storage
-- `users` table: userid (auto PK), username (unique), password_hash (SHA-256), created_at
+- `registeredusers` table: loginname (PK), passwordhash, regtime, isldapuser, isremoteuser, remoteserviceid, active (see Increment 9 for full schema)
 - Entity: `AppUser`, Repository: `AppUserRepository`
-- Default seed: `sysadmin` / `sysadmin`
+- Default seed: `sysadmin` / `sysadmin` (OLDSHA hash)
+- Auth dispatch: local → `PasswordService`, LDAP → `LdapAuthService`, remote → `CognitoAuthService`
 
 ### Configuration (`application.properties`)
 ```properties
@@ -1318,3 +1319,447 @@ Both endpoints use `@SecurityRequirements` (no auth required — part of login f
 |------|--------|
 | `auth/CognitoAuthService.java` | Added `CognitoTokenVerifier` field; added `verifyToken`, `verifyOAuthUrl`, `getLastModified`, `inviteUser`, `disableUser`, `enableUser`, `deleteUser`, `groupExists`, `parseQueryString`, `parseFragments`; made `decodeIdToken` public; updated `exchangeCodeForToken` to use signature verification with fallback |
 | `controller/SecurityController.java` | Added `GET /security/oauth/url` and `POST /security/oauth/callback` endpoints; cleaned up FQN imports to use short imports |
+
+## Increment 9 — Principals, Groups, ACLs & Auth Providers
+
+Replaces the stub user server and simple `users` table with a full Polopoly-compatible principal infrastructure: multi-scheme password verification, LDAP authentication with user provisioning and group sync, Cognito configuration properties, group/ACL database tables with JPA entities, and expanded PrincipalsController with group CRUD and membership management.
+
+### Architecture
+
+```
+SecurityController (POST /security/token)
+  ├─ Local user → PasswordService.verify()
+  │                 ├─ OLDSHA  (Polopoly default: SHA-1 + static secret, first 8 bytes hex)
+  │                 ├─ SHA-256 (64-char hex)
+  │                 ├─ {SHA}, {SSHA}, {MD5}, {SMD5} (LDAP-style prefixed)
+  │                 ├─ {CLEARTEXT}
+  │                 └─ {LDAPUSER}, {REMOTEUSER}, {COGNITOUSER} → always false (delegated)
+  ├─ LDAP user  → LdapAuthService.authenticate()  (JNDI bind)
+  └─ Remote user → CognitoAuthService.authenticate()  (AWS Admin API)
+
+PrincipalsController (/principals)
+  ├─ /users/me, /users, /users/{userId}     → AppUserRepository
+  ├─ /groups, /groups/{id}                   → AppGroupRepository
+  ├─ /groups (POST), /groups/{id} (PUT/DEL) → Group CRUD + owner tracking
+  └─ /groups/{id}/members (POST/DEL)        → AppGroupMemberRepository
+
+LocalUserServer (implements UserServer)
+  ├─ loginAndMerge()      → PasswordService + login stats
+  ├─ getUserIdByLoginName() → AppUserRepository
+  ├─ findGroup()           → AppGroupRepository + AppGroupMemberRepository → LocalGroup
+  ├─ getAllGroups()         → AppGroupRepository
+  └─ findGroupsByMember()  → AppGroupMemberRepository
+
+DamDataResource
+  ├─ /dam/content/users  → AppUserRepository.findAll() (cached)
+  └─ /dam/content/groups → AppGroupRepository.findAll()
+```
+
+### Database Schema Changes
+
+Replaced the simple `users` table with Polopoly-compatible tables:
+
+**`registeredusers`** (replaces `users`):
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `loginname` | VARCHAR(64) UNIQUE | Login name (PK) |
+| `passwordhash` | VARCHAR(255) | Hash with scheme prefix or OLDSHA/SHA-256 hex |
+| `regtime` | INTEGER | Registration time (epoch seconds) |
+| `isldapuser` | INTEGER | 1 = LDAP-authenticated |
+| `isremoteuser` | INTEGER | 1 = remote-authenticated (Cognito) |
+| `remoteserviceid` | VARCHAR(255) | Remote service identifier (e.g., "cognito") |
+| `remoteloginnames` | VARCHAR(255) | Comma-separated remote login names |
+| `lastlogintime` | INTEGER | Last login time (epoch seconds) |
+| `numlogins` | INTEGER | Login counter |
+| `active` | INTEGER | 1 = active, 0 = disabled |
+
+**`groupData`**:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER AUTO PK | Group ID |
+| `name` | VARCHAR(64) | Group name |
+| `creationTime` | INTEGER | Creation time (epoch seconds) |
+| `firstOwnerId` | VARCHAR(32) | Creator principal ID |
+| `ldapGroupDn` | VARCHAR(255) | Linked LDAP group DN |
+| `remoteGroupDn` | VARCHAR(255) | Linked remote group DN |
+| `remoteServiceId` | VARCHAR(255) | Remote service identifier |
+
+**`groupMember`**: (`groupId` INTEGER, `principalId` VARCHAR(32))
+
+**`groupOwner`**: (`groupId` INTEGER, `principalId` VARCHAR(32))
+
+**`aclData`**: (`id` INTEGER AUTO PK, `name` VARCHAR(32), `creationTime` INTEGER, `firstOwnerId` VARCHAR(32))
+
+**`acl`**: (`aclId` INTEGER, `principalId` VARCHAR(32), `permission` VARCHAR(32))
+
+**`aclOwner`**: (`aclId` INTEGER, `principalId` VARCHAR(32))
+
+Default seed data: `sysadmin` user with OLDSHA hash of `sysadmin` (`bb40d977a94b02f2`).
+
+### PasswordService
+
+`com.atex.desk.api.auth.PasswordService` — `@Component`, multi-scheme password verification supporting all Polopoly password formats:
+
+| Scheme | Format | Verification |
+|--------|--------|-------------|
+| OLDSHA | 16-char hex (no prefix) | SHA-1(staticSecret + password), first 8 bytes |
+| SHA256 | 64-char hex (no prefix) | SHA-256(password) |
+| {SHA} | Base64 | SHA-1(password) |
+| {SSHA} | Base64 | SHA-1(password + salt), salt appended |
+| {MD5} | Base64 | MD5(password) |
+| {SMD5} | Base64 | MD5(password + salt), salt appended |
+| {CLEARTEXT} | Plaintext | Direct compare |
+| {LDAPUSER} | Marker | Always false (delegate to LDAP) |
+| {REMOTEUSER} | Marker | Always false (delegate to remote) |
+| {COGNITOUSER} | Marker | Always false (delegate to Cognito) |
+
+Methods: `verify(password, storedHash)`, `detectScheme(storedHash)`, `hashOldSha(password)`, `hashSha256(password)`. Uses constant-time comparison for salted schemes.
+
+### LdapAuthService
+
+`com.atex.desk.api.auth.LdapAuthService` — `@Component @ConditionalOnProperty(name = "desk.ldap.enabled", havingValue = "true")`. Ported from Polopoly's `LdapUtil`.
+
+**Authentication:**
+- `authenticate(loginName, password)` — resolves DN via admin search, then user bind
+- Supports external authentication (SSO pre-auth) when `desk.ldap.external-authentication=true`
+
+**DN Resolution:**
+- `findUserDn(loginName)` / `getDistinguishedNameForUser(loginName)` — admin search with configurable filter
+- `getLoginNameForUser(dn)` — reverse lookup DN → login name
+
+**User Attributes:**
+- `getUserAttributes(loginName)` — mapped attributes via `desk.ldap.attribute-mapping.*`
+- `getRawUserAttributes(loginName)` — raw LDAP attributes
+- Supports binary attributes (base64 encoded) and boolean normalization
+
+**User Provisioning (write mode):**
+- `registerUser(loginName, password)` — creates LDAP entry (requires `desk.ldap.write-enabled=true` + `desk.ldap.can-register-users=true`)
+- `modifyAttribute(userDn, attributeId, value)` — modify LDAP attributes
+- `setPassword(userDn, newPassword)` — encode + store password
+
+**Group Operations:**
+- `getGroupsForUser(loginName)` — groups via member attribute search
+- `getAllGroups()` — all groups in group search base
+- `getGroupAttributes(groupDn)` — cached group details with nested group support
+- `isLdapGroup(dn)` — checks objectClass
+- `isLdapEntryModified(dn, sinceTimestamp)` — change detection via `modifyTimestamp`
+- `reloadGroups()` — force cache clear
+
+**Password Encoding (for writes):**
+- `encodePassword(password, scheme)` — supports CLEARTEXT, SHA, SSHA, MD5, SMD5
+
+**Inner class:** `LdapGroup` — holds groupName, nestedGroups (Set), users (Set), modifyTimestamp.
+
+### LdapProperties
+
+`com.atex.desk.api.auth.LdapProperties` — `@ConfigurationProperties(prefix = "desk.ldap")`:
+
+| Category | Properties |
+|----------|-----------|
+| Connection | `provider-url`, `initial-context-factory`, `security-protocol`, `security-authentication`, `referral`, `connection-pool` |
+| Admin bind | `admin-dn`, `admin-password` |
+| User search | `search-base`, `login-name-attribute` (uid), `object-class` (inetOrgPerson), `advanced-query`, `user-password-attribute` |
+| Group search | `group-search-base`, `group-object-class` (groupOfNames), `group-member-attribute` (member), `group-name-attribute` (cn), `group-advanced-query`, `nested-groups-supported` |
+| Group reload | `group-reload-interval` (3600000ms) |
+| Behavior | `write-enabled`, `can-register-users`, `case-insensitive` (true), `external-authentication` |
+| Password | `password-scheme` (SSHA) |
+| Attribute mapping | `attribute-mapping.*`, `binary-attributes`, `boolean-attributes` |
+| Domain | `domain`, `domain-attribute` |
+
+### Entity Layer (7 new entities)
+
+`com.atex.desk.api.entity`:
+
+| Entity | Table | PK | Description |
+|--------|-------|----|-------------|
+| `AppUser` | `registeredusers` | `loginname` (String) | Expanded: added `isLdapUser`, `isRemoteUser`, `remoteServiceId`, `remoteLoginNames`, `lastLoginTime`, `numLogins`, `active` + helper methods `isActive()`, `isLdap()`, `isRemote()` |
+| `AppGroup` | `groupData` | `id` (auto Integer) | Group with name, creationTime, firstOwnerId, ldapGroupDn, remoteGroupDn, remoteServiceId |
+| `AppGroupMember` | `groupMember` | composite (`groupId`, `principalId`) | Group membership |
+| `AppGroupMemberId` | — | — | Composite PK class for `AppGroupMember` |
+| `AppGroupOwner` | `groupOwner` | composite (`groupId`, `principalId`) | Group ownership |
+| `AppGroupOwnerId` | — | — | Composite PK class for `AppGroupOwner` |
+| `AppAcl` | `aclData` | `id` (auto Integer) | ACL with name, creationTime, firstOwnerId |
+| `AppAclEntry` | `acl` | composite (`aclId`, `principalId`, `permission`) | ACL permission entry |
+| `AppAclEntryId` | — | — | Composite PK class for `AppAclEntry` |
+| `AppAclOwner` | `aclOwner` | composite (`aclId`, `principalId`) | ACL ownership |
+| `AppAclOwnerId` | — | — | Composite PK class for `AppAclOwner` |
+
+### Repository Layer (6 new repositories)
+
+`com.atex.desk.api.repository`:
+
+| Repository | Key Methods |
+|-----------|-------------|
+| `AppGroupRepository` | `findByName(String)`, `findAll()` |
+| `AppGroupMemberRepository` | `findByGroupId(int)`, `findByPrincipalId(String)`, `deleteByGroupIdAndPrincipalId(int, String)` |
+| `AppGroupOwnerRepository` | `findByGroupId(int)` |
+| `AppAclRepository` | `findByName(String)` |
+| `AppAclEntryRepository` | `findByAclId(int)`, `findByPrincipalId(String)` |
+| `AppAclOwnerRepository` | `findByAclId(int)` |
+
+`AppUserRepository` modified: PK changed from `userid` (Integer) to `loginname` (String), renamed `findByUsername` → `findByLoginName`, added `findAll()`.
+
+### DTO Layer (2 new DTOs)
+
+| DTO | Fields |
+|-----|--------|
+| `GroupDto` | `groupId`, `name`, `createdAt`, `members` (optional) |
+| `PrincipalDto` | Added `groupList` field (optional, populated when `addGroupsToUsers=true`) |
+
+### PrincipalsController
+
+`com.atex.desk.api.controller.PrincipalsController` at `/principals` — expanded from 4 to 11 endpoints:
+
+| Method | Path | Behaviour |
+|--------|------|-----------|
+| GET | `/principals/users/me` | Current authenticated user |
+| GET | `/principals/users` | List all active users (optional `addGroupsToUsers` param) |
+| GET | `/principals/users/{userId}` | Get user by login name |
+| GET | `/principals/groups` | List all groups |
+| GET | `/principals/groups/{groupId}` | Get group by ID (optional `members` param) |
+| POST | `/principals/groups` | Create group (`{name}`) — creator added as owner |
+| PUT | `/principals/groups/{groupId}` | Update group name |
+| DELETE | `/principals/groups/{groupId}` | Delete group + memberships + owners |
+| POST | `/principals/groups/{groupId}/members` | Add member (`{principalId}`) — idempotent |
+| DELETE | `/principals/groups/{groupId}/members/{principalId}` | Remove member |
+
+### LocalUserServer & LocalGroup
+
+**`LocalUserServer`** — expanded from 2 to 5 `UserServer` methods:
+
+| Method | Implementation |
+|--------|---------------|
+| `loginAndMerge(loginName, password, caller)` | `PasswordService.verify()` + login stats update |
+| `getUserIdByLoginName(loginName)` | `AppUserRepository.findByLoginName()` |
+| `findGroup(groupId)` | `AppGroupRepository` + `AppGroupMemberRepository` → `LocalGroup` |
+| `getAllGroups()` | `AppGroupRepository.findAll()` → `GroupId[]` |
+| `findGroupsByMember(principalId)` | `AppGroupMemberRepository.findByPrincipalId()` → `GroupId[]` |
+
+**`LocalGroup`** — new class implementing `Group` interface with `getGroupId()`, `getName()`, `isMember()`, `getMembers()`.
+
+**`Group`** interface — added `getMembers()` returning `Set<String>`.
+
+**`GroupId`** — added `getId()` accessor.
+
+**`UserServer`** interface — added `findGroup()`, `getAllGroups()`, `findGroupsByMember()`.
+
+### DamDataResource Wiring
+
+- `users` endpoint: wired to `AppUserRepository.findAll()` (cached via Guava `OBJECT_CACHE`)
+- `groups` endpoint: wired to `AppGroupRepository.findAll()` (was returning empty array)
+
+### Configuration (`application.properties`)
+
+```properties
+# LDAP authentication (disabled by default)
+desk.ldap.enabled=false
+desk.ldap.provider-url=
+desk.ldap.search-base=
+desk.ldap.admin-dn=
+desk.ldap.admin-password=
+desk.ldap.login-name-attribute=uid
+desk.ldap.object-class=inetOrgPerson
+# ... (30+ properties — see LdapProperties for full list)
+
+# Cognito authentication (disabled by default)
+desk.cognito.enabled=false
+desk.cognito.user-pool-id=
+desk.cognito.client-id=
+desk.cognito.client-secret=
+desk.cognito.region=eu-west-1
+# ... (20+ properties — see CognitoProperties for full list)
+```
+
+### DemoApplication Changes
+
+Added `LdapProperties.class` and `CognitoProperties.class` to `@EnableConfigurationProperties`.
+
+### Gradle Changes
+
+Added AWS SDK v2 dependency:
+```groovy
+implementation platform('software.amazon.awssdk:bom:2.31.3')
+implementation 'software.amazon.awssdk:cognitoidentityprovider'
+```
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `auth/PasswordService.java` | Multi-scheme password verification (OLDSHA, SHA-256, {SHA}, {SSHA}, {MD5}, {SMD5}, {CLEARTEXT}) |
+| `auth/LdapAuthService.java` | Full LDAP auth, DN resolution, user provisioning, group sync, password management |
+| `auth/LdapProperties.java` | `@ConfigurationProperties(prefix = "desk.ldap")` — 30+ LDAP configuration properties |
+| `auth/CognitoProperties.java` | `@ConfigurationProperties(prefix = "desk.cognito")` — Cognito configuration properties |
+| `dto/GroupDto.java` | Group DTO with groupId, name, createdAt, members |
+| `entity/AppGroup.java` | Group entity (`groupData` table) |
+| `entity/AppGroupMember.java` | Group membership entity (`groupMember` table) |
+| `entity/AppGroupMemberId.java` | Composite PK for AppGroupMember |
+| `entity/AppGroupOwner.java` | Group ownership entity (`groupOwner` table) |
+| `entity/AppGroupOwnerId.java` | Composite PK for AppGroupOwner |
+| `entity/AppAcl.java` | ACL entity (`aclData` table) |
+| `entity/AppAclEntry.java` | ACL entry entity (`acl` table) |
+| `entity/AppAclEntryId.java` | Composite PK for AppAclEntry |
+| `entity/AppAclOwner.java` | ACL owner entity (`aclOwner` table) |
+| `entity/AppAclOwnerId.java` | Composite PK for AppAclOwner |
+| `onecms/LocalGroup.java` | `Group` interface implementation backed by DB |
+| `repository/AppGroupRepository.java` | Group repository |
+| `repository/AppGroupMemberRepository.java` | Group membership repository |
+| `repository/AppGroupOwnerRepository.java` | Group ownership repository |
+| `repository/AppAclRepository.java` | ACL repository |
+| `repository/AppAclEntryRepository.java` | ACL entry repository |
+| `repository/AppAclOwnerRepository.java` | ACL owner repository |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `build.gradle` | Added AWS SDK v2 BOM + cognitoidentityprovider |
+| `DemoApplication.java` | Added `LdapProperties`, `CognitoProperties` to `@EnableConfigurationProperties` |
+| `entity/AppUser.java` | Expanded: table `registeredusers`, PK `loginname`, added LDAP/remote/active fields |
+| `repository/AppUserRepository.java` | PK changed to String, `findByUsername` → `findByLoginName`, added `findAll()` |
+| `dto/PrincipalDto.java` | Added `groupList` field |
+| `controller/PrincipalsController.java` | Expanded from 4 to 11 endpoints: group CRUD, membership management |
+| `onecms/LocalUserServer.java` | Added `PasswordService` dep; implemented `loginAndMerge`, `findGroup`, `getAllGroups`, `findGroupsByMember` |
+| `UserServer.java` | Added `findGroup()`, `getAllGroups()`, `findGroupsByMember()` |
+| `Group.java` | Added `getMembers()` returning `Set<String>` |
+| `GroupId.java` | Added `getId()` accessor |
+| `DamDataResource.java` | Wired `users`/`groups` endpoints to real repositories |
+| `DamPublisherFactory.java` | Updated for expanded UserServer API |
+| `EngagementAspect.java` | Minor fix |
+| `application.properties` | Added LDAP (30+) and Cognito (20+) configuration properties |
+| `schema.sql` | Replaced `users` table with `registeredusers`, added `groupData`, `groupMember`, `groupOwner`, `aclData`, `acl`, `aclOwner` |
+| `data.sql` | Updated seed data for `registeredusers` table with OLDSHA hash |
+
+## Increment 10 — Search Resource, SolrSearchClient & DamSearchResource
+
+Ports the search endpoint infrastructure from the Polopoly platform: the `/search/{core}/select` REST endpoint for direct Solr proxy access with format negotiation (JSON/XML), permission filtering, and working-sites decoration; the `SearchClient` API interface for programmatic Solr queries; legacy Polopoly search types; and the `/dam/search/{core}/select` remote proxy endpoint.
+
+### Architecture
+
+```
+Desk UI / OneCMS clients
+  ├─ /search/{core}/select  → SearchController
+  │    └─ LocalSearchClient (implements SearchClient)
+  │         └─ SolrService.rawQuery() → Solr
+  │              ├─ Permission filtering (content_readers_ss / content_writers_ss / content_owners_ss)
+  │              ├─ Working-sites decoration (page_ss filter via SolrQueryDecorator)
+  │              └─ Format negotiation: JSON (Gson) or XML (DOM)
+  │
+  └─ /dam/search/{core}/select → DamSearchController
+       └─ DamPublisherFactory.createContext() → RemoteUtils.callRemoteWs()
+            → Remote CMS REST API
+```
+
+### Search API Types (preserving original packages)
+
+**Package `com.atex.onecms.search`** (from polopoly/core/data-api-api):
+- `SearchClient` — Interface: `query(core, SolrQuery, Subject, SearchOptions)` → `SearchResponse`. Constants: `CORE_ONECMS`, `CORE_LATEST`, `CORE_DEFAULT`. Default convenience methods for core/options
+- `SearchResponse` — Interface: `getCore()`, `response()` → `QueryResponse`, `json()` → `String`, `jsonTree()` → `JsonElement`, `getStatus()`, `getErrorMessage()`
+- `SearchOptions` — Options class: `filterWorkingSites`, `postMethod`, `permission` (`ACCESS_PERMISSION` enum: OFF/READ/WRITE/OWNER). Static factories: `none()`, `filterWorkingSites()`, `withPermission()`, `postMethod()`
+
+**Package `com.atex.onecms.ws.search`**:
+- `SolrFormat` — Enum: `json`, `xml`
+- `SearchMethod` — Enum: `GET`, `POST`
+- `ChildFactory<E>` — Generic tree builder interface for NamedList → JSON/XML conversion
+- `ChildFactoryJSON` — Gson-based implementation using `JsonObject`/`JsonArray`
+- `ChildFactoryXML` — DOM-based implementation using `Element`/`Document`
+- `SearchServiceUtil` — Full implementation (replaced 4-line stub): `parseQueryString()`, `deduceResponseType()`, `toJSON()`, `toXML()`, `formatResponse()`, `solrError()`, recursive NamedList walker
+
+**Package `com.polopoly.search.solr`**:
+- `SearchClient` — Legacy interface: `search(SolrQuery, pageSize)` → `SearchResult`
+- `SearchResult` — Paginated result: `getApproximateNumberOfPages()`, `iterator()`, `getPage(int)`
+- `SearchResultPage` — Page: `getHits()` → `List<ContentId>`, `getQueryResponses()`, `isEmpty()`, `isIncomplete()`
+- `SolrIndexName` — Simple wrapper: `name` field, `getName()`, `toString()`
+- `SolrSearchClient` — Simplified class implementing legacy `SearchClient`; methods throw `UnsupportedOperationException("Use LocalSearchClient")`
+
+### LocalSearchClient
+
+`com.atex.desk.api.search.LocalSearchClient` — `@Component` implementing `com.atex.onecms.search.SearchClient`:
+- Constructor: `@Nullable SolrService`, `DeskProperties`
+- Core name mapping: `"onecms"` → `deskProperties.getSolrCore()`, `"latest"` → `deskProperties.getSolrLatestCore()`, others → as-is
+- `ConcurrentHashMap<String, SolrService>` cache for per-core `SolrService` instances via `solrService.forCore()`
+- Working-sites filter: delegates to `SolrQueryDecorator.decorateWithWorkingSites()` (ready for when user working sites are in DB)
+- Permission filter: adds `fq` for `content_readers_ss`/`content_writers_ss`/`content_owners_ss` per permission level
+
+`com.atex.desk.api.search.LocalSearchResponse` — Implements `SearchResponse`, wraps `QueryResponse`. Lazy JSON serialization via `SearchServiceUtil.toJSON()`.
+
+### SolrService Changes
+
+Added three public methods:
+- `rawQuery(SolrQuery)` → `QueryResponse` — exposes the private `executeQuery` for direct query access
+- `forCore(String coreName)` → `SolrService` — creates instance for a different core, reusing the same server URL
+- `getCoreName()` → `String` — returns the core name this instance is configured for
+
+### SearchController
+
+`com.atex.desk.api.controller.SearchController` at `/search`:
+
+| Method | Path | Consumes | Description |
+|--------|------|----------|-------------|
+| GET | `/{core}/select` | — | Query string params |
+| POST | `/{core}/select` | `application/x-www-form-urlencoded` | Form params |
+| POST | `/{core}/select` | `application/json` | JSON body |
+
+All route to private `process()` which:
+1. Parses query via `SearchServiceUtil.parseQueryString()`
+2. Determines format via `SearchServiceUtil.deduceResponseType(wt)`
+3. Extracts `variant` and `permission` params from query
+4. Builds `SearchOptions` from method + permission
+5. Executes via `LocalSearchClient.query()`
+6. If `variant` set → inlines content data (resolves each doc's `id` via `ContentManager`, adds as `_data` field)
+7. Formats response via `SearchServiceUtil.formatResponse()` or `SearchServiceUtil.solrError()`
+
+JSON POST: parses body via Gson `JsonParser` into query string params.
+
+### DamSearchController
+
+`com.atex.desk.api.controller.DamSearchController` at `/dam/search`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/{core}/select` | Proxy to remote CMS backend |
+
+Flow:
+1. `DamUserContext.from(req).assertLoggedIn()` → `Caller`
+2. `damPublisherFactory.createContext(backendId, caller)` → `PublishingContext`
+3. Builds URL: `remoteApiUrl + "search/" + core + "/select?" + queryString`
+4. Calls `RemoteUtils.callRemoteWs("GET", url, auth)`
+5. Returns response as `ResponseEntity` with `application/json`
+
+### Auth & Config Changes
+
+- `AuthConfig` — Added `/search/*` to `addUrlPatterns()` (note: `/dam/search/*` already covered by `/dam/*`)
+- `OpenApiConfig` — Added `"Search"` tag: "Solr search proxy with format negotiation and permission filtering"
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `com/atex/onecms/search/SearchClient.java` | Public search client interface |
+| `com/atex/onecms/search/SearchResponse.java` | Search response interface |
+| `com/atex/onecms/search/SearchOptions.java` | Search options with permissions |
+| `com/atex/onecms/ws/search/SolrFormat.java` | json/xml enum |
+| `com/atex/onecms/ws/search/SearchMethod.java` | GET/POST enum |
+| `com/atex/onecms/ws/search/ChildFactory.java` | Generic tree builder interface |
+| `com/atex/onecms/ws/search/ChildFactoryJSON.java` | Gson-based ChildFactory |
+| `com/atex/onecms/ws/search/ChildFactoryXML.java` | DOM-based ChildFactory |
+| `com/polopoly/search/solr/SearchClient.java` | Legacy search interface |
+| `com/polopoly/search/solr/SearchResult.java` | Paginated result interface |
+| `com/polopoly/search/solr/SearchResultPage.java` | Result page interface |
+| `com/polopoly/search/solr/SolrIndexName.java` | Index name wrapper |
+| `com/polopoly/search/solr/SolrSearchClient.java` | Simplified SolrSearchClient |
+| `com/atex/desk/api/search/LocalSearchClient.java` | Spring component wrapping SolrService |
+| `com/atex/desk/api/search/LocalSearchResponse.java` | SearchResponse implementation |
+| `com/atex/desk/api/controller/SearchController.java` | `/search/{core}/select` REST controller |
+| `com/atex/desk/api/controller/DamSearchController.java` | `/dam/search/{core}/select` proxy |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `com/atex/onecms/ws/search/SearchServiceUtil.java` | Replaced 4-line stub with full implementation: query parsing, JSON/XML format conversion, error formatting |
+| `com/atex/onecms/app/dam/solr/SolrService.java` | Added `rawQuery()`, `forCore()`, `getCoreName()` methods |
+| `com/atex/desk/api/auth/AuthConfig.java` | Added `/search/*` to auth filter URL patterns |
+| `com/atex/desk/api/config/OpenApiConfig.java` | Added "Search" tag |
