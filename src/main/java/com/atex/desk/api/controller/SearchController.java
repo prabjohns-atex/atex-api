@@ -174,7 +174,7 @@ public class SearchController {
                 if (cid == null) continue;
                 var vid = contentManager.resolve(cid, Subject.NOBODY_CALLER);
                 if (vid == null) continue;
-                var result = contentManager.get(vid, Object.class, Subject.NOBODY_CALLER);
+                var result = contentManager.get(vid, variant, Object.class, null, Subject.NOBODY_CALLER);
                 if (result != null && result.getContent() != null) {
                     // Serialize content as JSON and add as _data field
                     com.google.gson.Gson gson = new com.google.gson.Gson();

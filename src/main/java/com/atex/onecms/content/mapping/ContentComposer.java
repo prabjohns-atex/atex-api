@@ -1,25 +1,29 @@
 package com.atex.onecms.content.mapping;
 
 import com.atex.onecms.content.ContentResult;
-
-import java.util.Map;
+import com.atex.onecms.content.callback.CallbackException;
 
 /**
- * Interface for variant-based content transformation.
- * ContentComposers transform content from one representation to another
- * based on the requested variant.
+ * A ContentComposer is used to produce an alternative representation of a content.
+ * It can convert the content's data and its type.
+ * ContentComposers are called as the last step in a data processing pipeline.
+ *
+ * @param <IN>     the type to convert from.
+ * @param <OUT>    the type to convert to. May be the same as IN if no type conversion is needed.
+ * @param <CONFIG> the type of the composer's configuration bean.
  */
 public interface ContentComposer<IN, OUT, CONFIG> {
 
     /**
-     * Compose the source content result into a new representation.
+     * Compose a content based on source.
      *
-     * @param source  the source content result
-     * @param variant the name of the variant being requested
-     * @param params  additional parameters
-     * @param config  composer configuration
-     * @return the composed content result
+     * @param source  a content on which aspect mappers have been applied.
+     * @param variant name of the requested variant
+     * @param request parameters specific to this request only
+     * @param context the application context
+     * @return a new representation of the content. It cannot be null!
+     * @throws CallbackException if it fails to compose the content.
      */
     ContentResult<OUT> compose(ContentResult<IN> source, String variant,
-                                Map<String, Object> params, CONFIG config);
+                                Request request, Context<CONFIG> context) throws CallbackException;
 }

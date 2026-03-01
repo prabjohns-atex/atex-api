@@ -33,6 +33,12 @@ import com.atex.onecms.content.callback.CallbackException;
 import com.atex.onecms.content.files.FileService;
 import com.atex.onecms.content.lifecycle.LifecycleContextPreStore;
 import com.atex.onecms.content.lifecycle.LifecyclePreStore;
+import com.atex.onecms.content.mapping.ContentComposer;
+import com.atex.onecms.content.mapping.ContentComposerUtil;
+import com.atex.onecms.content.mapping.ContentComposerUtilImpl;
+import com.atex.onecms.content.mapping.Context;
+import com.atex.onecms.content.mapping.Request;
+import com.atex.onecms.content.mapping.RequestImpl;
 import com.atex.onecms.content.repository.ContentModifiedException;
 import com.atex.onecms.content.repository.StorageException;
 import org.springframework.lang.Nullable;
@@ -81,6 +87,17 @@ public class LocalContentManager implements ContentManager {
      */
     private final Map<String, List<LifecyclePreStore<?, ?>>> preStoreHooks = new ConcurrentHashMap<>();
 
+    /**
+     * Registry of content composers keyed by variant name.
+     * Each variant can have multiple registrations — type-specific wins over wildcard.
+     */
+    private final Map<String, List<ComposerRegistration>> composerRegistry = new ConcurrentHashMap<>();
+
+    /**
+     * A composer registration binding a content type pattern to a composer.
+     */
+    public record ComposerRegistration(String contentType, ContentComposer<Object, Object, Object> composer) {}
+
     public LocalContentManager(ContentService contentService, ObjectMapper objectMapper,
                                 WorkspaceStorage workspaceStorage, IdGenerator idGenerator,
                                 @Nullable FileService fileService,
@@ -105,6 +122,21 @@ public class LocalContentManager implements ContentManager {
      */
     public <T, C> void registerPreStoreHook(String contentType, LifecyclePreStore<T, C> hook) {
         preStoreHooks.computeIfAbsent(contentType, k -> new ArrayList<>()).add(hook);
+    }
+
+    // --- Composer registration ---
+
+    /**
+     * Register a content composer for a variant.
+     * Use "*" for composers that should handle all content types.
+     */
+    @SuppressWarnings("unchecked")
+    public void registerComposer(String variant, String contentType,
+                                  ContentComposer<?, ?, ?> composer) {
+        composerRegistry.computeIfAbsent(variant, k -> new ArrayList<>())
+            .add(new ComposerRegistration(contentType, (ContentComposer<Object, Object, Object>) composer));
+        LOG.info("Registered composer for variant '" + variant + "' type '" + contentType + "': "
+                 + composer.getClass().getName());
     }
 
     // --- Resolve ---
@@ -174,7 +206,14 @@ public class LocalContentManager implements ContentManager {
             }
 
             ContentResultDto result = dto.get();
-            return (ContentResult<T>) dtoToContentResult(result, contentId, variant, dataClass);
+            ContentResult<T> rawResult = (ContentResult<T>) dtoToContentResult(result, contentId, variant, dataClass);
+
+            // Execute composer if variant is specified
+            if (variant != null && !variant.isEmpty()) {
+                rawResult = executeComposer(rawResult, variant, params, subject, options);
+            }
+
+            return rawResult;
         } catch (Exception e) {
             throw new StorageException("Failed to get content: " + contentId, e);
         }
@@ -536,6 +575,54 @@ public class LocalContentManager implements ContentManager {
     }
 
     // --- Conversion helpers ---
+
+    // --- Composer execution ---
+
+    @SuppressWarnings("unchecked")
+    private <T> ContentResult<T> executeComposer(ContentResult<T> rawResult, String variant,
+                                                  Map<String, Object> params, Subject subject,
+                                                  GetOption... options) {
+        List<ComposerRegistration> registrations = composerRegistry.get(variant);
+        if (registrations == null || registrations.isEmpty()) {
+            return rawResult; // No composer registered — return raw result with variant tag
+        }
+
+        // Find best match: type-specific first, then wildcard
+        String contentType = rawResult.getContent() != null
+            ? rawResult.getContent().getContentDataType() : null;
+
+        ComposerRegistration match = null;
+        ComposerRegistration wildcard = null;
+
+        for (ComposerRegistration reg : registrations) {
+            if (ALL_TYPES.equals(reg.contentType())) {
+                if (wildcard == null) wildcard = reg;
+            } else if (contentType != null && contentType.equals(reg.contentType())) {
+                match = reg;
+                break; // Type-specific wins
+            }
+        }
+
+        if (match == null) match = wildcard;
+        if (match == null) return rawResult;
+
+        try {
+            Request request = new RequestImpl(params, subject, options);
+            ContentComposerUtil util = new ContentComposerUtilImpl(rawResult);
+            Context<Object> context = new Context<>(this, null, util, fileService);
+
+            ContentResult<Object> composed = match.composer().compose(
+                (ContentResult<Object>) rawResult, variant, request, context);
+
+            if (composed != null) {
+                return (ContentResult<T>) composed;
+            }
+            LOG.warning("Composer for variant '" + variant + "' returned null, using raw result");
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Composer execution failed for variant '" + variant + "', using raw result", e);
+        }
+        return rawResult;
+    }
 
     @SuppressWarnings("unchecked")
     private <T> ContentResult<T> dtoToContentResult(ContentResultDto dto,

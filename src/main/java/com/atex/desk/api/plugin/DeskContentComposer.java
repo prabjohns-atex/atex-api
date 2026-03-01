@@ -17,6 +17,14 @@ public interface DeskContentComposer extends ExtensionPoint {
     String variant();
 
     /**
+     * Content type(s) this composer applies to.
+     * Use "*" for all types. Default: all types.
+     */
+    default String[] contentTypes() {
+        return new String[]{"*"};
+    }
+
+    /**
      * Transform content for the requested variant.
      *
      * @param source the original content result

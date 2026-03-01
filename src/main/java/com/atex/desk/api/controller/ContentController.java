@@ -6,6 +6,11 @@ import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ContentWriteDto;
 import com.atex.desk.api.dto.ErrorResponseDto;
 import com.atex.desk.api.service.ContentService;
+import com.atex.onecms.content.ContentManager;
+import com.atex.onecms.content.ContentResult;
+import com.atex.onecms.content.ContentVersionId;
+import com.atex.onecms.content.IdUtil;
+import com.atex.onecms.content.Subject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -26,7 +31,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.lang.Nullable;
 
 import java.net.URI;
 import java.util.Optional;
@@ -40,12 +47,15 @@ public class ContentController
 
     private final ContentService contentService;
     private final ConfigurationService configurationService;
+    private final ContentManager contentManager;
 
     public ContentController(ContentService contentService,
-                              ConfigurationService configurationService)
+                              ConfigurationService configurationService,
+                              @Nullable ContentManager contentManager)
     {
         this.contentService = contentService;
         this.configurationService = configurationService;
+        this.contentManager = contentManager;
     }
 
     /**
@@ -64,8 +74,15 @@ public class ContentController
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> getContent(
         @Parameter(description = "Content ID (versioned or unversioned)", example = "onecms:abc123")
-        @PathVariable String id)
+        @PathVariable String id,
+        @Parameter(description = "Variant name for content composition (e.g. atex.onecms.preview)")
+        @RequestParam(value = "variant", required = false) String variant)
     {
+        // If variant is requested and ContentManager is available, use variant-aware path
+        if (variant != null && !variant.isEmpty() && contentManager != null) {
+            return getContentWithVariant(id, variant);
+        }
+
         if (contentService.isVersionedId(id))
         {
             String[] parts = contentService.parseContentId(id);
@@ -85,6 +102,32 @@ public class ContentController
                     .location(URI.create("/content/contentid/" + vid))
                     .build())
                 .orElseGet(() -> notFound("Content not found"));
+        }
+    }
+
+    /**
+     * Fetch content via ContentManager with variant composition.
+     */
+    private ResponseEntity<?> getContentWithVariant(String id, String variant) {
+        try {
+            ContentVersionId vid;
+            if (contentService.isVersionedId(id)) {
+                vid = IdUtil.fromVersionedString(id);
+            } else {
+                var cid = IdUtil.fromString(id);
+                if (cid == null) return notFound("Invalid content ID");
+                vid = contentManager.resolve(cid, Subject.NOBODY_CALLER);
+                if (vid == null) return notFound("Content not found");
+            }
+            ContentResult<Object> result = contentManager.get(
+                vid, variant, Object.class, null, Subject.NOBODY_CALLER);
+            if (result == null || !result.getStatus().isSuccess()) {
+                return notFound("Content not found");
+            }
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponseDto("VARIANT_ERROR", "Failed to compose variant: " + e.getMessage()));
         }
     }
 
