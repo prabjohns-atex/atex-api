@@ -1526,14 +1526,14 @@ Response: `{ runTime, maxCommitId, numFound, size, events: [{contentId, contentV
 - **Fire-and-forget**: `@Transactional(REQUIRES_NEW)` — recording failures don't affect content operations
 - **AuthConfig patterns**: `/content/*`, `/dam/*`, `/principals/*`, `/admin/*`, `/search/*`, `/changes/*`
 
-## Increment 13 (Plan) — Variant/Composer System
+## Increment 13 — Variant/Composer System
 
 Adds variant-based content composition to `ContentManager.get()`. When a non-null `variant` is passed, the system looks up a registered `ContentComposer` for that variant (optionally narrowed by content type), executes it to transform the raw `ContentResult`, and returns the composed result. This mirrors the original Polopoly `ExecutorReadComposer` pipeline.
 
 ### Architecture
 
 ```
-contentManager.get(contentId, "atex.onecms.preview", Object.class, params, subject)
+contentManager.get(contentId, "atex.onecms.indexing", Object.class, params, subject)
   │
   ├─ 1. Fetch raw content from DB (existing path)
   ├─ 2. Build raw ContentResult via dtoToContentResult()
@@ -1541,93 +1541,120 @@ contentManager.get(contentId, "atex.onecms.preview", Object.class, params, subje
   │      ├─ Match by variant name + content type (type-specific first)
   │      ├─ Fall back to variant name + wildcard ("*")
   │      └─ If no match → return raw result with variant tag (current behaviour)
-  ├─ 4. Build Request (params, subject, options) and Context (CM, FileService, config)
+  ├─ 4. Build RequestImpl (params, subject, options) and Context (CM, null config, util, fileService)
   └─ 5. Call composer.compose(rawResult, variant, request, context)
          → Return composed ContentResult
 
 Composer Registry (Map<String, List<ComposerRegistration>>):
-  "atex.onecms.indexing"  → [("*", DamIndexComposerAdapter)]
-  "atex.onecms.preview"   → [("*", DamContentPreviewComposer)]
-  "ppage"                 → [("atex.dam.standard.Page", DamPrintPageComposer)]
-  "jobExplorer"           → [("atex.dam.standard.Job", DamJobExplorerComposer)]
+  "atex.onecms.indexing"  → [("*", DamIndexComposerAdapter)]   ← registered
   [plugin variants]       → [registered via PF4J DeskContentComposer extensions]
+
+Future built-in composers (not yet ported):
+  "atex.onecms.preview"   → DamContentPreviewComposer (from gong/onecms-common)
+  "ppage"                 → DamPrintPageComposer (from gong/onecms-common)
+  "jobExplorer"           → DamJobExplorerComposer (from gong/onecms-common)
 
 Registration order:
   BuiltInComposerRegistrar (@PostConstruct)  ← built-in composers first
   PluginLoader (@DependsOn builtInComposerRegistrar) ← PF4J plugin composers after
 ```
 
-### Step 1: Composer Registry in LocalContentManager
+### ContentComposer Interface
 
-**File**: `com.atex.desk.api.onecms.LocalContentManager`
+Updated `com.atex.onecms.content.mapping.ContentComposer<IN, OUT, CONFIG>` signature to match the original Polopoly API:
 
-Add a `Map<String, List<ComposerRegistration>>` field keyed by variant name. Each `ComposerRegistration` is an inner record holding `contentType` (nullable/`"*"` = default) and a `ContentComposer<Object, Object, Object>`.
+```java
+ContentResult<OUT> compose(ContentResult<IN> source, String variant,
+                            Request request, Context<CONFIG> context) throws CallbackException;
+```
 
-**New methods:**
-- `registerComposer(String variant, String contentType, ContentComposer)` — appends to registry, mirrors `registerPreStoreHook()`
+Previously the desk-api stub had a simplified signature with `Map<String,Object> params, CONFIG config` — now uses `Request` and `Context<CONFIG>` for full compatibility with ported composers.
 
-**Modified methods:**
-- `get(ContentVersionId, String variant, Class<T>, Map<String,Object>, Subject, GetOption...)` — after building raw `ContentResult`, if variant is non-null:
-  1. Look up `composerRegistry.get(variant)`
-  2. Find best match: type-specific first (content's type matches registration), fall back to wildcard
-  3. Build `RequestImpl` (params + subject + options) and `Context` (this, null ModelDomain, null config, ContentComposerUtil, fileService)
-  4. Call `composer.compose(rawResult, variant, request, context)`
-  5. Return composed result
-  6. If no composer found → return raw result with variant set (current behaviour, no error)
+### Mapping Infrastructure (new classes)
 
-**Lookup priority**: Type-specific → default. Single match, no chaining (matches original Polopoly).
+| Class | Package | Description |
+|-------|---------|-------------|
+| `Request` | `c.a.o.content.mapping` | Interface: `getRequestParameters()`, `getSubject()`, `getOptions()` |
+| `RequestImpl` | `c.a.o.content.mapping` | Concrete implementation with static factory `RequestImpl.of(params, subject)` |
+| `Context<C>` | `c.a.o.content.mapping` | Composer context: `getContentManager()`, `getConfig()`, `getContentComposerUtil()`, `getFileService()`. No `ModelDomain` (desk-api doesn't have one). |
+| `ContentComposerUtil` | `c.a.o.content.mapping` | Utility interface: `filterUnmappedAspects()`, `getOriginalContent()`, `isAspectMapped()`, `notFoundInVariant()` |
+| `ContentComposerUtilImpl` | `c.a.o.content.mapping` | Simplified implementation — no AspectMapper infrastructure, `filterUnmappedAspects()` returns as-is, `isAspectMapped()` returns false |
 
-### Step 2: Enhance DeskContentComposer
+### Composer Registry in LocalContentManager
 
-**File**: `com.atex.desk.api.plugin.DeskContentComposer`
+`LocalContentManager` now has:
 
-Add `default String[] contentTypes()` returning `new String[]{"*"}` (all types). Plugin authors can override to target specific content types. Mirrors `DeskPreStoreHook.contentTypes()`.
+- `Map<String, List<ComposerRegistration>> composerRegistry` — keyed by variant name
+- `record ComposerRegistration(String contentType, ContentComposer<Object,Object,Object> composer)` — inner record
+- `registerComposer(String variant, String contentType, ContentComposer)` — appends to registry, logs registration
+- `executeComposer(ContentResult, variant, params, subject, options)` — private method called from `get()` when variant is non-null:
+  1. Looks up `composerRegistry.get(variant)`
+  2. Finds best match: type-specific first, then wildcard (`"*"`)
+  3. Builds `RequestImpl` + `Context<Object>` (with `this` as ContentManager, `fileService`, null config)
+  4. Calls `composer.compose()`, returns result
+  5. On error: logs warning, returns raw result (graceful fallback)
 
-### Step 3: Request and Context Infrastructure
+### BuiltInComposerRegistrar
 
-**New file**: `com.atex.onecms.content.mapping.RequestImpl` — concrete `Request` implementation:
-- `Map<String, Object> requestParameters`
-- `Subject subject`
-- `GetOption[] options`
-- Static factory: `RequestImpl.of(Map<String,Object> params, Subject subject)`
+`com.atex.desk.api.plugin.BuiltInComposerRegistrar` — `@Component("builtInComposerRegistrar")` with `@PostConstruct`:
 
-The existing `Context<C>` class already has the right shape. `ContentComposerUtil` and `ContentComposerUtilImpl` already exist.
-
-### Step 4: BuiltInComposerRegistrar
-
-**New file**: `com.atex.desk.api.plugin.BuiltInComposerRegistrar`
-
-`@Component("builtInComposerRegistrar")` with `@PostConstruct`, following `BuiltInHookRegistrar` pattern. Registers:
+Currently registers one composer:
 
 | Variant | Content Type | Composer | Notes |
 |---------|-------------|----------|-------|
-| `atex.onecms.indexing` | `*` (all) | Adapter wrapping existing `DamIndexComposer` `@Component` | Wraps `JsonObject` result into `ContentResult<Object>` |
-| `atex.onecms.preview` | `*` (all) | `DamContentPreviewComposer` (ported from gong) | Search highlighting, wire article follows |
-| `ppage` | `atex.dam.standard.Page` | `DamPrintPageComposer` (ported from gong) | Print page flattening |
-| `jobExplorer` | `atex.dam.standard.Job` | `DamJobExplorerComposer` (ported from gong) | Job explorer view |
+| `atex.onecms.indexing` | `*` (all) | Lambda adapter wrapping existing `DamIndexComposer` `@Component` | Calls `damIndexComposer.compose(source, versionId)`, wraps `JsonObject` result into `ContentResult<Object>` |
 
-The `DamIndexComposer` adapter calls `damIndexComposer.compose(source, versionId)` → wraps `JsonObject` as `ContentResult<Object>`. The existing `ContentIndexer` direct-call path remains unchanged.
+### DeskContentComposer Enhancement
 
-### Step 5: Wire Plugin Composers in PluginLoader
+Added `default String[] contentTypes()` returning `{"*"}` — plugin authors can override to target specific content types. Mirrors `DeskPreStoreHook.contentTypes()`.
 
-**File**: `com.atex.desk.api.plugin.PluginLoader`
+### PluginLoader Wiring
 
-- Add `@DependsOn({"builtInHookRegistrar", "builtInComposerRegistrar"})`
-- Replace `"not yet wired"` log with actual registration:
-  - For each `DeskContentComposer`: adapt to `ContentComposer<Object,Object,Object>`, call `contentManager.registerComposer(composer.variant(), contentType, adapted)` for each `contentTypes()`
+- Changed `@DependsOn("builtInHookRegistrar")` → `@DependsOn({"builtInHookRegistrar", "builtInComposerRegistrar"})`
+- Replaced `"not yet wired"` log with actual registration loop:
+  - For each `DeskContentComposer`: adapts to `ContentComposer<Object,Object,Object>` via lambda, calls `contentManager.registerComposer()` for each `contentTypes()`
 
-### Step 6: Fix SearchController to Pass Variant
+### SearchController Fix
 
-**File**: `com.atex.desk.api.controller.SearchController`
+`inlineContentData()` now passes the `variant` parameter through to `contentManager.get(vid, variant, Object.class, null, Subject.NOBODY_CALLER)` — previously it called `contentManager.get(vid, Object.class, Subject.NOBODY_CALLER)` ignoring the variant entirely.
 
-Change `inlineContentData()` to pass the variant through: `contentManager.get(vid, variant, Object.class, null, Subject.NOBODY_CALLER)` instead of `contentManager.get(vid, Object.class, Subject.NOBODY_CALLER)`. The variant string is already extracted from the Solr query at line ~112.
+### ContentController Variant Support
 
-### Step 7: Add Variant Query Param to ContentController
+- Added `ContentManager` as constructor parameter (`@Nullable`)
+- `getContent()` now accepts `@RequestParam(value = "variant", required = false) String variant`
+- When variant is set: routes to `getContentWithVariant()` which resolves the ID via `ContentManager`, calls `contentManager.get(vid, variant, Object.class, null, subject)`, and returns the composed `ContentResult`
+- When variant is null: uses existing `ContentService` path (no change)
 
-**File**: `com.atex.desk.api.controller.ContentController`
+### New Files (6)
 
-- Inject `ContentManager` alongside existing `ContentService`
-- Add `@RequestParam(value = "variant", required = false) String variant` to `getContent()` and related endpoints
-- When variant is set: use `contentManager.get(vid, variant, Object.class, null, subject)` → convert to DTO
-- When variant is null: use existing `ContentService` path (no change)
+| File | Description |
+|------|-------------|
+| `plugin/BuiltInComposerRegistrar.java` | Registers built-in composers at startup |
+| `mapping/Request.java` | Request interface for composers |
+| `mapping/RequestImpl.java` | Concrete Request implementation |
+| `mapping/Context.java` | Composer context (CM, config, util, FileService) |
+| `mapping/ContentComposerUtil.java` | Utility interface for composers |
+| `mapping/ContentComposerUtilImpl.java` | Simplified implementation |
+
+### Modified Files (6)
+
+| File | Change |
+|------|--------|
+| `mapping/ContentComposer.java` | Updated signature: `compose(source, variant, Request, Context)` with `CallbackException` |
+| `onecms/LocalContentManager.java` | Added `composerRegistry`, `ComposerRegistration` record, `registerComposer()`, `executeComposer()` in `get()` |
+| `plugin/DeskContentComposer.java` | Added `default contentTypes()` method |
+| `plugin/PluginLoader.java` | `@DependsOn` updated, wires PF4J composers into registry |
+| `controller/SearchController.java` | Passes variant to `contentManager.get()` in `inlineContentData()` |
+| `controller/ContentController.java` | Added `ContentManager` injection, `variant` query param, `getContentWithVariant()` |
+
+### Future Work
+
+The following composers from the gong codebase can be ported and registered in `BuiltInComposerRegistrar`:
+
+| Composer | Variant | Source | Priority |
+|----------|---------|--------|----------|
+| `DamContentPreviewComposer` | `atex.onecms.preview` | gong/onecms-common | High — used by search result previews |
+| `DamPrintPageComposer` | `ppage` | gong/onecms-common | Medium — print page flattening |
+| `DamJobExplorerComposer` | `jobExplorer` | gong/onecms-common | Medium — job explorer view |
+| `CustomDamComposer` | (base class) | gong/onecms-common | Required by DamContentPreviewComposer |
 
