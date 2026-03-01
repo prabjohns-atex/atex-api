@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.UnaryOperator;
 
 public class ContentOperationUtils {
 
@@ -71,6 +72,12 @@ public class ContentOperationUtils {
     // === Content operations ===
 
     public List<ContentId> duplicate(List<String> ids, Subject subject, String loginName) {
+        return duplicate(ids.stream().map(IdUtil::fromString).toList(), subject, loginName, null, null);
+    }
+
+    public List<ContentId> duplicate(List<ContentId> ids, Subject subject, String loginName,
+                                      UnaryOperator<ContentWriteBuilder<Object>> editOriginal,
+                                      UnaryOperator<ContentWriteBuilder<Object>> editDuplicated) {
         List<ContentId> duplicated = new ArrayList<>();
         if (contentManager == null) {
             LOG.warn("ContentOperationUtils not configured — contentManager is null");
@@ -79,19 +86,29 @@ public class ContentOperationUtils {
 
         Subject resolveSubject = subject != null ? subject : SYSTEM_SUBJECT;
 
-        for (String idStr : ids) {
+        for (ContentId sourceId : ids) {
             try {
-                ContentId sourceId = IdUtil.fromString(idStr);
                 ContentVersionId latestVersion = contentManager.resolve(sourceId, resolveSubject);
                 if (latestVersion == null) {
-                    LOG.warn("duplicate: cannot resolve {}", idStr);
+                    LOG.warn("duplicate: cannot resolve {}", IdUtil.toIdString(sourceId));
                     continue;
                 }
 
                 ContentResult<Object> cr = contentManager.get(latestVersion, null, Object.class, null, resolveSubject);
                 if (cr == null || cr.getContent() == null) {
-                    LOG.warn("duplicate: cannot get content for {}", idStr);
+                    LOG.warn("duplicate: cannot get content for {}", IdUtil.toIdString(sourceId));
                     continue;
+                }
+
+                // Apply editOriginal operator if provided (e.g. mark original as noUsePrint)
+                if (editOriginal != null) {
+                    ContentWriteBuilder<Object> origCwb = new ContentWriteBuilder<>();
+                    origCwb.type(cr.getContent().getContentDataType());
+                    origCwb.mainAspect(cr.getContent().getContentAspect());
+                    origCwb = editOriginal.apply(origCwb);
+                    // Update the original content
+                    ContentWrite<Object> origUpdate = origCwb.buildUpdate();
+                    contentManager.update(latestVersion.getContentId(), origUpdate, resolveSubject);
                 }
 
                 // Build a new content write with same data
@@ -100,13 +117,18 @@ public class ContentOperationUtils {
                 cwb.mainAspect(cr.getContent().getContentAspect());
                 cwb.aspects(cr.getContent().getAspects());
 
+                // Apply editDuplicated operator if provided (e.g. mark duplicate as noUseWeb)
+                if (editDuplicated != null) {
+                    cwb = editDuplicated.apply(cwb);
+                }
+
                 ContentWrite<Object> create = cwb.buildCreate();
                 ContentResult<Object> result = contentManager.create(create, resolveSubject);
                 if (result != null && result.getContentId() != null) {
                     duplicated.add(result.getContentId().getContentId());
                 }
             } catch (Exception e) {
-                LOG.error("Error duplicating {}: {}", idStr, e.getMessage(), e);
+                LOG.error("Error duplicating {}: {}", IdUtil.toIdString(sourceId), e.getMessage(), e);
             }
         }
         return duplicated;

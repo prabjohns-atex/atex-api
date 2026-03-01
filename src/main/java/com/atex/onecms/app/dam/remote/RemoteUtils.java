@@ -4,6 +4,8 @@ import com.atex.onecms.app.dam.util.HttpDamUtils;
 import com.atex.onecms.content.ContentManager;
 import com.atex.onecms.content.ContentResult;
 import com.atex.onecms.content.Subject;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,21 @@ public class RemoteUtils {
         } catch (Exception e) {
             LOG.error("Error calling remote WS: {} {}", method, url, e);
             return "";
+        }
+    }
+
+    /**
+     * Call a remote service and return the result as a JsonObject.
+     */
+    public JsonObject callRemoteService(String url) {
+        String body = callRemoteWs("GET", url, true);
+        try {
+            return JsonParser.parseString(body).getAsJsonObject();
+        } catch (Exception e) {
+            LOG.warn("Cannot parse remote response as JSON: {}", e.getMessage());
+            JsonObject err = new JsonObject();
+            err.addProperty("error", "Cannot parse response");
+            return err;
         }
     }
 }

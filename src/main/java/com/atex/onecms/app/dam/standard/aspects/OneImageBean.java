@@ -8,6 +8,8 @@ public class OneImageBean extends OneContentBean {
     private String credit;
     private int width;
     private int height;
+    private boolean noUsePrint;
+    private boolean noUseWeb;
 
     public String getDescription() { return description; }
     public void setDescription(String v) { this.description = v; }
@@ -23,4 +25,8 @@ public class OneImageBean extends OneContentBean {
     public void setWidth(int v) { this.width = v; }
     public int getHeight() { return height; }
     public void setHeight(int v) { this.height = v; }
+    public boolean isNoUsePrint() { return noUsePrint; }
+    public void setNoUsePrint(boolean v) { this.noUsePrint = v; }
+    public boolean isNoUseWeb() { return noUseWeb; }
+    public void setNoUseWeb(boolean v) { this.noUseWeb = v; }
 }

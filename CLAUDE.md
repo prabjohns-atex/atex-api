@@ -429,7 +429,7 @@ Full implementation of `RestrictContentService` — restricts/unrestricts conten
 **RestrictContentService methods:**
 - `restrictContent(ContentId, Subject)` — updates InsertionInfoAspectBean (security parent, insert parent, associated sites) + WFContentStatusAspectBean + WebContentStatusAspectBean
 - `unRestrictContent(ContentId, Subject)` — reverse operation using unrestrict config
-- `canRestrictContent(ContentId, Subject)` / `canUnRestrictContent(ContentId, Subject)` — permission checks
+- `canRestrictContent(ContentId, Subject)` / `canUnrestrictContent(ContentId, Subject)` — permission checks
 - `applyRestrictContent(ContentWrite)` / `applyUnRestrictContent(ContentWrite)` — apply restrictions to a ContentWrite before creation
 
 ### Increment 3e — Publishing Pipeline
@@ -774,7 +774,7 @@ desk.image-metadata-service.enabled=false
 **New files (22):**
 
 | File | Description |
-|---|---|
+|---|-------------|
 | `content/CachingFetcher.java` | Per-request content cache |
 | `content/SetStatusOperation.java` | Status change operation |
 | `content/AddEngagement.java` | Engagement add operation |
@@ -802,9 +802,9 @@ desk.image-metadata-service.enabled=false
 
 | File | Change |
 |---|---|
-| `OneArticleBean.java` | Extend `OneContentBean`, add missing fields |
-| `OneImageBean.java` | Extend `OneContentBean`, add missing fields |
-| `DamCollectionAspectBean.java` | Extend `OneContentBean`, add missing fields |
+| `OneArticleBean.java` | Extend `OneContentBean`; add missing fields |
+| `OneImageBean.java` | Extend `OneContentBean`; add missing fields |
+| `DamCollectionAspectBean.java` | Extend `OneContentBean`; add missing fields |
 | `DamArticleAspectBean.java` | Simplified to extend `OneArticleBean` |
 | `DamImageAspectBean.java` | Simplified to extend `OneImageBean` |
 | `LifecycleContextPreStore.java` | Add optional `FileService` field |
@@ -1051,7 +1051,8 @@ desk.config.flavor=
 ### New Files
 
 | File | Description |
-|---|---|
+|------|-------------|
+| `auth/CognitoTokenVerifier.java` | JWK fetching, key parsing (RSA/EC), JWT signature verification, `Locator<Key>` implementation |
 | `config/ConfigProperties.java` | `@ConfigurationProperties(prefix = "desk.config")`: `enabled` (boolean), `flavor` (String) |
 | `config/ConfigurationService.java` | 5-tier config lookup, classpath + plugin scanning, cache, synthetic ContentResult |
 | `config/Json5Reader.java` | JSON5 → JSON converter (strip comments, trailing commas, Gson lenient) |
@@ -1062,160 +1063,6 @@ desk.config.flavor=
 | `resources/config/project/.gitkeep` | Empty project override directory |
 | `scripts/config-mapping.txt` | Source mapping file (201 entries): source path → dest path + extraction type |
 | `scripts/config-sync.py` | Python sync script: reads mapping, extracts JSON from XML, copies to config dirs |
-
-### Modified Files
-
-| File | Change |
-|---|---|
-| `LocalContentManager.java` | Add `ConfigurationService` injection; intercept `resolve(externalId)` and `get()` for synthetic config IDs |
-| `ContentController.java` | Add `ConfigurationService` injection; fallback in `getContentByExternalId()` |
-| `DemoApplication.java` | Add `ConfigProperties.class` to `@EnableConfigurationProperties` |
-| `AuthConfig.java` | Add `/admin/*` to auth filter URL patterns |
-| `application.properties` | Add `desk.config.enabled=true`, `desk.config.flavor=` |
-
-## Increment 7.1 — SpringDoc OpenAPI Generation
-
-Replaces the hand-authored `static/openapi.yaml` (1830 lines) and manually-configured Swagger UI WebJar with SpringDoc-generated OpenAPI from annotations. The Polopoly Swagger 2 annotations (`@ApiOperation`, `@ApiModelProperty`) are mapped to OpenAPI 3 equivalents (`@Operation`, `@Schema`).
-
-### Architecture
-
-```
-SpringDoc OpenAPI 3.0.1
-  ├─ Auto-generates /v3/api-docs JSON from controller annotations
-  ├─ Bundles Swagger UI at /swagger-ui.html (no manual WebJar config)
-  └─ spring-boot-jackson2 bridge (swagger-core needs Jackson 2)
-
-Annotation mapping (Polopoly → desk-api):
-  @Api(tags)                → @Tag(name) on class
-  @ApiOperation(value)      → @Operation(summary)
-  @ApiParam("desc")         → @Parameter(description)
-  @ApiResponse(code, ...)   → @ApiResponse(responseCode, ...)
-  @ApiModel(description)    → @Schema(description) on class
-  @ApiModelProperty("desc") → @Schema(description) on field
-  @ApiImplicitParam(X-Auth) → Global security scheme in OpenApiConfig
-```
-
-### Dependencies
-
-**Removed:**
-- `org.webjars:swagger-ui:5.21.0`
-- `org.webjars:webjars-locator-core:0.59`
-
-**Added:**
-- `org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1` — auto-generates spec, bundles Swagger UI
-- `org.springframework.boot:spring-boot-jackson2` — bridge for swagger-core's Jackson 2 dependency
-
-### Configuration (`application.properties`)
-
-```properties
-springdoc.api-docs.path=/v3/api-docs
-springdoc.swagger-ui.path=/swagger-ui.html
-springdoc.swagger-ui.persist-authorization=true
-springdoc.swagger-ui.deep-linking=true
-springdoc.swagger-ui.operations-sorter=alpha
-springdoc.swagger-ui.tags-sorter=alpha
-springdoc.packages-to-scan=com.atex.desk.api.controller,com.atex.onecms.app.dam.ws
-```
-
-No auth config changes needed — `/v3/*` and `/swagger-ui/**` are outside the AuthFilter URL patterns.
-
-### OpenApiConfig
-
-`com.atex.desk.api.config.OpenApiConfig` — `@Configuration` providing an `OpenAPI` bean:
-- **Info**: title "Desk API", version "0.0.1-SNAPSHOT"
-- **Server**: `http://localhost:8081`
-- **Security scheme**: `authToken` — apiKey in header `X-Auth-Token`
-- **Global security requirement**: `authToken` applied to all endpoints by default
-- **Tag definitions** (7 tags with descriptions):
-
-| Tag | Description |
-|-----|-------------|
-| Authentication | Acquire, validate and manage authentication tokens |
-| Content | Create, get, update and delete content |
-| Workspace | Create, get, update and delete content in workspaces |
-| Principals | User and group management |
-| Configuration | Resource-based configuration admin |
-| Dashboard | System status and endpoint listing |
-| DAM | DAM content operations, search, publishing and configuration |
-
-### DTO Annotations
-
-All DTOs annotated with `@Schema` (class-level description + field-level descriptions):
-
-| DTO | Schema description |
-|-----|-------------------|
-| `ContentResultDto` | The content model when fetching a content |
-| `ContentWriteDto` | The content model used for create and update operations |
-| `AspectDto` | An aspect, the data field contains a _type field with the aspect type |
-| `MetaDto` | Metadata information about a content |
-| `ContentHistoryDto` | Content version history |
-| `ContentVersionInfoDto` | Content version info |
-| `ErrorResponseDto` | Error response with status code and message |
-| `CredentialsDto` | Login credentials |
-| `TokenResponseDto` | Authentication token response |
-| `PrincipalDto` | User principal info |
-| `WorkspaceInfoDto` | Workspace information |
-
-### Controller Annotations
-
-| Controller | Tag | Annotations |
-|------------|-----|-------------|
-| `SecurityController` | Authentication | `@Operation` + `@ApiResponse` on both methods; `@SecurityRequirements` (no auth) on login |
-| `ContentController` | Content | `@Operation` + `@ApiResponse` + `@Parameter` on all 9 methods |
-| `WorkspaceController` | Workspace | `@Operation` + `@ApiResponse` + `@Parameter` on all 7 methods |
-| `PrincipalsController` | Principals | `@Operation` on all 4 methods |
-| `ConfigurationController` | Configuration | `@Operation` + `@Parameter` on all 7 methods |
-| `DashboardController` | Dashboard | `@Operation` + `@SecurityRequirements` (no auth) on both methods |
-| `DamDataResource` | DAM | `@Tag` on class; `@Hidden` on 5 stub endpoints |
-
-**Unauthenticated endpoints** use `@SecurityRequirements` (standalone annotation, not `@Operation(security = {})` which SpringDoc 3.0.1 ignores) to override the global security requirement.
-
-**DamDataResource hidden endpoints** (501 NOT_IMPLEMENTED stubs):
-- `createPage`, `sendContent`, `assignContent`, `collectionPreview`, `mergeMultiplePdf`
-
-**Note**: DamDataResource endpoints only appear in the spec when all its runtime dependencies are satisfied (PolicyCMServer, CmClient, DamPublisherFactory, etc.).
-
-### WebConfig Changes
-
-- **Removed** `addResourceHandlers` override (SpringDoc serves its own Swagger UI)
-- **Updated** swagger-ui redirect: `/swagger-ui` → `/swagger-ui.html` (SpringDoc's canonical entry point)
-- **Kept** `/dashboard` → `/dashboard.html` redirect
-
-### DashboardController Fix
-
-Added `@Qualifier("requestMappingHandlerMapping")` to disambiguate between Spring MVC's `requestMappingHandlerMapping` and actuator's `controllerEndpointHandlerMapping` (exposed by SpringDoc's additional web MVC configuration).
-
-### Dashboard Links
-
-Updated `static/dashboard.html` header links:
-- Swagger UI: `/swagger-ui/index.html` → `/swagger-ui.html`
-- OpenAPI Spec: `/openapi.yaml` → `/v3/api-docs`
-
-### Actuator Enhancements
-
-**`MetricsConfig`** (`com.atex.desk.api.config`) — `@Configuration` with a `MeterRegistryCustomizer<MeterRegistry>` bean that adds the common tag `application=desk-api` to all Micrometer metrics.
-
-**`SolrHealthIndicator`** (`com.atex.desk.api.config`) — `@Component` implementing `HealthIndicator` for Solr connectivity. Uses `SolrService.getLatestEventId()` as a lightweight ping. Returns:
-- `UP` with url, core, latestEventId if Solr responds
-- `DOWN` with url, core, error message on failure
-- `UNKNOWN` with reason if Solr is not configured (`@Nullable SolrService`)
-
-Visible at `/actuator/health` alongside the default DB health indicator.
-
-### New Files
-
-| File | Description |
-|------|-------------|
-| `config/OpenApiConfig.java` | `OpenAPI` bean with security scheme, tags, API info |
-| `config/MetricsConfig.java` | Adds `application=desk-api` common tag to all Micrometer metrics |
-| `config/SolrHealthIndicator.java` | Actuator health indicator for Solr connectivity |
-
-### Deleted Files
-
-| File | Reason |
-|------|--------|
-| `static/openapi.yaml` | Replaced by auto-generation from annotations |
-| `static/swagger-ui/index.html` | Replaced by SpringDoc's built-in Swagger UI |
 
 ### Modified Files
 
@@ -1234,532 +1081,123 @@ Visible at `/actuator/health` alongside the default DB health indicator.
 | `dto/*.java` (11 files) | `@Schema` annotations on classes and fields |
 | `static/dashboard.html` | Update swagger/api-docs links |
 
-## Increment 8 — Cognito JWT Verification & User Lifecycle
+## Increment 11 — Additional DAM Resource Controllers
 
-Completes the Cognito integration by adding JWT signature verification (consolidating Polopoly's 4-class JWK infrastructure into one), OAuth callback endpoints, and user lifecycle management (invite/disable/enable/delete).
-
-### Architecture
-
-```
-Cognito User Pool
-  ├─ /.well-known/jwks.json  ← CognitoTokenVerifier fetches signing keys
-  ├─ /oauth2/authorize        ← GET /security/oauth/url redirects here
-  ├─ /oauth2/token             ← exchangeCodeForToken() calls here
-  └─ Admin API                 ← inviteUser, disableUser, enableUser, deleteUser
-
-CognitoTokenVerifier (Locator<Key>)
-  ├─ locate(Header) → resolve kid → fetch JWK → parse RSA/EC → cache
-  └─ verify(token) → Jwts.parser().keyLocator(this).requireIssuer().parseSignedClaims()
-       → CognitoUser {username, email, groups}
-
-SecurityController
-  ├─ POST /security/token           ← existing (username/password)
-  ├─ GET  /security/token           ← existing (validate)
-  ├─ GET  /security/oauth/url       ← NEW: returns Cognito hosted UI URL
-  └─ POST /security/oauth/callback  ← NEW: code/token → desk-api JWT
-```
-
-### CognitoTokenVerifier
-
-`com.atex.desk.api.auth.CognitoTokenVerifier` — consolidates Polopoly's `Jwk`, `JwkProvider`, `UrlJwkProvider`, `UrlSigningKeyResolver`, and `TokenDecoder` into a single class.
-
-- Implements `io.jsonwebtoken.Locator<Key>` (JJWT 0.12.x API)
-- `locate(Header)` — casts to `ProtectedHeader`, extracts `kid`, resolves from static `ConcurrentHashMap<String, Key>` cache
-- JWK fetching from Cognito `.well-known/jwks.json` via Java 11+ `HttpClient` + Gson (avoids Jackson 2 dependency)
-- RSA key parsing: base64url-decoded `n` (modulus) + `e` (exponent) → `RSAPublicKeySpec`
-- EC key parsing: `x`, `y` coordinates + `crv` (P-256/P-384/P-521) → `ECPublicKeySpec`
-- `verify(token)` — validates signature + issuer, extracts `cognito:username`, `email`, `cognito:groups` from claims
-
-### CognitoAuthService New Methods
-
-| Method | Description |
-|--------|-------------|
-| `verifyToken(String token)` | Full JWT signature verification via `CognitoTokenVerifier`, returns `CognitoUser` |
-| `verifyOAuthUrl(String url, String callbackUrl)` | Dispatches URL to code flow (query `?code=`) or implicit flow (fragment `#id_token=` / `#access_token=`) |
-| `getLastModified(String username)` | Returns user's `lastModifiedDate` from Cognito (millis), falls back to `createDate`, returns -1 if not found |
-| `inviteUser(String username, String email)` | Creates user via `AdminCreateUser` with email attribute + email delivery |
-| `disableUser(String username)` | Disables user via `AdminDisableUser` |
-| `enableUser(String username)` | Enables user via `AdminEnableUser` |
-| `deleteUser(String username)` | Deletes user via `AdminDeleteUser` |
-| `groupExists(String groupName)` | Checks group existence via `GetGroup`, returns boolean |
-
-**Modified methods:**
-- `exchangeCodeForToken()` — now uses `tokenVerifier.verify()` for signature validation, falls back to base64 decode if verification fails
-- `decodeIdToken()` — changed from `private` to `public` for cases where quick decode without verification is needed
-
-**Static utility methods:**
-- `parseQueryString(String url)` — extracts query parameters as `Map<String, String>`
-- `parseFragments(String url)` — extracts fragment parameters as `Map<String, String>`
-
-### Security Controller OAuth Endpoints
-
-`com.atex.desk.api.controller.SecurityController`:
-
-| Method | Path | Behaviour |
-|--------|------|-----------|
-| GET | `/security/oauth/url` | Returns Cognito hosted UI login URL; query param: `callbackUrl` |
-| POST | `/security/oauth/callback` | Exchanges OAuth code/token for desk-api JWT |
-
-Both endpoints use `@SecurityRequirements` (no auth required — part of login flow).
-
-**Callback endpoint** accepts:
-- `{code, callbackUrl}` — authorization code flow → `exchangeCodeForToken()`
-- `{url}` — implicit flow (token in URL fragment) → `verifyOAuthUrl()`
-- After authentication: `ensureLocalUser()` → `tokenService.createToken()` → `TokenResponseDto`
-
-### New Files
-
-| File | Description |
-|------|-------------|
-| `auth/CognitoTokenVerifier.java` | JWK fetching, key parsing (RSA/EC), JWT signature verification, `Locator<Key>` implementation |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `auth/CognitoAuthService.java` | Added `CognitoTokenVerifier` field; added `verifyToken`, `verifyOAuthUrl`, `getLastModified`, `inviteUser`, `disableUser`, `enableUser`, `deleteUser`, `groupExists`, `parseQueryString`, `parseFragments`; made `decodeIdToken` public; updated `exchangeCodeForToken` to use signature verification with fallback |
-| `controller/SecurityController.java` | Added `GET /security/oauth/url` and `POST /security/oauth/callback` endpoints; cleaned up FQN imports to use short imports |
-
-## Increment 9 — Principals, Groups, ACLs & Auth Providers
-
-Replaces the stub user server and simple `users` table with a full Polopoly-compatible principal infrastructure: multi-scheme password verification, LDAP authentication with user provisioning and group sync, Cognito configuration properties, group/ACL database tables with JPA entities, and expanded PrincipalsController with group CRUD and membership management.
+Ports the remaining 11 JAX-RS resource files from `gong/desk/module-desk-onecms/.../ws/` to Spring MVC `@RestController` classes. These were identified by cross-referencing the original codebase — DamDataResource (68 endpoints) was already ported in Increment 3, and DamSearchResource was ported in Increment 10 as `DamSearchController`. This increment covers all the other resource files.
 
 ### Architecture
 
 ```
-SecurityController (POST /security/token)
-  ├─ Local user → PasswordService.verify()
-  │                 ├─ OLDSHA  (Polopoly default: SHA-1 + static secret, first 8 bytes hex)
-  │                 ├─ SHA-256 (64-char hex)
-  │                 ├─ {SHA}, {SSHA}, {MD5}, {SMD5} (LDAP-style prefixed)
-  │                 ├─ {CLEARTEXT}
-  │                 └─ {LDAPUSER}, {REMOTEUSER}, {COGNITOUSER} → always false (delegated)
-  ├─ LDAP user  → LdapAuthService.authenticate()  (JNDI bind)
-  └─ Remote user → CognitoAuthService.authenticate()  (AWS Admin API)
-
-PrincipalsController (/principals)
-  ├─ /users/me, /users, /users/{userId}     → AppUserRepository
-  ├─ /groups, /groups/{id}                   → AppGroupRepository
-  ├─ /groups (POST), /groups/{id} (PUT/DEL) → Group CRUD + owner tracking
-  └─ /groups/{id}/members (POST/DEL)        → AppGroupMemberRepository
-
-LocalUserServer (implements UserServer)
-  ├─ loginAndMerge()      → PasswordService + login stats
-  ├─ getUserIdByLoginName() → AppUserRepository
-  ├─ findGroup()           → AppGroupRepository + AppGroupMemberRepository → LocalGroup
-  ├─ getAllGroups()         → AppGroupRepository
-  └─ findGroupsByMember()  → AppGroupMemberRepository
-
-DamDataResource
-  ├─ /dam/content/users  → AppUserRepository.findAll() (cached)
-  └─ /dam/content/groups → AppGroupRepository.findAll()
+Desk UI
+  ├─ /dam/ui/*          → DamUIResource         (system version info)
+  ├─ /dam/locales/*     → DamLocaleResource      (i18n locale bundles)
+  ├─ /dam/image/*       → DamImageResource       (print variant creation)
+  ├─ /dam/tagmanager/*  → DamTagManagerResource   (tag taxonomy CRUD)
+  ├─ /dam/print-page/*  → DamPrintPageResource    (15 print edition endpoints)
+  ├─ /dam/page/*        → DamPageResource         (page publishing pipeline)
+  ├─ /dam/pdftool/*     → DamPdfToolResource      (PDF conversion)
+  ├─ /dam/scheduling/*  → DamSchedulingResource   (scheduled publishing)
+  ├─ /dam/content/social/*     → SocialResource        (social media accounts)
+  ├─ /dam/content/statistics/* → StatisticsResource    (analytics embeds)
+  └─ /dam/search/*      → DamSearchController    (already in Increment 10)
 ```
 
-### Database Schema Changes
-
-Replaced the simple `users` table with Polopoly-compatible tables:
-
-**`registeredusers`** (replaces `users`):
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `loginname` | VARCHAR(64) UNIQUE | Login name (PK) |
-| `passwordhash` | VARCHAR(255) | Hash with scheme prefix or OLDSHA/SHA-256 hex |
-| `regtime` | INTEGER | Registration time (epoch seconds) |
-| `isldapuser` | INTEGER | 1 = LDAP-authenticated |
-| `isremoteuser` | INTEGER | 1 = remote-authenticated (Cognito) |
-| `remoteserviceid` | VARCHAR(255) | Remote service identifier (e.g., "cognito") |
-| `remoteloginnames` | VARCHAR(255) | Comma-separated remote login names |
-| `lastlogintime` | INTEGER | Last login time (epoch seconds) |
-| `numlogins` | INTEGER | Login counter |
-| `active` | INTEGER | 1 = active, 0 = disabled |
-
-**`groupData`**:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INTEGER AUTO PK | Group ID |
-| `name` | VARCHAR(64) | Group name |
-| `creationTime` | INTEGER | Creation time (epoch seconds) |
-| `firstOwnerId` | VARCHAR(32) | Creator principal ID |
-| `ldapGroupDn` | VARCHAR(255) | Linked LDAP group DN |
-| `remoteGroupDn` | VARCHAR(255) | Linked remote group DN |
-| `remoteServiceId` | VARCHAR(255) | Remote service identifier |
-
-**`groupMember`**: (`groupId` INTEGER, `principalId` VARCHAR(32))
-
-**`groupOwner`**: (`groupId` INTEGER, `principalId` VARCHAR(32))
-
-**`aclData`**: (`id` INTEGER AUTO PK, `name` VARCHAR(32), `creationTime` INTEGER, `firstOwnerId` VARCHAR(32))
-
-**`acl`**: (`aclId` INTEGER, `principalId` VARCHAR(32), `permission` VARCHAR(32))
-
-**`aclOwner`**: (`aclId` INTEGER, `principalId` VARCHAR(32))
-
-Default seed data: `sysadmin` user with OLDSHA hash of `sysadmin` (`bb40d977a94b02f2`).
-
-### PasswordService
-
-`com.atex.desk.api.auth.PasswordService` — `@Component`, multi-scheme password verification supporting all Polopoly password formats:
-
-| Scheme | Format | Verification |
-|--------|--------|-------------|
-| OLDSHA | 16-char hex (no prefix) | SHA-1(staticSecret + password), first 8 bytes |
-| SHA256 | 64-char hex (no prefix) | SHA-256(password) |
-| {SHA} | Base64 | SHA-1(password) |
-| {SSHA} | Base64 | SHA-1(password + salt), salt appended |
-| {MD5} | Base64 | MD5(password) |
-| {SMD5} | Base64 | MD5(password + salt), salt appended |
-| {CLEARTEXT} | Plaintext | Direct compare |
-| {LDAPUSER} | Marker | Always false (delegate to LDAP) |
-| {REMOTEUSER} | Marker | Always false (delegate to remote) |
-| {COGNITOUSER} | Marker | Always false (delegate to Cognito) |
-
-Methods: `verify(password, storedHash)`, `detectScheme(storedHash)`, `hashOldSha(password)`, `hashSha256(password)`. Uses constant-time comparison for salted schemes.
-
-### LdapAuthService
-
-`com.atex.desk.api.auth.LdapAuthService` — `@Component @ConditionalOnProperty(name = "desk.ldap.enabled", havingValue = "true")`. Ported from Polopoly's `LdapUtil`.
-
-**Authentication:**
-- `authenticate(loginName, password)` — resolves DN via admin search, then user bind
-- Supports external authentication (SSO pre-auth) when `desk.ldap.external-authentication=true`
-
-**DN Resolution:**
-- `findUserDn(loginName)` / `getDistinguishedNameForUser(loginName)` — admin search with configurable filter
-- `getLoginNameForUser(dn)` — reverse lookup DN → login name
-
-**User Attributes:**
-- `getUserAttributes(loginName)` — mapped attributes via `desk.ldap.attribute-mapping.*`
-- `getRawUserAttributes(loginName)` — raw LDAP attributes
-- Supports binary attributes (base64 encoded) and boolean normalization
-
-**User Provisioning (write mode):**
-- `registerUser(loginName, password)` — creates LDAP entry (requires `desk.ldap.write-enabled=true` + `desk.ldap.can-register-users=true`)
-- `modifyAttribute(userDn, attributeId, value)` — modify LDAP attributes
-- `setPassword(userDn, newPassword)` — encode + store password
-
-**Group Operations:**
-- `getGroupsForUser(loginName)` — groups via member attribute search
-- `getAllGroups()` — all groups in group search base
-- `getGroupAttributes(groupDn)` — cached group details with nested group support
-- `isLdapGroup(dn)` — checks objectClass
-- `isLdapEntryModified(dn, sinceTimestamp)` — change detection via `modifyTimestamp`
-- `reloadGroups()` — force cache clear
-
-**Password Encoding (for writes):**
-- `encodePassword(password, scheme)` — supports CLEARTEXT, SHA, SSHA, MD5, SMD5
-
-**Inner class:** `LdapGroup` — holds groupName, nestedGroups (Set), users (Set), modifyTimestamp.
-
-### LdapProperties
-
-`com.atex.desk.api.auth.LdapProperties` — `@ConfigurationProperties(prefix = "desk.ldap")`:
-
-| Category | Properties |
-|----------|-----------|
-| Connection | `provider-url`, `initial-context-factory`, `security-protocol`, `security-authentication`, `referral`, `connection-pool` |
-| Admin bind | `admin-dn`, `admin-password` |
-| User search | `search-base`, `login-name-attribute` (uid), `object-class` (inetOrgPerson), `advanced-query`, `user-password-attribute` |
-| Group search | `group-search-base`, `group-object-class` (groupOfNames), `group-member-attribute` (member), `group-name-attribute` (cn), `group-advanced-query`, `nested-groups-supported` |
-| Group reload | `group-reload-interval` (3600000ms) |
-| Behavior | `write-enabled`, `can-register-users`, `case-insensitive` (true), `external-authentication` |
-| Password | `password-scheme` (SSHA) |
-| Attribute mapping | `attribute-mapping.*`, `binary-attributes`, `boolean-attributes` |
-| Domain | `domain`, `domain-attribute` |
-
-### Entity Layer (7 new entities)
-
-`com.atex.desk.api.entity`:
-
-| Entity | Table | PK | Description |
-|--------|-------|----|-------------|
-| `AppUser` | `registeredusers` | `loginname` (String) | Expanded: added `isLdapUser`, `isRemoteUser`, `remoteServiceId`, `remoteLoginNames`, `lastLoginTime`, `numLogins`, `active` + helper methods `isActive()`, `isLdap()`, `isRemote()` |
-| `AppGroup` | `groupData` | `id` (auto Integer) | Group with name, creationTime, firstOwnerId, ldapGroupDn, remoteGroupDn, remoteServiceId |
-| `AppGroupMember` | `groupMember` | composite (`groupId`, `principalId`) | Group membership |
-| `AppGroupMemberId` | — | — | Composite PK class for `AppGroupMember` |
-| `AppGroupOwner` | `groupOwner` | composite (`groupId`, `principalId`) | Group ownership |
-| `AppGroupOwnerId` | — | — | Composite PK class for `AppGroupOwner` |
-| `AppAcl` | `aclData` | `id` (auto Integer) | ACL with name, creationTime, firstOwnerId |
-| `AppAclEntry` | `acl` | composite (`aclId`, `principalId`, `permission`) | ACL permission entry |
-| `AppAclEntryId` | — | — | Composite PK class for `AppAclEntry` |
-| `AppAclOwner` | `aclOwner` | composite (`aclId`, `principalId`) | ACL ownership |
-| `AppAclOwnerId` | — | — | Composite PK class for `AppAclOwner` |
-
-### Repository Layer (6 new repositories)
-
-`com.atex.desk.api.repository`:
-
-| Repository | Key Methods |
-|-----------|-------------|
-| `AppGroupRepository` | `findByName(String)`, `findAll()` |
-| `AppGroupMemberRepository` | `findByGroupId(int)`, `findByPrincipalId(String)`, `deleteByGroupIdAndPrincipalId(int, String)` |
-| `AppGroupOwnerRepository` | `findByGroupId(int)` |
-| `AppAclRepository` | `findByName(String)` |
-| `AppAclEntryRepository` | `findByAclId(int)`, `findByPrincipalId(String)` |
-| `AppAclOwnerRepository` | `findByAclId(int)` |
-
-`AppUserRepository` modified: PK changed from `userid` (Integer) to `loginname` (String), renamed `findByUsername` → `findByLoginName`, added `findAll()`.
-
-### DTO Layer (2 new DTOs)
-
-| DTO | Fields |
-|-----|--------|
-| `GroupDto` | `groupId`, `name`, `createdAt`, `members` (optional) |
-| `PrincipalDto` | Added `groupList` field (optional, populated when `addGroupsToUsers=true`) |
-
-### PrincipalsController
-
-`com.atex.desk.api.controller.PrincipalsController` at `/principals` — expanded from 4 to 11 endpoints:
-
-| Method | Path | Behaviour |
-|--------|------|-----------|
-| GET | `/principals/users/me` | Current authenticated user |
-| GET | `/principals/users` | List all active users (optional `addGroupsToUsers` param) |
-| GET | `/principals/users/{userId}` | Get user by login name |
-| GET | `/principals/groups` | List all groups |
-| GET | `/principals/groups/{groupId}` | Get group by ID (optional `members` param) |
-| POST | `/principals/groups` | Create group (`{name}`) — creator added as owner |
-| PUT | `/principals/groups/{groupId}` | Update group name |
-| DELETE | `/principals/groups/{groupId}` | Delete group + memberships + owners |
-| POST | `/principals/groups/{groupId}/members` | Add member (`{principalId}`) — idempotent |
-| DELETE | `/principals/groups/{groupId}/members/{principalId}` | Remove member |
-
-### LocalUserServer & LocalGroup
-
-**`LocalUserServer`** — expanded from 2 to 5 `UserServer` methods:
-
-| Method | Implementation |
-|--------|---------------|
-| `loginAndMerge(loginName, password, caller)` | `PasswordService.verify()` + login stats update |
-| `getUserIdByLoginName(loginName)` | `AppUserRepository.findByLoginName()` |
-| `findGroup(groupId)` | `AppGroupRepository` + `AppGroupMemberRepository` → `LocalGroup` |
-| `getAllGroups()` | `AppGroupRepository.findAll()` → `GroupId[]` |
-| `findGroupsByMember(principalId)` | `AppGroupMemberRepository.findByPrincipalId()` → `GroupId[]` |
-
-**`LocalGroup`** — new class implementing `Group` interface with `getGroupId()`, `getName()`, `isMember()`, `getMembers()`.
-
-**`Group`** interface — added `getMembers()` returning `Set<String>`.
-
-**`GroupId`** — added `getId()` accessor.
-
-**`UserServer`** interface — added `findGroup()`, `getAllGroups()`, `findGroupsByMember()`.
-
-### DamDataResource Wiring
-
-- `users` endpoint: wired to `AppUserRepository.findAll()` (cached via Guava `OBJECT_CACHE`)
-- `groups` endpoint: wired to `AppGroupRepository.findAll()` (was returning empty array)
-
-### Configuration (`application.properties`)
-
-```properties
-# LDAP authentication (disabled by default)
-desk.ldap.enabled=false
-desk.ldap.provider-url=
-desk.ldap.search-base=
-desk.ldap.admin-dn=
-desk.ldap.admin-password=
-desk.ldap.login-name-attribute=uid
-desk.ldap.object-class=inetOrgPerson
-# ... (30+ properties — see LdapProperties for full list)
-
-# Cognito authentication (disabled by default)
-desk.cognito.enabled=false
-desk.cognito.user-pool-id=
-desk.cognito.client-id=
-desk.cognito.client-secret=
-desk.cognito.region=eu-west-1
-# ... (20+ properties — see CognitoProperties for full list)
-```
-
-### DemoApplication Changes
-
-Added `LdapProperties.class` and `CognitoProperties.class` to `@EnableConfigurationProperties`.
-
-### Gradle Changes
-
-Added AWS SDK v2 dependency:
-```groovy
-implementation platform('software.amazon.awssdk:bom:2.31.3')
-implementation 'software.amazon.awssdk:cognitoidentityprovider'
-```
-
-### New Files
-
-| File | Description |
-|------|-------------|
-| `auth/PasswordService.java` | Multi-scheme password verification (OLDSHA, SHA-256, {SHA}, {SSHA}, {MD5}, {SMD5}, {CLEARTEXT}) |
-| `auth/LdapAuthService.java` | Full LDAP auth, DN resolution, user provisioning, group sync, password management |
-| `auth/LdapProperties.java` | `@ConfigurationProperties(prefix = "desk.ldap")` — 30+ LDAP configuration properties |
-| `auth/CognitoProperties.java` | `@ConfigurationProperties(prefix = "desk.cognito")` — Cognito configuration properties |
-| `dto/GroupDto.java` | Group DTO with groupId, name, createdAt, members |
-| `entity/AppGroup.java` | Group entity (`groupData` table) |
-| `entity/AppGroupMember.java` | Group membership entity (`groupMember` table) |
-| `entity/AppGroupMemberId.java` | Composite PK for AppGroupMember |
-| `entity/AppGroupOwner.java` | Group ownership entity (`groupOwner` table) |
-| `entity/AppGroupOwnerId.java` | Composite PK for AppGroupOwner |
-| `entity/AppAcl.java` | ACL entity (`aclData` table) |
-| `entity/AppAclEntry.java` | ACL entry entity (`acl` table) |
-| `entity/AppAclEntryId.java` | Composite PK for AppAclEntry |
-| `entity/AppAclOwner.java` | ACL owner entity (`aclOwner` table) |
-| `entity/AppAclOwnerId.java` | Composite PK for AppAclOwner |
-| `onecms/LocalGroup.java` | `Group` interface implementation backed by DB |
-| `repository/AppGroupRepository.java` | Group repository |
-| `repository/AppGroupMemberRepository.java` | Group membership repository |
-| `repository/AppGroupOwnerRepository.java` | Group ownership repository |
-| `repository/AppAclRepository.java` | ACL repository |
-| `repository/AppAclEntryRepository.java` | ACL entry repository |
-| `repository/AppAclOwnerRepository.java` | ACL owner repository |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `build.gradle` | Added AWS SDK v2 BOM + cognitoidentityprovider |
-| `DemoApplication.java` | Added `LdapProperties`, `CognitoProperties` to `@EnableConfigurationProperties` |
-| `entity/AppUser.java` | Expanded: table `registeredusers`, PK `loginname`, added LDAP/remote/active fields |
-| `repository/AppUserRepository.java` | PK changed to String, `findByUsername` → `findByLoginName`, added `findAll()` |
-| `dto/PrincipalDto.java` | Added `groupList` field |
-| `controller/PrincipalsController.java` | Expanded from 4 to 11 endpoints: group CRUD, membership management |
-| `onecms/LocalUserServer.java` | Added `PasswordService` dep; implemented `loginAndMerge`, `findGroup`, `getAllGroups`, `findGroupsByMember` |
-| `UserServer.java` | Added `findGroup()`, `getAllGroups()`, `findGroupsByMember()` |
-| `Group.java` | Added `getMembers()` returning `Set<String>` |
-| `GroupId.java` | Added `getId()` accessor |
-| `DamDataResource.java` | Wired `users`/`groups` endpoints to real repositories |
-| `DamPublisherFactory.java` | Updated for expanded UserServer API |
-| `EngagementAspect.java` | Minor fix |
-| `application.properties` | Added LDAP (30+) and Cognito (20+) configuration properties |
-| `schema.sql` | Replaced `users` table with `registeredusers`, added `groupData`, `groupMember`, `groupOwner`, `aclData`, `acl`, `aclOwner` |
-| `data.sql` | Updated seed data for `registeredusers` table with OLDSHA hash |
-
-## Increment 10 — Search Resource, SolrSearchClient & DamSearchResource
-
-Ports the search endpoint infrastructure from the Polopoly platform: the `/search/{core}/select` REST endpoint for direct Solr proxy access with format negotiation (JSON/XML), permission filtering, and working-sites decoration; the `SearchClient` API interface for programmatic Solr queries; legacy Polopoly search types; and the `/dam/search/{core}/select` remote proxy endpoint.
-
-### Architecture
-
-```
-Desk UI / OneCMS clients
-  ├─ /search/{core}/select  → SearchController
-  │    └─ LocalSearchClient (implements SearchClient)
-  │         └─ SolrService.rawQuery() → Solr
-  │              ├─ Permission filtering (content_readers_ss / content_writers_ss / content_owners_ss)
-  │              ├─ Working-sites decoration (page_ss filter via SolrQueryDecorator)
-  │              └─ Format negotiation: JSON (Gson) or XML (DOM)
-  │
-  └─ /dam/search/{core}/select → DamSearchController
-       └─ DamPublisherFactory.createContext() → RemoteUtils.callRemoteWs()
-            → Remote CMS REST API
-```
-
-### Search API Types (preserving original packages)
-
-**Package `com.atex.onecms.search`** (from polopoly/core/data-api-api):
-- `SearchClient` — Interface: `query(core, SolrQuery, Subject, SearchOptions)` → `SearchResponse`. Constants: `CORE_ONECMS`, `CORE_LATEST`, `CORE_DEFAULT`. Default convenience methods for core/options
-- `SearchResponse` — Interface: `getCore()`, `response()` → `QueryResponse`, `json()` → `String`, `jsonTree()` → `JsonElement`, `getStatus()`, `getErrorMessage()`
-- `SearchOptions` — Options class: `filterWorkingSites`, `postMethod`, `permission` (`ACCESS_PERMISSION` enum: OFF/READ/WRITE/OWNER). Static factories: `none()`, `filterWorkingSites()`, `withPermission()`, `postMethod()`
-
-**Package `com.atex.onecms.ws.search`**:
-- `SolrFormat` — Enum: `json`, `xml`
-- `SearchMethod` — Enum: `GET`, `POST`
-- `ChildFactory<E>` — Generic tree builder interface for NamedList → JSON/XML conversion
-- `ChildFactoryJSON` — Gson-based implementation using `JsonObject`/`JsonArray`
-- `ChildFactoryXML` — DOM-based implementation using `Element`/`Document`
-- `SearchServiceUtil` — Full implementation (replaced 4-line stub): `parseQueryString()`, `deduceResponseType()`, `toJSON()`, `toXML()`, `formatResponse()`, `solrError()`, recursive NamedList walker
-
-**Package `com.polopoly.search.solr`**:
-- `SearchClient` — Legacy interface: `search(SolrQuery, pageSize)` → `SearchResult`
-- `SearchResult` — Paginated result: `getApproximateNumberOfPages()`, `iterator()`, `getPage(int)`
-- `SearchResultPage` — Page: `getHits()` → `List<ContentId>`, `getQueryResponses()`, `isEmpty()`, `isIncomplete()`
-- `SolrIndexName` — Simple wrapper: `name` field, `getName()`, `toString()`
-- `SolrSearchClient` — Simplified class implementing legacy `SearchClient`; methods throw `UnsupportedOperationException("Use LocalSearchClient")`
-
-### LocalSearchClient
-
-`com.atex.desk.api.search.LocalSearchClient` — `@Component` implementing `com.atex.onecms.search.SearchClient`:
-- Constructor: `@Nullable SolrService`, `DeskProperties`
-- Core name mapping: `"onecms"` → `deskProperties.getSolrCore()`, `"latest"` → `deskProperties.getSolrLatestCore()`, others → as-is
-- `ConcurrentHashMap<String, SolrService>` cache for per-core `SolrService` instances via `solrService.forCore()`
-- Working-sites filter: delegates to `SolrQueryDecorator.decorateWithWorkingSites()` (ready for when user working sites are in DB)
-- Permission filter: adds `fq` for `content_readers_ss`/`content_writers_ss`/`content_owners_ss` per permission level
-
-`com.atex.desk.api.search.LocalSearchResponse` — Implements `SearchResponse`, wraps `QueryResponse`. Lazy JSON serialization via `SearchServiceUtil.toJSON()`.
-
-### SolrService Changes
-
-Added three public methods:
-- `rawQuery(SolrQuery)` → `QueryResponse` — exposes the private `executeQuery` for direct query access
-- `forCore(String coreName)` → `SolrService` — creates instance for a different core, reusing the same server URL
-- `getCoreName()` → `String` — returns the core name this instance is configured for
-
-### SearchController
-
-`com.atex.desk.api.controller.SearchController` at `/search`:
-
-| Method | Path | Consumes | Description |
-|--------|------|----------|-------------|
-| GET | `/{core}/select` | — | Query string params |
-| POST | `/{core}/select` | `application/x-www-form-urlencoded` | Form params |
-| POST | `/{core}/select` | `application/json` | JSON body |
-
-All route to private `process()` which:
-1. Parses query via `SearchServiceUtil.parseQueryString()`
-2. Determines format via `SearchServiceUtil.deduceResponseType(wt)`
-3. Extracts `variant` and `permission` params from query
-4. Builds `SearchOptions` from method + permission
-5. Executes via `LocalSearchClient.query()`
-6. If `variant` set → inlines content data (resolves each doc's `id` via `ContentManager`, adds as `_data` field)
-7. Formats response via `SearchServiceUtil.formatResponse()` or `SearchServiceUtil.solrError()`
-
-JSON POST: parses body via Gson `JsonParser` into query string params.
-
-### DamSearchController
-
-`com.atex.desk.api.controller.DamSearchController` at `/dam/search`:
+### Annotation Conversion Pattern
+
+Same mechanical conversion as Increment 3 Phase 5:
+
+| JAX-RS | Spring MVC |
+|--------|------------|
+| `@Path("/dam/ui")` on class | `@RequestMapping("/dam/ui")` |
+| `@GET @Path("system/versions")` | `@GetMapping("system/versions")` |
+| `@PathParam` | `@PathVariable` |
+| `@QueryParam` | `@RequestParam` |
+| `@DefaultValue` | `@RequestParam(defaultValue = ...)` |
+| `@HeaderParam("X-Auth-Token")` | `@RequestHeader("X-Auth-Token")` |
+| `@Produces/@Consumes` | Removed (Spring defaults) |
+| `Response` return type | `ResponseEntity<?>` |
+| `Response.ok(entity).build()` | `ResponseEntity.ok(entity)` |
+| `Response.status(404).build()` | `ResponseEntity.status(HttpStatus.NOT_FOUND).build()` |
+
+### Controllers Created (10 new, 1 already existed)
+
+| Controller | Base Path | Endpoints | Original File |
+|------------|-----------|-----------|---------------|
+| `DamUIResource` | `/dam/ui` | `GET system/versions` | DamUIResource.java (72 lines) |
+| `SocialResource` | `/dam/content/social` | `GET accounts` | SocialResource.java (74 lines) |
+| `DamImageResource` | `/dam/image` | `POST create-print-variant/{id}` | DamImageResource.java (166 lines) |
+| `StatisticsResource` | `/dam/content/statistics` | `GET embed/site/{domain}`, `GET embed/contentid/{id}` | StatisticsResource.java (226 lines) |
+| `DamLocaleResource` | `/dam/locales` | `GET {app}/locale/{fileName}` | DamLocaleResource.java (301 lines) |
+| `DamTagManagerResource` | `/dam/tagmanager` | `GET lookup/{parentId}/{dimensionId}`, `GET search/{parentId}/{dimensionId}`, `POST create/{parentId}/{dimensionId}` | DamTagManagerResource.java (180 lines) |
+| `DamSchedulingResource` | `/dam/scheduling` | `POST implementScheduleInstance` | DamSchedulingResource.java (118 lines) |
+| `DamPdfToolResource` | `/dam/pdftool` | `POST /convertFile`, `POST /convert`, `POST /convert/{scheme}/{host}/{path}` | DamPdfToolResource.java (245 lines) |
+| `DamPrintPageResource` | `/dam/print-page` | 15 endpoints (see below) | DamPrintPageResource.java (480 lines) |
+| `DamPageResource` | `/dam/page` | `POST publish`, `GET contentid/{id}/slots`, `GET externalid/{id}/slots`, `POST duplicate` | DamPageResource.java (800 lines) |
+| ~~`DamSearchResource`~~ | `/dam/search` | `GET {core}/select` | Already ported as `DamSearchController` in Increment 10 |
+
+### DamPrintPageResource Endpoints (15)
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/{core}/select` | Proxy to remote CMS backend |
+| GET | `publications/autocomplete` | Autocomplete publications by term |
+| GET | `publications` | List all publications |
+| GET | `publications/{publication}/dates` | Publication dates |
+| GET | `publications/{publication}/{edition}/dates` | Publication edition dates |
+| GET | `publications/editions` | All editions |
+| GET | `publications/{publication}/editions` | Editions for publication + date |
+| GET | `publications/{publication}/{edition}/zones` | Zones for publication/edition/date |
+| GET | `publications/{publication}/{edition}/sections` | Sections for publication/edition/date |
+| GET | `publications/{publication}/pubeditions` | Pub-edition editions |
+| GET | `pubeditions/{publication}/{edition}/zones` | Pub-edition zones |
+| GET | `pubeditions/{publication}/{edition}/sections` | Pub-edition sections |
+| GET | `publications/contentData` | Content data profiles |
+| GET | `publications/contentData/{profile}/publications` | Publications for profile |
+| GET | `publications/contentData/{profile}/{publication}/editions` | Editions for profile/publication |
+| GET | `publications/contentData/{profile}/{publication}/{edition}/zones` | Zones for profile/pub/edition |
+| GET | `publications/contentData/{profile}/{publication}/{edition}/{zone}/sections` | Sections for profile/pub/edition/zone |
 
-Flow:
-1. `DamUserContext.from(req).assertLoggedIn()` → `Caller`
-2. `damPublisherFactory.createContext(backendId, caller)` → `PublishingContext`
-3. Builds URL: `remoteApiUrl + "search/" + core + "/select?" + queryString`
-4. Calls `RemoteUtils.callRemoteWs("GET", url, auth)`
-5. Returns response as `ResponseEntity` with `application/json`
+All endpoints support `partition=archive` query param where applicable.
 
-### Auth & Config Changes
+### DamPageResource Endpoints (4)
 
-- `AuthConfig` — Added `/search/*` to `addUrlPatterns()` (note: `/dam/search/*` already covered by `/dam/*`)
-- `OpenApiConfig` — Added `"Search"` tag: "Solr search proxy with format negotiation and permission filtering"
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `publish` | Publish page — resolves articles, publishes content, transforms IDs, sends to remote backend |
+| GET | `externalid/{id}/slots` | Get page slots by external ID |
+| GET | `contentid/{id}/slots` | Get page slots by content ID (with optional `backend` param) |
+| POST | `duplicate` | Duplicate page — creates copy on remote backend with optional ACE site sync |
 
-### New Files
+### Supporting Stub/Service Classes Created
 
-| File | Description |
-|------|-------------|
-| `com/atex/onecms/search/SearchClient.java` | Public search client interface |
-| `com/atex/onecms/search/SearchResponse.java` | Search response interface |
-| `com/atex/onecms/search/SearchOptions.java` | Search options with permissions |
-| `com/atex/onecms/ws/search/SolrFormat.java` | json/xml enum |
-| `com/atex/onecms/ws/search/SearchMethod.java` | GET/POST enum |
-| `com/atex/onecms/ws/search/ChildFactory.java` | Generic tree builder interface |
-| `com/atex/onecms/ws/search/ChildFactoryJSON.java` | Gson-based ChildFactory |
-| `com/atex/onecms/ws/search/ChildFactoryXML.java` | DOM-based ChildFactory |
-| `com/polopoly/search/solr/SearchClient.java` | Legacy search interface |
-| `com/polopoly/search/solr/SearchResult.java` | Paginated result interface |
-| `com/polopoly/search/solr/SearchResultPage.java` | Result page interface |
-| `com/polopoly/search/solr/SolrIndexName.java` | Index name wrapper |
-| `com/polopoly/search/solr/SolrSearchClient.java` | Simplified SolrSearchClient |
-| `com/atex/desk/api/search/LocalSearchClient.java` | Spring component wrapping SolrService |
-| `com/atex/desk/api/search/LocalSearchResponse.java` | SearchResponse implementation |
-| `com/atex/desk/api/controller/SearchController.java` | `/search/{core}/select` REST controller |
-| `com/atex/desk/api/controller/DamSearchController.java` | `/dam/search/{core}/select` proxy |
+| Class | Package | Description |
+|-------|---------|-------------|
+| `AyrShareService` | `c.a.o.a.d.ayrshare` | Social media integration: `getActiveAccounts()` → `SocialAccountResponse`. Stub returning empty accounts. |
+| `TagManagerService` | `c.a.o.a.d.tagmanager` | Tag taxonomy CRUD: `lookupTag()`, `searchTag()`, `createTag()`, `tagToEntity()`. Stub returning empty results. |
+| `PublicationsService` | `c.a.o.a.d.publication` | Print publication data: `profiles()`, `publications()`, `editions()`, `zones()`, `sections()`. Stub returning empty lists. |
+| `AtexPdfium` | `c.a.tools.pdfconverter` | PDF→image conversion: `convertPdf(input, output)`. Stub throwing `UnsupportedOperationException`. |
+| `VersionInfo` | `c.a.o.a.d.ui` | System version info for About dialog: `getVersions()`, `getModules()`. Returns desk-api build info. |
+| `MavenProject` | `c.a.o.a.d.ui` | Maven project metadata: `groupId`, `artifactId`, `version`. |
+| `DamPublishingScheduleUtils` | `c.a.o.a.d.publishingschedule` | Scheduled publishing: `implementPlan(contentId, pubDate)`. Stub throwing `UnsupportedOperationException`. |
+| `ConfigurationDataBean` | `c.a.o.content` | Configuration content bean with `json` field for locale storage. |
+| `StringUtils` | `c.a.o.a.d.util` | Simple utility: `notNull(String)` — null/empty check for DamPrintPageResource. |
+| `GsonFactory` | `c.a.gong.data.publish.page` | Gson factory: `create()` → default `Gson` instance. |
+| `Page` | `c.a.gong.data.publish.page` | Page data model: name, externalId, aceId, containers. `from(JsonElement)`, `toJson()`. |
+| `PageResponse` | `c.a.gong.data.publish.page` | Page response model: contentId, containers. |
+| `Container` | `c.a.gong.data.publish.page` | Container: name, articles list. |
+| `Article` | `c.a.gong.data.publish.page` | Article: contentId, teaserMap. |
+| `DuplicatePage` | `c.a.gong.data.publish.page` | Duplicate page request: sourcePageId, targetParentId, aceId, title, description. |
 
-### Modified Files
+### Existing Classes Modified
 
-| File | Change |
-|------|--------|
-| `com/atex/onecms/ws/search/SearchServiceUtil.java` | Replaced 4-line stub with full implementation: query parsing, JSON/XML format conversion, error formatting |
-| `com/atex/onecms/app/dam/solr/SolrService.java` | Added `rawQuery()`, `forCore()`, `getCoreName()` methods |
-| `com/atex/desk/api/auth/AuthConfig.java` | Added `/search/*` to auth filter URL patterns |
-| `com/atex/desk/api/config/OpenApiConfig.java` | Added "Search" tag |
+| Class | Change |
+|-------|--------|
+| `DeskSystemConfiguration` | Added `fetch(cm, subject)` static factory, `plausibleDomains`, `plausibleEmbeds`, `plausibleDefaultEmbed`, `usePlausibleEmbed()` fields and methods |
+| `SolrPrintPageService` | Replaced empty stub with full method signatures: `publications()`, `publicationDates()`, `editions()`, `zones()`, `sections()` + archive variants. All return empty lists (stub). |
+| `SSOUtil` | Added `isEnabled()`, `getSSOQueryName()`, `encode()`, `getSSOTTL()` methods. Disabled by default. |
+| `DamPublisherFactory` | Added `getBackendIdFromApiDomain(String, Caller)` overload returning `Optional<String>` |
+| `ContentPublisher` | Added `publishPage()`, `duplicatePage()`, `getContent(Function, UnaryOperator)`, `toRemoteContentId()`, `fromRemoteContentId()` as default methods |
+| `ContentOperationUtils` | Added overloaded `duplicate(List<ContentId>, Subject, String, UnaryOperator, UnaryOperator)` with edit operators for original and duplicated content |
+| `standard/aspects/OneImageBean.java` | Added `noUsePrint`, `noUseWeb` boolean fields with getters/setters |
+| `util/HttpDamUtils.java` | Added `isFailed()` and `getError()` convenience aliases for `isError()` and `getErrorMessage()` |
+| `remote/RemoteUtils.java` | Added `callRemoteService(String url)` returning `JsonObject` via Gson parsing |
+| `PublicationLinkSupport` | Populated empty file with interface: `getPublicationLink()`, `setPublicationLink(String)` |

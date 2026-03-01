@@ -60,7 +60,9 @@ public class HttpDamUtils {
 
         public String getBody() { return body; }
         public boolean isError() { return error; }
+        public boolean isFailed() { return error; }
         public String getErrorMessage() { return errorMessage; }
+        public String getError() { return errorMessage; }
         public Map<String, String> getHeaders() { return headers; }
         public String getHeader(String name) { return headers.get(name); }
     }

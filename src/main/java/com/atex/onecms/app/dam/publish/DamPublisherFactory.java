@@ -17,6 +17,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 public class DamPublisherFactory {
@@ -79,6 +80,10 @@ public class DamPublisherFactory {
             }
         }
         return null;
+    }
+
+    public Optional<String> getBackendIdFromApiDomain(String apiDomain, Caller caller) {
+        return Optional.ofNullable(getBackendIdFromApiDomain(apiDomain));
     }
 
     private RemotesConfiguration getRemotesConfiguration() {
