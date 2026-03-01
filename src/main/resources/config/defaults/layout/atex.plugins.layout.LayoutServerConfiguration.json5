@@ -1,0 +1,10 @@
+{
+  "_type": "com.atex.plugins.layout.LayoutServerConfigurationBean",
+  "layoutServer": "http://localhost:8888",
+  "printServer": "http://localhost:8888",
+  "layoutNewsRoomServer": "http://localhost:8888",
+  "timeout": 360,
+  "poolSize": 32,
+  "slowUrlRegex": "",
+  "vSlowUrlRegex": ""
+}

@@ -40,7 +40,8 @@ public class OpenApiConfig
                 new Tag().name("Dashboard").description("System status and endpoint listing"),
                 new Tag().name("DAM").description("DAM content operations, search, publishing and configuration"),
                 new Tag().name("Search").description("Solr search proxy with format negotiation and permission filtering"),
-                new Tag().name("Changes").description("Content change feed for polling content lifecycle events")
+                new Tag().name("Changes").description("Content change feed for polling content lifecycle events"),
+                new Tag().name("Layout").description("Print layout proxy for HandJ/P-Series layout servers")
             ));
     }
 }

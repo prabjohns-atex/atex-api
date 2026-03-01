@@ -343,3 +343,6 @@ json-ref|adm-starterkit-pseries|onecms-templates/article/desk/atex.onecms.Templa
 #
 # --- flavor/pseries/widgets-configuration ---
 xml-cdata|adm-starterkit-pseries|widgets-configuration/configuration.widget.activePreview.xml|flavor/pseries|widgets-configuration|configuration.widget.activePreview
+#
+# --- defaults/layout ---
+manual|none||defaults|layout|atex.plugins.layout.LayoutServerConfiguration
