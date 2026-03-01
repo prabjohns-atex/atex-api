@@ -794,23 +794,22 @@ desk.image-metadata-service.enabled=false
 | `lifecycle/handleItemState/HandleItemStatePreStore.java` | Spike/unspike |
 | `lifecycle/collection/CollectionPreStore.java` | Collection item processing |
 | `plugin/BuiltInHookRegistrar.java` | Registers hooks per content type |
-| `mapping/RequestImpl.java` | Concrete `Request` implementation |
-| `composer/DamContentPreviewComposer.java` | Preview variant composer (ported) |
-| `composer/CustomDamComposer.java` | Base class for DAM composers (ported) |
-| `composer/DamPrintPageComposer.java` | Print page variant composer (ported) |
-| `composer/DamJobExplorerComposer.java` | Job explorer variant composer (ported) |
-| `print/PrintPageBean.java` | Print page composed bean |
-| `planning/JobExplorerBean.java` | Job explorer item bean |
-| `planning/JobExplorerResultBean.java` | Job explorer result bean |
+| `plugin/PartitionProperties.java` | Partition config properties |
+| `indexing/ContentIndexer.java` | Post-store Solr indexing |
+| `indexing/DamIndexComposer.java` | Content → Solr JSON |
 
 **Modified files (8):**
 
 | File | Change |
-|------|--------|
-| `com/atex/onecms/ws/search/SearchServiceUtil.java` | Replaced 4-line stub with full implementation: query parsing, JSON/XML format conversion, error formatting |
-| `com/atex/onecms/app/dam/solr/SolrService.java` | Added `rawQuery()`, `forCore()`, `getCoreName()` methods |
-| `com/atex/desk/api/auth/AuthConfig.java` | Added `/search/*` to auth filter URL patterns |
-| `com/atex/desk/api/config/OpenApiConfig.java` | Added "Search" tag |
+|---|---|
+| `OneArticleBean.java` | Extend `OneContentBean`; add missing fields |
+| `OneImageBean.java` | Extend `OneContentBean`; add missing fields |
+| `DamCollectionAspectBean.java` | Extend `OneContentBean`; add missing fields |
+| `DamArticleAspectBean.java` | Simplified to extend `OneArticleBean` |
+| `DamImageAspectBean.java` | Simplified to extend `OneImageBean` |
+| `LifecycleContextPreStore.java` | Add optional `FileService` field |
+| `LocalContentManager.java` | Wildcard hook matching, post-store indexing, `FileService` + `ContentIndexer` injection |
+| `SolrService.java` | Add `index()` and `delete()` methods |
 
 ## Increment 7 — Resource-Based Configuration System
 
@@ -1053,7 +1052,7 @@ desk.config.flavor=
 
 | File | Description |
 |------|-------------|
-| `auth/CognitoTokenVerifier.java` | JWK fetching, key parsing (RSA/EC), JWT signature verification, OAuth2 token introspection |
+| `auth/CognitoTokenVerifier.java` | JWK fetching, key parsing (RSA/EC), JWT signature verification, `Locator<Key>` implementation |
 | `config/ConfigProperties.java` | `@ConfigurationProperties(prefix = "desk.config")`: `enabled` (boolean), `flavor` (String) |
 | `config/ConfigurationService.java` | 5-tier config lookup, classpath + plugin scanning, cache, synthetic ContentResult |
 | `config/Json5Reader.java` | JSON5 → JSON converter (strip comments, trailing commas, Gson lenient) |
@@ -1449,7 +1448,85 @@ All endpoints support `partition=archive` query param where applicable.
 | `remote/RemoteUtils.java` | Added `callRemoteService(String url)` returning `JsonObject` via Gson parsing |
 | `PublicationLinkSupport` | Populated empty file with interface: `getPublicationLink()`, `setPublicationLink(String)` |
 
-## Increment 12 — Variant/Composer System
+## Increment 12 — Content Change Feed (ChangesResource)
+
+Implements a DB-backed content change feed (`GET /changes`) using the existing MySQL tables (`changelist`, `changelistattributes`, `eventtypes`, `eventsqueue`). Hooks into `LocalContentManager` to record events after create/update/delete.
+
+### Architecture
+
+```
+LocalContentManager
+  ├─ create() → recordChange("CREATE", result, vid, userId)
+  ├─ update() → recordChange("UPDATE", result, vid, userId)
+  └─ delete() → recordDelete(contentId, userId)
+       │
+       ▼
+  ChangeListService (@Service)
+    ├─ AtomicInteger commitId (seeded from MAX(changelist.id))
+    ├─ recordEvent() — @Transactional(REQUIRES_NEW), fire-and-forget
+    │    ├─ Upsert changelist (delete old + insert new)
+    │    ├─ Store attributes (objectType, securityParentId, partition, etc.)
+    │    └─ Append to eventsqueue (audit log)
+    ├─ recordDelete() — similar but limited metadata
+    └─ queryChanges() — dynamic native SQL with filters
+         └─ JOIN changelist ↔ changelistattributes ↔ eventtypes
+```
+
+### Endpoint
+
+`GET /changes` (auth required via `AuthFilter /changes/*`):
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `commitId` | long | — | Return changes with commitId > value (cursor) |
+| `changedSince` | long (UTC ms) | — | Return changes since time (ignored if commitId set) |
+| `content` | string (multi) | — | Content type filter (aspect names) |
+| `object` | string (multi) | article,image,page,graphic,collection | Object type filter (`*` = disable) |
+| `partition` | string (multi) | — | Partition filter |
+| `event` | string (multi) | CREATE,UPDATE,DELETE | Event type filter (`*` = disable) |
+| `rows` | int | 100 | Max results (capped at 10000) |
+
+Response: `{ runTime, maxCommitId, numFound, size, events: [{contentId, contentVersionId, commitId, commitTime, eventType, objectType, contentType, creationTime, creator, modificationTime, modifier, securityParentId, insertionParentId, partitions}] }`
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `entity/EventTypeEntity.java` | JPA entity for `eventtypes` table |
+| `entity/ChangeListEntry.java` | JPA entity for `changelist` table (non-auto-generated PK) |
+| `entity/ChangeListAttribute.java` | JPA entity for `changelistattributes` table |
+| `entity/ChangeListAttributeId.java` | Composite PK class for changelist attributes |
+| `entity/EventQueueEntry.java` | JPA entity for `eventsqueue` table |
+| `repository/EventTypeRepository.java` | `findByName(String)` |
+| `repository/AttributeRepository.java` | `findByName(String)` (uses existing `Attribute` entity) |
+| `repository/ChangeListRepository.java` | `findMaxId()`, `findByContentid()`, `deleteByContentid()` |
+| `repository/ChangeListAttributeRepository.java` | `findByIdIn()`, `deleteByIdIn()` |
+| `repository/EventQueueRepository.java` | Basic save only |
+| `service/ChangeListService.java` | Event recording + change feed querying |
+| `service/InvalidCommitIdException.java` | Exception for commitId > max |
+| `dto/ChangeEventDto.java` | Change event DTO with `@Schema` annotations |
+| `dto/ChangeFeedDto.java` | Change feed response wrapper |
+| `controller/ChangesController.java` | `GET /changes` endpoint |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `LocalContentManager.java` | Added `@Nullable ChangeListService` (8th constructor param), `recordChange()` after create/update, `recordDelete()` after delete |
+| `AuthConfig.java` | Added `/changes/*` to auth filter URL patterns |
+| `OpenApiConfig.java` | Added "Changes" tag |
+| `data.sql` | Added DELETE event type + modifier/modificationTime/creationTime attribute seeds |
+| `schema.sql` | Added `changelist_commit_at` index |
+| `application.properties` | Added `desk.changes.enabled=true` |
+
+### Design Notes
+
+- **Commit ID**: `AtomicInteger` seeded from `MAX(changelist.id)` — safe for single-instance deployment
+- **Upsert semantics**: `changelist_contentid_UNIQUE` constraint means only latest change per content ID stored (matches original Solr behavior)
+- **Fire-and-forget**: `@Transactional(REQUIRES_NEW)` — recording failures don't affect content operations
+- **AuthConfig patterns**: `/content/*`, `/dam/*`, `/principals/*`, `/admin/*`, `/search/*`, `/changes/*`
+
+## Increment 13 (Plan) — Variant/Composer System
 
 Adds variant-based content composition to `ContentManager.get()`. When a non-null `variant` is passed, the system looks up a registered `ContentComposer` for that variant (optionally narrowed by content type), executes it to transform the raw `ContentResult`, and returns the composed result. This mirrors the original Polopoly `ExecutorReadComposer` pipeline.
 
