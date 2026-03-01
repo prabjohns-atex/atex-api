@@ -132,6 +132,8 @@ Auth: `X-AUTH-TOKEN` header (JWT, enforced by `AuthFilter`).
 |--------|------|-----------|
 | POST | `/security/token` | Login: `{username, password}` → JWT token + userId + expireTime |
 | GET | `/security/token` | Validate: `X-Auth-Token` header → token info if valid |
+| GET | `/security/oauth/url` | Get Cognito hosted UI login URL (query param: `callbackUrl`) |
+| POST | `/security/oauth/callback` | Exchange OAuth code/token for desk-api JWT |
 
 ### User Storage
 - `users` table: userid (auto PK), username (unique), password_hash (SHA-256), created_at
@@ -1230,3 +1232,89 @@ Visible at `/actuator/health` alongside the default DB health indicator.
 | `DamDataResource.java` | `@Tag(name = "DAM")`, `@Hidden` on 5 stubs |
 | `dto/*.java` (11 files) | `@Schema` annotations on classes and fields |
 | `static/dashboard.html` | Update swagger/api-docs links |
+
+## Increment 8 — Cognito JWT Verification & User Lifecycle
+
+Completes the Cognito integration by adding JWT signature verification (consolidating Polopoly's 4-class JWK infrastructure into one), OAuth callback endpoints, and user lifecycle management (invite/disable/enable/delete).
+
+### Architecture
+
+```
+Cognito User Pool
+  ├─ /.well-known/jwks.json  ← CognitoTokenVerifier fetches signing keys
+  ├─ /oauth2/authorize        ← GET /security/oauth/url redirects here
+  ├─ /oauth2/token             ← exchangeCodeForToken() calls here
+  └─ Admin API                 ← inviteUser, disableUser, enableUser, deleteUser
+
+CognitoTokenVerifier (Locator<Key>)
+  ├─ locate(Header) → resolve kid → fetch JWK → parse RSA/EC → cache
+  └─ verify(token) → Jwts.parser().keyLocator(this).requireIssuer().parseSignedClaims()
+       → CognitoUser {username, email, groups}
+
+SecurityController
+  ├─ POST /security/token           ← existing (username/password)
+  ├─ GET  /security/token           ← existing (validate)
+  ├─ GET  /security/oauth/url       ← NEW: returns Cognito hosted UI URL
+  └─ POST /security/oauth/callback  ← NEW: code/token → desk-api JWT
+```
+
+### CognitoTokenVerifier
+
+`com.atex.desk.api.auth.CognitoTokenVerifier` — consolidates Polopoly's `Jwk`, `JwkProvider`, `UrlJwkProvider`, `UrlSigningKeyResolver`, and `TokenDecoder` into a single class.
+
+- Implements `io.jsonwebtoken.Locator<Key>` (JJWT 0.12.x API)
+- `locate(Header)` — casts to `ProtectedHeader`, extracts `kid`, resolves from static `ConcurrentHashMap<String, Key>` cache
+- JWK fetching from Cognito `.well-known/jwks.json` via Java 11+ `HttpClient` + Gson (avoids Jackson 2 dependency)
+- RSA key parsing: base64url-decoded `n` (modulus) + `e` (exponent) → `RSAPublicKeySpec`
+- EC key parsing: `x`, `y` coordinates + `crv` (P-256/P-384/P-521) → `ECPublicKeySpec`
+- `verify(token)` — validates signature + issuer, extracts `cognito:username`, `email`, `cognito:groups` from claims
+
+### CognitoAuthService New Methods
+
+| Method | Description |
+|--------|-------------|
+| `verifyToken(String token)` | Full JWT signature verification via `CognitoTokenVerifier`, returns `CognitoUser` |
+| `verifyOAuthUrl(String url, String callbackUrl)` | Dispatches URL to code flow (query `?code=`) or implicit flow (fragment `#id_token=` / `#access_token=`) |
+| `getLastModified(String username)` | Returns user's `lastModifiedDate` from Cognito (millis), falls back to `createDate`, returns -1 if not found |
+| `inviteUser(String username, String email)` | Creates user via `AdminCreateUser` with email attribute + email delivery |
+| `disableUser(String username)` | Disables user via `AdminDisableUser` |
+| `enableUser(String username)` | Enables user via `AdminEnableUser` |
+| `deleteUser(String username)` | Deletes user via `AdminDeleteUser` |
+| `groupExists(String groupName)` | Checks group existence via `GetGroup`, returns boolean |
+
+**Modified methods:**
+- `exchangeCodeForToken()` — now uses `tokenVerifier.verify()` for signature validation, falls back to base64 decode if verification fails
+- `decodeIdToken()` — changed from `private` to `public` for cases where quick decode without verification is needed
+
+**Static utility methods:**
+- `parseQueryString(String url)` — extracts query parameters as `Map<String, String>`
+- `parseFragments(String url)` — extracts fragment parameters as `Map<String, String>`
+
+### Security Controller OAuth Endpoints
+
+`com.atex.desk.api.controller.SecurityController`:
+
+| Method | Path | Behaviour |
+|--------|------|-----------|
+| GET | `/security/oauth/url` | Returns Cognito hosted UI login URL; query param: `callbackUrl` |
+| POST | `/security/oauth/callback` | Exchanges OAuth code/token for desk-api JWT |
+
+Both endpoints use `@SecurityRequirements` (no auth required — part of login flow).
+
+**Callback endpoint** accepts:
+- `{code, callbackUrl}` — authorization code flow → `exchangeCodeForToken()`
+- `{url}` — implicit flow (token in URL fragment) → `verifyOAuthUrl()`
+- After authentication: `ensureLocalUser()` → `tokenService.createToken()` → `TokenResponseDto`
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `auth/CognitoTokenVerifier.java` | JWK fetching, key parsing (RSA/EC), JWT signature verification, `Locator<Key>` implementation |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `auth/CognitoAuthService.java` | Added `CognitoTokenVerifier` field; added `verifyToken`, `verifyOAuthUrl`, `getLastModified`, `inviteUser`, `disableUser`, `enableUser`, `deleteUser`, `groupExists`, `parseQueryString`, `parseFragments`; made `decodeIdToken` public; updated `exchangeCodeForToken` to use signature verification with fallback |
+| `controller/SecurityController.java` | Added `GET /security/oauth/url` and `POST /security/oauth/callback` endpoints; cleaned up FQN imports to use short imports |

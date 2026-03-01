@@ -1,7 +1,10 @@
 package com.atex.desk.api.controller;
 
+import com.atex.desk.api.auth.CognitoAuthService;
 import com.atex.desk.api.auth.DecodedToken;
+import com.atex.desk.api.auth.LdapAuthService;
 import com.atex.desk.api.auth.InvalidTokenException;
+import com.atex.desk.api.auth.PasswordService;
 import com.atex.desk.api.auth.TokenService;
 import com.atex.desk.api.dto.CredentialsDto;
 import com.atex.desk.api.dto.ErrorResponseDto;
@@ -16,18 +19,18 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/security")
@@ -39,11 +42,21 @@ public class SecurityController
 
     private final TokenService tokenService;
     private final AppUserRepository userRepository;
+    private final PasswordService passwordService;
+    private final LdapAuthService ldapAuthService;
+    private final CognitoAuthService cognitoAuthService;
 
-    public SecurityController(TokenService tokenService, AppUserRepository userRepository)
+    public SecurityController(TokenService tokenService,
+                              AppUserRepository userRepository,
+                              PasswordService passwordService,
+                              @Nullable LdapAuthService ldapAuthService,
+                              @Nullable CognitoAuthService cognitoAuthService)
     {
         this.tokenService = tokenService;
         this.userRepository = userRepository;
+        this.passwordService = passwordService;
+        this.ldapAuthService = ldapAuthService;
+        this.cognitoAuthService = cognitoAuthService;
     }
 
     /**
@@ -71,22 +84,60 @@ public class SecurityController
                 .body(new ErrorResponseDto("BAD_REQUEST", "No password present"));
         }
 
-        AppUser user = userRepository.findByUsername(credentials.getUsername()).orElse(null);
+        AppUser user = userRepository.findByLoginName(credentials.getUsername()).orElse(null);
         if (user == null)
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponseDto("UNAUTHORIZED", "Authentication failed"));
         }
 
-        String hash = sha256(credentials.getPassword());
-        if (!hash.equals(user.getPasswordHash()))
+        if (!user.isActive())
+        {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponseDto("UNAUTHORIZED", "Account is disabled"));
+        }
+
+        // Dispatch to appropriate auth provider
+        boolean authenticated = false;
+
+        if (user.isLdap())
+        {
+            if (ldapAuthService == null)
+            {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "LDAP authentication not configured"));
+            }
+            authenticated = ldapAuthService.authenticate(credentials.getUsername(), credentials.getPassword());
+        }
+        else if (user.isRemote())
+        {
+            if (cognitoAuthService == null)
+            {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "Remote authentication not configured"));
+            }
+            authenticated = cognitoAuthService.authenticate(credentials.getUsername(), credentials.getPassword());
+        }
+        else
+        {
+            // Local password verification
+            authenticated = passwordService.verify(credentials.getPassword(), user.getPasswordHash());
+        }
+
+        if (!authenticated)
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponseDto("UNAUTHORIZED", "Authentication failed"));
         }
 
+        // Update login stats
+        user.setLastLoginTime((int) (System.currentTimeMillis() / 1000));
+        user.setNumLogins(user.getNumLogins() + 1);
+        userRepository.save(user);
+
+        // JWT sub = loginName
         String token = tokenService.createToken(
-            user.getUserId().toString(),
+            user.getLoginName(),
             List.of("READ", "WRITE", "OWNER"),
             DEFAULT_EXPIRATION
         );
@@ -95,7 +146,7 @@ public class SecurityController
 
         TokenResponseDto response = new TokenResponseDto();
         response.setToken(token);
-        response.setUserId(user.getUserId().toString());
+        response.setUserId(user.getLoginName());
         if (decoded != null && decoded.expiration() != null)
         {
             response.setExpireTime(Long.toString(decoded.expiration().getTime()));
@@ -141,6 +192,113 @@ public class SecurityController
         }
     }
 
+    /**
+     * GET /security/oauth/url — Get the Cognito hosted UI login URL.
+     */
+    @GetMapping("/oauth/url")
+    @SecurityRequirements
+    @Operation(summary = "Get OAuth login URL",
+               description = "Returns the Cognito hosted UI login URL for OAuth authentication")
+    @ApiResponse(responseCode = "200", description = "OAuth URL returned")
+    @ApiResponse(responseCode = "503", description = "Cognito not configured",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> getOAuthUrl(@RequestParam("callbackUrl") String callbackUrl)
+    {
+        if (cognitoAuthService == null)
+        {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "Cognito authentication not configured"));
+        }
+
+        String url = cognitoAuthService.getOAuthUrl(callbackUrl);
+        if (url == null)
+        {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "Cognito domain not configured"));
+        }
+
+        return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    /**
+     * POST /security/oauth/callback — Exchange OAuth code/token for a desk-api JWT.
+     * Accepts either {code, callbackUrl} for authorization code flow,
+     * or {url} for implicit flow (token in URL fragment).
+     */
+    @PostMapping("/oauth/callback")
+    @SecurityRequirements
+    @Operation(summary = "OAuth callback",
+               description = "Exchange an OAuth authorization code or token for a desk-api JWT token")
+    @ApiResponse(responseCode = "200", description = "Authentication successful",
+                 content = @Content(schema = @Schema(implementation = TokenResponseDto.class)))
+    @ApiResponse(responseCode = "401", description = "Authentication failed",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    @ApiResponse(responseCode = "503", description = "Cognito not configured",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> oauthCallback(@RequestBody Map<String, String> body)
+    {
+        if (cognitoAuthService == null)
+        {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "Cognito authentication not configured"));
+        }
+
+        CognitoAuthService.CognitoUser cognitoUser = null;
+
+        // Try code flow first
+        String code = body.get("code");
+        String callbackUrl = body.get("callbackUrl");
+        if (code != null && !code.isBlank() && callbackUrl != null && !callbackUrl.isBlank())
+        {
+            cognitoUser = cognitoAuthService.exchangeCodeForToken(code, callbackUrl);
+        }
+        else
+        {
+            // Try URL-based flow (implicit or code in URL)
+            String url = body.get("url");
+            if (url != null && !url.isBlank())
+            {
+                String resolvedCallbackUrl = callbackUrl != null ? callbackUrl
+                    : (url.contains("?") ? url.substring(0, url.indexOf('?')) : url);
+                cognitoUser = cognitoAuthService.verifyOAuthUrl(url, resolvedCallbackUrl);
+            }
+        }
+
+        if (cognitoUser == null || cognitoUser.getUsername() == null)
+        {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponseDto("UNAUTHORIZED", "OAuth authentication failed"));
+        }
+
+        // Ensure local user exists
+        String loginName = cognitoAuthService.ensureLocalUser(cognitoUser.getUsername());
+        if (loginName == null)
+        {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponseDto("UNAUTHORIZED",
+                    "No local user found and auto-creation is disabled"));
+        }
+
+        // Issue desk-api JWT
+        String token = tokenService.createToken(
+            loginName,
+            List.of("READ", "WRITE", "OWNER"),
+            DEFAULT_EXPIRATION
+        );
+
+        DecodedToken decoded = decodeTokenSafe(token);
+
+        TokenResponseDto response = new TokenResponseDto();
+        response.setToken(token);
+        response.setUserId(loginName);
+        if (decoded != null && decoded.expiration() != null)
+        {
+            response.setExpireTime(Long.toString(decoded.expiration().getTime()));
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
     private DecodedToken decodeTokenSafe(String token)
     {
         try
@@ -150,25 +308,6 @@ public class SecurityController
         catch (InvalidTokenException e)
         {
             return null;
-        }
-    }
-
-    private static String sha256(String input)
-    {
-        try
-        {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(64);
-            for (byte b : digest)
-            {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        }
-        catch (NoSuchAlgorithmException e)
-        {
-            throw new RuntimeException(e);
         }
     }
 }
