@@ -351,6 +351,31 @@ public class SolrService extends SolrUtils {
         return gson.toJson(root);
     }
 
+    /**
+     * Execute a raw SolrQuery and return the QueryResponse directly.
+     * Used by LocalSearchClient for the search endpoint.
+     */
+    public QueryResponse rawQuery(SolrQuery query) throws Exception {
+        return executeQuery(query);
+    }
+
+    /**
+     * Create a SolrService instance for a different core, reusing the same server URL.
+     */
+    public SolrService forCore(String coreName) {
+        if (coreName.equals(this.core)) {
+            return this;
+        }
+        return new SolrService(new SolrServerUrl(this.solrServerUrl), coreName);
+    }
+
+    /**
+     * Get the core name this service instance is configured for.
+     */
+    public String getCoreName() {
+        return core;
+    }
+
     private QueryResponse executeQuery(SolrQuery query) throws Exception {
         try {
             if (logger.isLoggable(Level.FINE)) {
