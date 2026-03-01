@@ -1081,6 +1081,252 @@ desk.config.flavor=
 | `dto/*.java` (11 files) | `@Schema` annotations on classes and fields |
 | `static/dashboard.html` | Update swagger/api-docs links |
 
+## Increment 7.1 — SpringDoc OpenAPI Generation
+
+Replaces the hand-authored `static/openapi.yaml` (1830 lines) and manually-configured Swagger UI WebJar with SpringDoc-generated OpenAPI from annotations. The Polopoly Swagger 2 annotations (`@ApiOperation`, `@ApiModelProperty`) are mapped to OpenAPI 3 equivalents (`@Operation`, `@Schema`).
+
+### Architecture
+
+```
+SpringDoc OpenAPI 3.0.1
+  ├─ Auto-generates /v3/api-docs JSON from controller annotations
+  ├─ Bundles Swagger UI at /swagger-ui.html (no manual WebJar config)
+  └─ spring-boot-jackson2 bridge (swagger-core needs Jackson 2)
+```
+
+### Dependencies
+
+**Removed:** `org.webjars:swagger-ui:5.21.0`, `org.webjars:webjars-locator-core:0.59`
+**Added:** `org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1`, `org.springframework.boot:spring-boot-jackson2`
+
+### Configuration (`application.properties`)
+
+```properties
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.persist-authorization=true
+springdoc.swagger-ui.deep-linking=true
+springdoc.swagger-ui.operations-sorter=alpha
+springdoc.swagger-ui.tags-sorter=alpha
+springdoc.packages-to-scan=com.atex.desk.api.controller,com.atex.onecms.app.dam.ws
+```
+
+### OpenApiConfig
+
+`com.atex.desk.api.config.OpenApiConfig` — `@Configuration` providing an `OpenAPI` bean with security scheme (`authToken` apiKey in header `X-Auth-Token`), global security requirement, and tag definitions (Authentication, Content, Workspace, Principals, Configuration, Dashboard, DAM, Search).
+
+### DTO Annotations
+
+All DTOs annotated with `@Schema` (class-level + field-level): `ContentResultDto`, `ContentWriteDto`, `AspectDto`, `MetaDto`, `ContentHistoryDto`, `ContentVersionInfoDto`, `ErrorResponseDto`, `CredentialsDto`, `TokenResponseDto`, `PrincipalDto`, `WorkspaceInfoDto`.
+
+### Controller Annotations
+
+All controllers annotated with `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter`. Unauthenticated endpoints use `@SecurityRequirements` (standalone). DamDataResource: `@Tag(name = "DAM")`, `@Hidden` on 5 stub endpoints.
+
+### Actuator Enhancements
+
+- **`MetricsConfig`** — `@Configuration` adding `application=desk-api` common tag to all Micrometer metrics
+- **`SolrHealthIndicator`** — `@Component` implementing `HealthIndicator` for Solr connectivity at `/actuator/health`
+
+## Increment 8 — Cognito JWT Verification & User Lifecycle
+
+Completes Cognito integration: JWT signature verification (consolidating Polopoly's 4-class JWK infrastructure into one), OAuth callback endpoints, and user lifecycle management.
+
+### CognitoTokenVerifier
+
+`com.atex.desk.api.auth.CognitoTokenVerifier` — implements `io.jsonwebtoken.Locator<Key>` (JJWT 0.12.x):
+- JWK fetching from Cognito `.well-known/jwks.json` via Java 11+ `HttpClient` + Gson
+- RSA key parsing: base64url `n` + `e` → `RSAPublicKeySpec`
+- EC key parsing: `x`, `y` + `crv` (P-256/P-384/P-521) → `ECPublicKeySpec`
+- `ConcurrentHashMap<String, Key>` cache by `kid`
+- `verify(token)` → validates signature + issuer, extracts `cognito:username`, `email`, `cognito:groups`
+
+### SecurityController OAuth Endpoints
+
+| Method | Path | Behaviour |
+|--------|------|-----------|
+| GET | `/security/oauth/url` | Returns Cognito hosted UI login URL (query param: `callbackUrl`) |
+| POST | `/security/oauth/callback` | Exchanges OAuth code/token for desk-api JWT |
+
+### CognitoAuthService New Methods
+
+`verifyToken`, `verifyOAuthUrl`, `getLastModified`, `inviteUser`, `disableUser`, `enableUser`, `deleteUser`, `groupExists`, `parseQueryString`, `parseFragments`.
+
+## Increment 9 — Principals, Groups, ACLs & Auth Providers
+
+Full Polopoly-compatible principal infrastructure: multi-scheme password verification, LDAP authentication with user provisioning and group sync, Cognito configuration properties, group/ACL database tables with JPA entities, and expanded PrincipalsController.
+
+### PasswordService
+
+`com.atex.desk.api.auth.PasswordService` — `@Component`, multi-scheme password verification: OLDSHA (SHA-1 + static secret), SHA-256, {SHA}, {SSHA}, {MD5}, {SMD5}, {CLEARTEXT}, {LDAPUSER}/{REMOTEUSER}/{COGNITOUSER} (markers).
+
+### LdapAuthService
+
+`com.atex.desk.api.auth.LdapAuthService` — `@Component @ConditionalOnProperty(name = "desk.ldap.enabled", havingValue = "true")`:
+- Authentication via admin search + user bind
+- DN resolution, user attributes with attribute mapping
+- User provisioning (write mode), password encoding
+- Group operations with nested group support and caching
+
+### Database Schema Changes
+
+New tables: `registeredusers` (expanded from `users`), `groupData`, `groupMember`, `groupOwner`, `aclData`, `acl`, `aclOwner`.
+
+### Entity Layer (7 new entities)
+
+`AppUser` (expanded), `AppGroup`, `AppGroupMember`/`AppGroupMemberId`, `AppGroupOwner`/`AppGroupOwnerId`, `AppAcl`, `AppAclEntry`/`AppAclEntryId`, `AppAclOwner`/`AppAclOwnerId`.
+
+### PrincipalsController (expanded to 11 endpoints)
+
+| Method | Path | Behaviour |
+|--------|------|-----------|
+| GET | `/principals/users/me` | Current authenticated user |
+| GET | `/principals/users` | List all active users (optional `addGroupsToUsers` param) |
+| GET | `/principals/users/{userId}` | Get user by login name |
+| GET | `/principals/groups` | List all groups |
+| GET | `/principals/groups/{groupId}` | Get group by ID (optional `members` param) |
+| POST | `/principals/groups` | Create group |
+| PUT | `/principals/groups/{groupId}` | Update group name |
+| DELETE | `/principals/groups/{groupId}` | Delete group + memberships + owners |
+| POST | `/principals/groups/{groupId}/members` | Add member (idempotent) |
+| DELETE | `/principals/groups/{groupId}/members/{principalId}` | Remove member |
+
+### Configuration
+
+LDAP: 30+ properties under `desk.ldap.*`. Cognito: 20+ properties under `desk.cognito.*`. Both disabled by default.
+
+## Increment 10 — Search Resource, SolrSearchClient & DamSearchResource
+
+Ports the search endpoint infrastructure from the Polopoly platform: the `/search/{core}/select` REST endpoint for direct Solr proxy access with format negotiation (JSON/XML), permission filtering, and working-sites decoration; the `SearchClient` API interface for programmatic Solr queries; legacy Polopoly search types; and the `/dam/search/{core}/select` remote proxy endpoint.
+
+### Architecture
+
+```
+Desk UI / OneCMS clients
+  ├─ /search/{core}/select  → SearchController
+  │    └─ LocalSearchClient (implements SearchClient)
+  │         └─ SolrService.rawQuery() → Solr
+  │              ├─ Permission filtering (content_readers_ss / content_writers_ss / content_owners_ss)
+  │              ├─ Working-sites decoration (page_ss filter via SolrQueryDecorator)
+  │              └─ Format negotiation: JSON (Gson) or XML (DOM)
+  │
+  └─ /dam/search/{core}/select → DamSearchController
+       └─ DamPublisherFactory.createContext() → RemoteUtils.callRemoteWs()
+            → Remote CMS REST API
+```
+
+### Search API Types (preserving original packages)
+
+**Package `com.atex.onecms.search`** (from polopoly/core/data-api-api):
+- `SearchClient` — Interface: `query(core, SolrQuery, Subject, SearchOptions)` → `SearchResponse`. Constants: `CORE_ONECMS`, `CORE_LATEST`, `CORE_DEFAULT`. Default convenience methods for core/options
+- `SearchResponse` — Interface: `getCore()`, `response()` → `QueryResponse`, `json()` → `String`, `jsonTree()` → `JsonElement`, `getStatus()`, `getErrorMessage()`
+- `SearchOptions` — Options class: `filterWorkingSites`, `postMethod`, `permission` (`ACCESS_PERMISSION` enum: OFF/READ/WRITE/OWNER). Static factories: `none()`, `filterWorkingSites()`, `withPermission()`, `postMethod()`
+
+**Package `com.atex.onecms.ws.search`**:
+- `SolrFormat` — Enum: `json`, `xml`
+- `SearchMethod` — Enum: `GET`, `POST`
+- `ChildFactory<E>` — Generic tree builder interface for NamedList → JSON/XML conversion
+- `ChildFactoryJSON` — Gson-based implementation using `JsonObject`/`JsonArray`
+- `ChildFactoryXML` — DOM-based implementation using `Element`/`Document`
+- `SearchServiceUtil` — Full implementation (replaced 4-line stub): `parseQueryString()`, `deduceResponseType()`, `toJSON()`, `toXML()`, `formatResponse()`, `solrError()`, recursive NamedList walker
+
+**Package `com.polopoly.search.solr`**:
+- `SearchClient` — Legacy interface: `search(SolrQuery, pageSize)` → `SearchResult`
+- `SearchResult` — Paginated result: `getApproximateNumberOfPages()`, `iterator()`, `getPage(int)`
+- `SearchResultPage` — Page: `getHits()` → `List<ContentId>`, `getQueryResponses()`, `isEmpty()`, `isIncomplete()`
+- `SolrIndexName` — Simple wrapper: `name` field, `getName()`, `toString()`
+- `SolrSearchClient` — Simplified class implementing legacy `SearchClient`; methods throw `UnsupportedOperationException("Use LocalSearchClient")`
+
+### LocalSearchClient
+
+`com.atex.desk.api.search.LocalSearchClient` — `@Component` implementing `com.atex.onecms.search.SearchClient`:
+- Constructor: `@Nullable SolrService`, `DeskProperties`
+- Core name mapping: `"onecms"` → `deskProperties.getSolrCore()`, `"latest"` → `deskProperties.getSolrLatestCore()`, others → as-is
+- `ConcurrentHashMap<String, SolrService>` cache for per-core `SolrService` instances via `solrService.forCore()`
+- Working-sites filter: delegates to `SolrQueryDecorator.decorateWithWorkingSites()` (ready for when user working sites are in DB)
+- Permission filter: adds `fq` for `content_readers_ss`/`content_writers_ss`/`content_owners_ss` per permission level
+
+`com.atex.desk.api.search.LocalSearchResponse` — Implements `SearchResponse`, wraps `QueryResponse`. Lazy JSON serialization via `SearchServiceUtil.toJSON()`.
+
+### SolrService Changes
+
+Added three public methods:
+- `rawQuery(SolrQuery)` → `QueryResponse` — exposes the private `executeQuery` for direct query access
+- `forCore(String coreName)` → `SolrService` — creates instance for a different core, reusing the same server URL
+- `getCoreName()` → `String` — returns the core name this instance is configured for
+
+### SearchController
+
+`com.atex.desk.api.controller.SearchController` at `/search`:
+
+| Method | Path | Consumes | Description |
+|--------|------|----------|-------------|
+| GET | `/{core}/select` | — | Query string params |
+| POST | `/{core}/select` | `application/x-www-form-urlencoded` | Form params |
+| POST | `/{core}/select` | `application/json` | JSON body |
+
+All route to private `process()` which:
+1. Parses query via `SearchServiceUtil.parseQueryString()`
+2. Determines format via `SearchServiceUtil.deduceResponseType(wt)`
+3. Extracts `variant` and `permission` params from query
+4. Builds `SearchOptions` from method + permission
+5. Executes via `LocalSearchClient.query()`
+6. If `variant` set → inlines content data (resolves each doc's `id` via `ContentManager`, adds as `_data` field)
+7. Formats response via `SearchServiceUtil.formatResponse()` or `SearchServiceUtil.solrError()`
+
+JSON POST: parses body via Gson `JsonParser` into query string params.
+
+### DamSearchController
+
+`com.atex.desk.api.controller.DamSearchController` at `/dam/search`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/{core}/select` | Proxy to remote CMS backend |
+
+Flow:
+1. `DamUserContext.from(req).assertLoggedIn()` → `Caller`
+2. `damPublisherFactory.createContext(backendId, caller)` → `PublishingContext`
+3. Builds URL: `remoteApiUrl + "search/" + core + "/select?" + queryString`
+4. Calls `RemoteUtils.callRemoteWs("GET", url, auth)`
+5. Returns response as `ResponseEntity` with `application/json`
+
+### Auth & Config Changes
+
+- `AuthConfig` — Added `/search/*` to `addUrlPatterns()` (note: `/dam/search/*` already covered by `/dam/*`)
+- `OpenApiConfig` — Added `"Search"` tag: "Solr search proxy with format negotiation and permission filtering"
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `com/atex/onecms/search/SearchClient.java` | Public search client interface |
+| `com/atex/onecms/search/SearchResponse.java` | Search response interface |
+| `com/atex/onecms/search/SearchOptions.java` | Search options with permissions |
+| `com/atex/onecms/ws/search/SolrFormat.java` | json/xml enum |
+| `com/atex/onecms/ws/search/SearchMethod.java` | GET/POST enum |
+| `com/atex/onecms/ws/search/ChildFactory.java` | Generic tree builder interface |
+| `com/atex/onecms/ws/search/ChildFactoryJSON.java` | Gson-based ChildFactory |
+| `com/atex/onecms/ws/search/ChildFactoryXML.java` | DOM-based ChildFactory |
+| `com/polopoly/search/solr/SearchClient.java` | Legacy search interface |
+| `com/polopoly/search/solr/SearchResult.java` | Paginated result interface |
+| `com/polopoly/search/solr/SearchResultPage.java` | Result page interface |
+| `com/polopoly/search/solr/SolrIndexName.java` | Index name wrapper |
+| `com/polopoly/search/solr/SolrSearchClient.java` | Simplified SolrSearchClient |
+| `com/atex/desk/api/search/LocalSearchClient.java` | Spring component wrapping SolrService |
+| `com/atex/desk/api/search/LocalSearchResponse.java` | SearchResponse implementation |
+| `com/atex/desk/api/controller/SearchController.java` | `/search/{core}/select` REST controller |
+| `com/atex/desk/api/controller/DamSearchController.java` | `/dam/search/{core}/select` proxy |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `com/atex/onecms/ws/search/SearchServiceUtil.java` | Replaced 4-line stub with full implementation: query parsing, JSON/XML format conversion, error formatting |
+| `com/atex/onecms/app/dam/solr/SolrService.java` | Added `rawQuery()`, `forCore()`, `getCoreName()` methods |
+| `com/atex/desk/api/auth/AuthConfig.java` | Added `/search/*` to auth filter URL patterns |
+| `com/atex/desk/api/config/OpenApiConfig.java` | Added "Search" tag |
+
 ## Increment 11 — Additional DAM Resource Controllers
 
 Ports the remaining 11 JAX-RS resource files from `gong/desk/module-desk-onecms/.../ws/` to Spring MVC `@RestController` classes. These were identified by cross-referencing the original codebase — DamDataResource (68 endpoints) was already ported in Increment 3, and DamSearchResource was ported in Increment 10 as `DamSearchController`. This increment covers all the other resource files.
