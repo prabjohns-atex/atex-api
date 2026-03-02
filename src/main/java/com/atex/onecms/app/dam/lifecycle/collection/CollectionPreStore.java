@@ -3,6 +3,7 @@ package com.atex.onecms.app.dam.lifecycle.collection;
 import com.atex.onecms.app.dam.standard.aspects.DamCollectionAspectBean;
 import com.atex.onecms.app.dam.standard.aspects.DamContentAccessAspectBean;
 import com.atex.onecms.content.Content;
+import com.atex.onecms.content.ContentId;
 import com.atex.onecms.content.ContentManager;
 import com.atex.onecms.content.ContentWrite;
 import com.atex.onecms.content.ContentWriteBuilder;
@@ -62,17 +63,17 @@ public class CollectionPreStore implements LifecyclePreStore<Object, Object> {
             }
 
             // Detect newly added items
-            List<String> newIds = bean.getContentIds();
-            List<String> existingIds = null;
+            List<ContentId> newIds = bean.getContents();
+            List<ContentId> existingIds = null;
             if (existing != null) {
                 Object existingData = existing.getContentData();
                 if (existingData instanceof DamCollectionAspectBean existingBean) {
-                    existingIds = existingBean.getContentIds();
+                    existingIds = existingBean.getContents();
                 }
             }
 
             if (newIds != null && !newIds.isEmpty()) {
-                List<String> addedIds = new ArrayList<>(newIds);
+                List<ContentId> addedIds = new ArrayList<>(newIds);
                 if (existingIds != null) {
                     addedIds.removeAll(existingIds);
                 }

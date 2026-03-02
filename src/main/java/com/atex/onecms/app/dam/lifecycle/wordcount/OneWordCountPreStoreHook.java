@@ -2,6 +2,7 @@ package com.atex.onecms.app.dam.lifecycle.wordcount;
 
 import com.atex.onecms.app.dam.standard.aspects.OneArticleBean;
 import com.atex.onecms.app.dam.standard.aspects.OneContentBean;
+import com.atex.plugins.structured.text.StructuredText;
 import com.atex.onecms.content.Content;
 import com.atex.onecms.content.ContentWrite;
 import com.atex.onecms.content.ContentWriteBuilder;
@@ -30,13 +31,17 @@ public class OneWordCountPreStoreHook implements LifecyclePreStore<Object, Objec
         }
 
         try {
-            int wordCount = countWords(bean.getBody());
+            int wordCount = countWords(extractText(bean.getBody()));
             bean.setWords(wordCount);
             return ContentWriteBuilder.from(input).mainAspectData(bean).build();
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Error counting words", e);
             return input;
         }
+    }
+
+    static String extractText(StructuredText st) {
+        return st != null ? st.getText() : null;
     }
 
     static int countWords(String html) {

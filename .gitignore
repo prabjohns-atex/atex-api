@@ -38,3 +38,23 @@ out/
 
 ### Claude Code ###
 .claude/
+
+### Symlinks to reference codebases ###
+/polopoly
+/gong
+/adm-content-service
+/adm-starterkit
+/onecms-lib
+/onecms-widgets
+/reporter-tool
+/mytype-new
+/copyfit
+/module-pseries
+/structured-text
+
+### Analysis docs (generated) ###
+IMPLEMENTATION_STATUS.md
+MISSING_FUNCTIONS.md
+MISSING_TL_DR.md
+
+/structured-text/

@@ -28,7 +28,12 @@
       "WebSearch",
       "WebFetch",
       "WebFetch(domain:central.sonatype.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(export PATH=*)",
+      "Bash(export JAVA_HOME=/c/opt/java/temurin-21.0.2 && export PATH=\"/c/opt/java/temurin-21.0.2/bin:$PATH\" && cd /c/Users/peter/projects/desk-api && ./gradlew compileJava -Xlint:deprecation 2>&1)",
+      "Bash(export JAVA_HOME=/c/opt/java/temurin-21.0.2 && export PATH=\"/c/opt/java/temurin-21.0.2/bin:$PATH\" && cd /c/Users/peter/projects/desk-api && ./gradlew --stop 2>&1)",
+      "Bash(JAVA_HOME=\"C:/Users/peter/.jdks/openjdk-25.0.2\" ./gradlew compileJava:*)",
+      "Bash(JAVA_HOME=\"C:/Users/peter/.jdks/openjdk-25.0.2\" timeout 60 ./gradlew bootRun:*)"
     ]
   }
 }

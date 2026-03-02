@@ -1,6 +1,7 @@
 package com.atex.onecms.app.dam.lifecycle.charcount;
 
 import com.atex.onecms.app.dam.standard.aspects.OneArticleBean;
+import com.atex.plugins.structured.text.StructuredText;
 import com.atex.onecms.content.Content;
 import com.atex.onecms.content.ContentWrite;
 import com.atex.onecms.content.ContentWriteBuilder;
@@ -29,7 +30,8 @@ public class OneCharCountPreStoreHook implements LifecyclePreStore<Object, Objec
         }
 
         try {
-            int charCount = countChars(bean.getBody());
+            StructuredText bodyText = bean.getBody();
+            int charCount = countChars(bodyText != null ? bodyText.getText() : null);
             bean.setChars(charCount);
             return ContentWriteBuilder.from(input).mainAspectData(bean).build();
         } catch (Exception e) {
