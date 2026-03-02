@@ -1,3 +1,60 @@
 {
-  "statuses": []
+  // Web workflow statuses
+  // First status is used as default for new content
+  "statuses": [
+    {
+      "statusID": "draft",
+      "name": "Draft",
+      "color": "#FFFF33",
+      "attributes": [],
+      "next": ["private", "ready"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "ready",
+      "name": "Ready",
+      "color": "#F44124",
+      "attributes": [],
+      "next": ["draft", "private"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "private",
+      "name": "Private",
+      "color": "#CC00FF",
+      "attributes": [],
+      "next": ["ready"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "updated",
+      "name": "Updated",
+      "color": "#66FF33",
+      "attributes": [],
+      "next": [],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "published",
+      "name": "Published",
+      "color": "#66FF33",
+      "attributes": [],
+      "next": ["updated"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "unpublished",
+      "name": "Unpublished",
+      "color": "#F47E24",
+      "attributes": [],
+      "next": [],
+      "users": [],
+      "entryConditions": []
+    }
+  ]
 }

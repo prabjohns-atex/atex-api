@@ -57,6 +57,12 @@ public class BuiltInHookRegistrar {
     private static final String DAM_AUDIO = "com.atex.onecms.app.dam.standard.aspects.DamAudioAspectBean";
     private static final String DAM_COLLECTION = "com.atex.onecms.app.dam.standard.aspects.DamCollectionAspectBean";
 
+    // Input template / _type names (used by REST API clients)
+    private static final String ONECMS_ARTICLE = "atex.onecms.article";
+    private static final String ONECMS_IMAGE = "atex.onecms.image";
+    private static final String ONECMS_AUDIO = "atex.onecms.audio";
+    private static final String ONECMS_COLLECTION = "atex.onecms.collection";
+
     private final LocalContentManager contentManager;
     private final PartitionProperties partitionProperties;
 
@@ -90,7 +96,7 @@ public class BuiltInHookRegistrar {
 
         // --- Image types (matching callbacks.xml order) ---
         // damimage.prestore → dam.partition → dam.workflow → dam.secparent → dam.addengagement
-        for (String type : new String[]{IMAGE, DAM_IMAGE, ONE_IMAGE}) {
+        for (String type : new String[]{IMAGE, DAM_IMAGE, ONE_IMAGE, ONECMS_IMAGE}) {
             contentManager.registerPreStoreHook(type, imageHook);
             contentManager.registerPreStoreHook(type, partitionHook);
             contentManager.registerPreStoreHook(type, workflowHook);
@@ -104,7 +110,7 @@ public class BuiltInHookRegistrar {
 
         // --- Article types (matching callbacks.xml order) ---
         // dam.partition → dam.workflow → dam.wordcount → dam.secparent → dam.addengagement
-        for (String type : new String[]{ARTICLE, DAM_ARTICLE, ONE_ARTICLE}) {
+        for (String type : new String[]{ARTICLE, DAM_ARTICLE, ONE_ARTICLE, ONECMS_ARTICLE}) {
             contentManager.registerPreStoreHook(type, partitionHook);
             contentManager.registerPreStoreHook(type, workflowHook);
             contentManager.registerPreStoreHook(type, wordCountHook);
@@ -119,16 +125,22 @@ public class BuiltInHookRegistrar {
         contentManager.registerPreStoreHook(WIRE_ARTICLE, charCountHook);
 
         // --- Audio types ---
-        contentManager.registerPreStoreHook(DAM_AUDIO, new DamAudioPreStoreHook());
-        contentManager.registerPreStoreHook(DAM_AUDIO, partitionHook);
-        contentManager.registerPreStoreHook(DAM_AUDIO, workflowHook);
-        contentManager.registerPreStoreHook(DAM_AUDIO, engagementHook);
+        DamAudioPreStoreHook audioHook = new DamAudioPreStoreHook();
+        for (String type : new String[]{DAM_AUDIO, ONECMS_AUDIO}) {
+            contentManager.registerPreStoreHook(type, audioHook);
+            contentManager.registerPreStoreHook(type, partitionHook);
+            contentManager.registerPreStoreHook(type, workflowHook);
+            contentManager.registerPreStoreHook(type, engagementHook);
+        }
 
         // --- Collection types ---
-        contentManager.registerPreStoreHook(DAM_COLLECTION, new CollectionPreStore());
-        contentManager.registerPreStoreHook(DAM_COLLECTION, partitionHook);
-        contentManager.registerPreStoreHook(DAM_COLLECTION, workflowHook);
-        contentManager.registerPreStoreHook(DAM_COLLECTION, engagementHook);
+        CollectionPreStore collectionHook = new CollectionPreStore();
+        for (String type : new String[]{DAM_COLLECTION, ONECMS_COLLECTION}) {
+            contentManager.registerPreStoreHook(type, collectionHook);
+            contentManager.registerPreStoreHook(type, partitionHook);
+            contentManager.registerPreStoreHook(type, workflowHook);
+            contentManager.registerPreStoreHook(type, engagementHook);
+        }
 
         LOG.info("Built-in pre-store hooks registered for "
             + "Image, WireImage, Article, WireArticle, Audio, Collection types "

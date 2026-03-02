@@ -523,6 +523,140 @@ public class LocalContentManager implements ContentManager {
         return resultDto;
     }
 
+    // --- DTO-level create/update with hooks ---
+
+    /**
+     * Create content from DTO, running all pre-store hooks.
+     * Used by ContentController as an alternative to contentService.createContent()
+     * which bypasses hooks.
+     */
+    @SuppressWarnings("unchecked")
+    public ContentResultDto createContentFromDto(ContentWriteDto writeDto, String userId)
+            throws CallbackException {
+        ContentWrite<Object> write = dtoToContentWrite(writeDto);
+        Subject subject = new Subject(userId, null);
+
+        // Run pre-store hooks (this is the whole point)
+        ContentWrite<Object> processed = runPreStoreHooks(write, null, subject);
+
+        // Convert back to DTO and delegate to ContentService
+        ContentWriteDto processedDto = contentWriteToDto(processed);
+        ContentResultDto result = contentService.createContent(processedDto, userId);
+
+        // Record change event
+        ContentVersionId vid = IdUtil.fromVersionedString(result.getVersion());
+        recordChange("CREATE", result, vid, userId);
+
+        return result;
+    }
+
+    /**
+     * Update content from DTO, running all pre-store hooks.
+     * Used by ContentController as an alternative to contentService.updateContent()
+     * which bypasses hooks.
+     *
+     * Merges existing aspects from the current version into the update — aspects
+     * not included in the update DTO are carried forward from the previous version.
+     * This matches the reference OneCMS behavior.
+     */
+    @SuppressWarnings("unchecked")
+    public Optional<ContentResultDto> updateContentFromDto(String delegationId, String key,
+            ContentWriteDto writeDto, String userId) throws CallbackException {
+        ContentId contentId = new ContentId(delegationId, key);
+        ContentWrite<Object> write = dtoToContentWrite(writeDto);
+        Subject subject = new Subject(userId, null);
+
+        // Fetch existing content for pre-store hooks and aspect merging
+        Content<Object> existing = null;
+        try {
+            ContentVersionId resolved = resolve(contentId, subject);
+            if (resolved != null) {
+                ContentResult<Object> existingResult = get(
+                    resolved, null, Object.class, null, subject);
+                if (existingResult.getStatus().isSuccess()) {
+                    existing = existingResult.getContent();
+                }
+            }
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Failed to fetch existing content for hooks", e);
+        }
+
+        // Merge existing aspects into the write — carry forward aspects not in the update
+        if (existing != null) {
+            write = mergeExistingAspects(write, existing);
+        }
+
+        // Run pre-store hooks
+        ContentWrite<Object> processed = runPreStoreHooks(write, existing, subject);
+
+        // Convert back to DTO and delegate to ContentService
+        ContentWriteDto processedDto = contentWriteToDto(processed);
+        Optional<ContentResultDto> result = contentService.updateContent(
+            delegationId, key, processedDto, userId);
+
+        // Record change event
+        result.ifPresent(r -> {
+            ContentVersionId vid = IdUtil.fromVersionedString(r.getVersion());
+            recordChange("UPDATE", r, vid, userId);
+        });
+
+        return result;
+    }
+
+    /**
+     * Merge existing aspects into a ContentWrite. Aspects from the existing content
+     * that are NOT present in the write are carried forward.
+     */
+    @SuppressWarnings("unchecked")
+    private ContentWrite<Object> mergeExistingAspects(ContentWrite<Object> write,
+                                                       Content<Object> existing) {
+        boolean needsMerge = false;
+        for (Aspect<?> existingAspect : existing.getAspects()) {
+            if (write.getAspect(existingAspect.getName()) == null) {
+                needsMerge = true;
+                break;
+            }
+        }
+        if (!needsMerge) return write;
+
+        ContentWriteBuilder<Object> builder = ContentWriteBuilder.from(write);
+        for (Aspect<?> existingAspect : existing.getAspects()) {
+            if (write.getAspect(existingAspect.getName()) == null) {
+                builder.aspect((Aspect) existingAspect);
+            }
+        }
+        return builder.build();
+    }
+
+    /**
+     * Convert a ContentWriteDto to a ContentWrite for hook processing.
+     */
+    @SuppressWarnings("unchecked")
+    private ContentWrite<Object> dtoToContentWrite(ContentWriteDto writeDto) {
+        ContentWriteBuilder<Object> builder = new ContentWriteBuilder<>();
+
+        if (writeDto.getAspects() != null) {
+            for (Map.Entry<String, AspectDto> entry : writeDto.getAspects().entrySet()) {
+                String name = entry.getKey();
+                AspectDto a = entry.getValue();
+
+                if ("contentData".equals(name)) {
+                    Map<String, Object> data = a.getData();
+                    builder.mainAspectData(data);
+                    if (data != null && data.containsKey("_type")) {
+                        builder.type((String) data.get("_type"));
+                    }
+                } else {
+                    if (a.getData() != null) {
+                        builder.aspect(name, a.getData());
+                    }
+                }
+            }
+        }
+
+        return builder.build();
+    }
+
     // --- Change feed recording ---
 
     private void recordChange(String eventType, ContentResultDto result,

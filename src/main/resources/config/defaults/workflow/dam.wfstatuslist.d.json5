@@ -1,3 +1,105 @@
 {
-  "statuses": []
+  // Content/print workflow statuses
+  // First status is used as default for new content
+  "statuses": [
+    {
+      "statusID": "private",
+      "name": "Private",
+      "color": "#CC00FF",
+      "attributes": [],
+      "next": ["review", "reporter", "editPackage", "proofPost", "printFirst", "digitalLove", "undated", "finished"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "processing",
+      "name": "Processing",
+      "color": "#bec411",
+      "attributes": [],
+      "next": [],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "failed",
+      "name": "Normalisation Failed",
+      "color": "#9e1f1f",
+      "attributes": [],
+      "next": [],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "review",
+      "name": "Review",
+      "color": "#898181",
+      "attributes": [],
+      "next": ["review", "reporter", "editPackage", "proofPost", "printFirst", "digitalLove", "undated", "finished"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "reporter",
+      "name": "Reporter",
+      "color": "#FF3333",
+      "attributes": [],
+      "next": ["review", "reporter", "editPackage", "proofPost", "printFirst", "digitalLove", "undated", "finished"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "editPackage",
+      "name": "Edit & package",
+      "color": "#FF9900",
+      "attributes": [],
+      "next": ["review", "reporter", "editPackage", "proofPost", "printFirst", "digitalLove", "undated", "finished"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "proofPost",
+      "name": "Proof & post",
+      "color": "#002366",
+      "attributes": [],
+      "next": ["review", "reporter", "editPackage", "proofPost", "printFirst", "digitalLove", "undated", "finished"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "digitalLove",
+      "name": "Digital love",
+      "color": "#9933FF",
+      "attributes": [],
+      "next": ["review", "reporter", "editPackage", "proofPost", "printFirst", "digitalLove", "undated", "finished"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "printFirst",
+      "name": "Print first",
+      "color": "#27E8E8",
+      "attributes": [],
+      "next": ["review", "reporter", "editPackage", "proofPost", "printFirst", "digitalLove", "undated", "finished"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "undated",
+      "name": "Undated",
+      "color": "#000000",
+      "attributes": [],
+      "next": ["review", "reporter", "editPackage", "proofPost", "printFirst", "digitalLove", "undated", "finished"],
+      "users": [],
+      "entryConditions": []
+    },
+    {
+      "statusID": "finished",
+      "name": "Finished",
+      "color": "#66FF33",
+      "attributes": [],
+      "next": [],
+      "users": [],
+      "entryConditions": []
+    }
+  ]
 }

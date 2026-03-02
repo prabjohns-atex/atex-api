@@ -5,12 +5,14 @@ import com.atex.desk.api.dto.ContentHistoryDto;
 import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ContentWriteDto;
 import com.atex.desk.api.dto.ErrorResponseDto;
+import com.atex.desk.api.onecms.LocalContentManager;
 import com.atex.desk.api.service.ContentService;
 import com.atex.onecms.content.ContentManager;
 import com.atex.onecms.content.ContentResult;
 import com.atex.onecms.content.ContentVersionId;
 import com.atex.onecms.content.IdUtil;
 import com.atex.onecms.content.Subject;
+import com.atex.onecms.content.callback.CallbackException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -49,14 +51,17 @@ public class ContentController
     private final ContentService contentService;
     private final ConfigurationService configurationService;
     private final ContentManager contentManager;
+    private final LocalContentManager localContentManager;
 
     public ContentController(ContentService contentService,
                               ConfigurationService configurationService,
-                              @Nullable ContentManager contentManager)
+                              @Nullable ContentManager contentManager,
+                              @Nullable LocalContentManager localContentManager)
     {
         this.contentService = contentService;
         this.configurationService = configurationService;
         this.contentManager = contentManager;
+        this.localContentManager = localContentManager;
     }
 
     /**
@@ -296,10 +301,22 @@ public class ContentController
                                             HttpServletRequest request)
     {
         String userId = resolveUserId(request);
-        ContentResultDto result = contentService.createContent(write, userId);
-        return ResponseEntity.created(URI.create("/content/contentid/" + result.getVersion()))
-            .eTag(result.getVersion())
-            .body(result);
+        try {
+            ContentResultDto result;
+            if (localContentManager != null) {
+                // Route through LocalContentManager to run pre-store hooks
+                result = localContentManager.createContentFromDto(write, userId);
+            } else {
+                result = contentService.createContent(write, userId);
+            }
+            return ResponseEntity.created(URI.create("/content/contentid/" + result.getVersion()))
+                .eTag(result.getVersion())
+                .body(result);
+        } catch (CallbackException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Pre-store hook failed: " + e.getMessage()));
+        }
     }
 
     /**
@@ -356,13 +373,25 @@ public class ContentController
         }
 
         String userId = resolveUserId(request);
-        Optional<ContentResultDto> result = contentService.updateContent(parts[0], parts[1], write, userId);
-        return result
-            .<ResponseEntity<?>>map(r -> ResponseEntity.ok()
-                .eTag(r.getVersion())
-                .location(URI.create("/content/contentid/" + r.getVersion()))
-                .body(r))
-            .orElseGet(() -> notFound("Content not found"));
+        try {
+            Optional<ContentResultDto> result;
+            if (localContentManager != null) {
+                // Route through LocalContentManager to run pre-store hooks
+                result = localContentManager.updateContentFromDto(parts[0], parts[1], write, userId);
+            } else {
+                result = contentService.updateContent(parts[0], parts[1], write, userId);
+            }
+            return result
+                .<ResponseEntity<?>>map(r -> ResponseEntity.ok()
+                    .eTag(r.getVersion())
+                    .location(URI.create("/content/contentid/" + r.getVersion()))
+                    .body(r))
+                .orElseGet(() -> notFound("Content not found"));
+        } catch (CallbackException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Pre-store hook failed: " + e.getMessage()));
+        }
     }
 
     /**

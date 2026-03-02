@@ -89,12 +89,19 @@ public class PasswordService
         {
             MessageDigest md = MessageDigest.getInstance("SHA-1");
             md.update(OLDSHA_SECRET);
-            md.update(password.getBytes(StandardCharsets.UTF_8));
+            // Use platform default encoding to match original IdGenerator.scrambleId()
+            md.update(password.getBytes());
             byte[] digest = md.digest();
+            // XOR-fold 20-byte SHA-1 digest into 8 bytes (matches IdGenerator.compressByteArray)
+            byte[] folded = new byte[8];
+            for (int i = 0; i < digest.length; i++)
+            {
+                folded[i % 8] ^= digest[i];
+            }
             StringBuilder sb = new StringBuilder(16);
             for (int i = 0; i < 8; i++)
             {
-                sb.append(String.format("%02x", digest[i]));
+                sb.append(String.format("%02x", folded[i]));
             }
             return sb.toString();
         }
