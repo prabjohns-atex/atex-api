@@ -123,69 +123,44 @@ def desk_already_has(desk_token, ext_id):
         return False
 
 
-def discover_external_ids_from_reference(ref_token, known_ids):
+def load_external_ids():
     """
-    Use the reference server's search or direct external ID list.
-    Since we don't have direct DB access, we'll try fetching a known list
-    of external IDs from the reference server. If a list file exists, use that.
-    Otherwise, we scan common prefixes.
+    Load external IDs from scripts/external-ids.txt (generated from MySQL).
+
+    File format is tab-delimited: externalid\\tmajor\\tminor
+    Generated via:
+        docker exec adm-mpp-db-server-1 mysql -u desk -pdesk desk -B -N \\
+            -e "SELECT externalid, major, minor FROM externalids ORDER BY externalid" \\
+            > scripts/external-ids.txt
+
+    Returns list of (externalid, policy_id) tuples where policy_id is "policy:major.minor".
     """
-    # Try loading from a local file first (pre-extracted from DB)
+    ids_file = os.path.join(os.path.dirname(__file__), "external-ids.txt")
+    entries = []
     try:
-        with open("scripts/external-ids.txt", "r") as f:
-            ids = [line.strip() for line in f if line.strip() and not line.startswith("#")]
-            if ids:
-                return ids
+        with open(ids_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split("\t")
+                if len(parts) >= 3:
+                    ext_id = parts[0]
+                    major = parts[1]
+                    minor = parts[2]
+                    policy_id = f"policy:{major}.{minor}"
+                    entries.append((ext_id, policy_id))
+                elif len(parts) == 1:
+                    # Plain external ID (no major/minor)
+                    entries.append((parts[0], None))
     except FileNotFoundError:
-        pass
-
-    print(f"{C.WARN}No scripts/external-ids.txt found.{C.RESET}")
-    print(f"{C.INFO}To generate, run against the reference DB:{C.RESET}")
-    print(f"{C.DIM}  mysql -h localhost -P 33306 -u desk -pdesk desk "
-          f"-e \"SELECT value FROM idaliases ia JOIN aliases a ON ia.aliasid=a.aliasid "
-          f"WHERE a.name='externalId' ORDER BY value\" -B -N > scripts/external-ids.txt{C.RESET}")
-    print()
-
-    # Fallback: try scanning common prefixes via the reference API
-    prefixes = [
-        "p.onecms.", "p.ContentType.", "p.Nosql", "p.DefaultTemplate",
-        "atex.configuration.desk.", "atex.dam.", "atex.plugins.",
-        "dam.wfstatuslist.", "dam.webstatuslist.",
-        "com.atex.onecms.", "com.polopoly.",
-        "plugins.", "dimension.",
-    ]
-
-    discovered = []
-    headers = {"X-Auth-Token": ref_token}
-
-    for prefix in prefixes:
-        # Try a few known IDs under each prefix
-        for suffix in ["", "d", "configuration", "standard", "default"]:
-            test_id = prefix + suffix if suffix else prefix.rstrip(".")
-            try:
-                resp = requests.get(
-                    f"{REFERENCE}/content/externalid/{test_id}",
-                    headers=headers,
-                    allow_redirects=True,
-                    timeout=10
-                )
-                if resp.status_code == 200:
-                    discovered.append(test_id)
-            except Exception:
-                pass
-
-    return discovered
-
-
-def extract_policy_id(content_json):
-    """
-    Extract the policy:X.Y ID from the content response.
-    The 'id' field in the response is in format 'delegationId:key',
-    e.g. 'policy:2.184'.
-    """
-    if content_json and "id" in content_json:
-        return content_json["id"]
-    return None
+        print(f"{C.WARN}No scripts/external-ids.txt found.{C.RESET}")
+        print(f"{C.INFO}To generate, run:{C.RESET}")
+        print(f'{C.DIM}  docker exec adm-mpp-db-server-1 mysql -u desk -pdesk desk -B -N \\'
+              f'\n    -e "SELECT externalid, major, minor FROM externalids ORDER BY externalid" \\'
+              f"\n    > scripts/external-ids.txt{C.RESET}")
+        print()
+    return entries
 
 
 def migrate_one(desk_token, ext_id, content_json, policy_id, dry_run=False, verbose=False):
@@ -266,70 +241,63 @@ def verify_one(desk_token, ext_id, policy_id, verbose=False):
 # Main commands
 # ---------------------------------------------------------------------------
 
+def filter_entries(entries, args):
+    """Apply common filters (--filter, --skip-sections, config skip) to entry list."""
+    if args.filter:
+        entries = [(eid, pid) for eid, pid in entries if args.filter in eid]
+
+    if args.skip_sections:
+        before = len(entries)
+        entries = [(eid, pid) for eid, pid in entries if not eid.startswith("section")]
+        skipped = before - len(entries)
+        if skipped:
+            print(f"{C.DIM}Skipped {skipped} section entries{C.RESET}")
+
+    if CONFIG_EXTERNAL_IDS:
+        before = len(entries)
+        entries = [(eid, pid) for eid, pid in entries if eid not in CONFIG_EXTERNAL_IDS]
+        skipped_cfg = before - len(entries)
+        if skipped_cfg:
+            print(f"{C.DIM}Skipped {skipped_cfg} config entries (served by ConfigurationService){C.RESET}")
+
+    return entries
+
+
 def cmd_discover(args):
     """Discover what needs migrating."""
     print(f"{C.BOLD}Discovering legacy content...{C.RESET}")
     print()
 
-    ref_token = login(REFERENCE)
     desk_token = login(DESK_API)
 
-    ext_ids = discover_external_ids_from_reference(ref_token, set())
-    if not ext_ids:
-        print(f"{C.WARN}No external IDs found. See instructions above.{C.RESET}")
+    entries = load_external_ids()
+    if not entries:
         return
 
-    # Filter
-    if args.filter:
-        ext_ids = [eid for eid in ext_ids if args.filter in eid]
-
-    if args.skip_sections:
-        before = len(ext_ids)
-        ext_ids = [eid for eid in ext_ids if not eid.startswith("section")]
-        print(f"{C.DIM}Skipped {before - len(ext_ids)} section entries{C.RESET}")
-
-    # Skip IDs already served by ConfigurationService (from config-mapping.txt)
-    if CONFIG_EXTERNAL_IDS:
-        before = len(ext_ids)
-        ext_ids = [eid for eid in ext_ids if eid not in CONFIG_EXTERNAL_IDS]
-        skipped_cfg = before - len(ext_ids)
-        if skipped_cfg:
-            print(f"{C.DIM}Skipped {skipped_cfg} config entries (served by ConfigurationService){C.RESET}")
-
-    print(f"Found {len(ext_ids)} external IDs to check")
+    entries = filter_entries(entries, args)
+    print(f"Found {len(entries)} external IDs to check")
     print()
 
     needs_migration = []
     already_available = []
-    not_on_ref = []
 
-    for i, ext_id in enumerate(ext_ids):
+    for i, (ext_id, policy_id) in enumerate(entries):
         if (i + 1) % 50 == 0:
-            print(f"{C.DIM}  Checked {i + 1}/{len(ext_ids)}...{C.RESET}")
+            print(f"{C.DIM}  Checked {i + 1}/{len(entries)}...{C.RESET}")
 
-        # Check if desk-api already has it
         if desk_already_has(desk_token, ext_id):
             already_available.append(ext_id)
-            continue
-
-        # Check if reference has it
-        resp = get_content_by_external_id(REFERENCE, ref_token, ext_id)
-        if resp.status_code == 200:
-            policy_id = extract_policy_id(resp.json())
-            needs_migration.append((ext_id, policy_id))
         else:
-            not_on_ref.append(ext_id)
+            needs_migration.append((ext_id, policy_id))
 
     print()
     print(f"{C.BOLD}Results:{C.RESET}")
     print(f"  {C.OK}Already available on desk-api: {len(already_available)}{C.RESET}")
     print(f"  {C.WARN}Needs migration: {len(needs_migration)}{C.RESET}")
-    print(f"  {C.DIM}Not found on reference: {len(not_on_ref)}{C.RESET}")
 
     if needs_migration and args.verbose:
         print()
         print(f"{C.BOLD}Items needing migration:{C.RESET}")
-        # Group by prefix
         prefixes = {}
         for ext_id, policy_id in needs_migration:
             prefix = ext_id.split(".")[0] if "." in ext_id else ext_id.split(":")[0]
@@ -338,11 +306,10 @@ def cmd_discover(args):
         for prefix in sorted(prefixes.keys()):
             items = prefixes[prefix]
             print(f"  {prefix}: {len(items)}")
-            if args.verbose:
-                for item in items[:5]:
-                    print(f"    {C.DIM}{item}{C.RESET}")
-                if len(items) > 5:
-                    print(f"    {C.DIM}... and {len(items) - 5} more{C.RESET}")
+            for item in items[:5]:
+                print(f"    {C.DIM}{item}{C.RESET}")
+            if len(items) > 5:
+                print(f"    {C.DIM}... and {len(items) - 5} more{C.RESET}")
 
 
 def cmd_migrate(args):
@@ -355,33 +322,12 @@ def cmd_migrate(args):
     ref_token = login(REFERENCE)
     desk_token = login(DESK_API)
 
-    # Load external IDs
-    ext_ids = discover_external_ids_from_reference(ref_token, set())
-    if not ext_ids:
-        print(f"{C.WARN}No external IDs found. See instructions above.{C.RESET}")
+    entries = load_external_ids()
+    if not entries:
         return
 
-    # Filter
-    if args.filter:
-        ext_ids = [eid for eid in ext_ids if args.filter in eid]
-        print(f"Filtered to {len(ext_ids)} IDs matching '{args.filter}'")
-
-    if args.skip_sections:
-        before = len(ext_ids)
-        ext_ids = [eid for eid in ext_ids if not eid.startswith("section")]
-        skipped = before - len(ext_ids)
-        if skipped:
-            print(f"{C.DIM}Skipped {skipped} section entries{C.RESET}")
-
-    # Skip IDs already served by ConfigurationService (from config-mapping.txt)
-    if CONFIG_EXTERNAL_IDS:
-        before = len(ext_ids)
-        ext_ids = [eid for eid in ext_ids if eid not in CONFIG_EXTERNAL_IDS]
-        skipped_cfg = before - len(ext_ids)
-        if skipped_cfg:
-            print(f"{C.DIM}Skipped {skipped_cfg} config entries (served by ConfigurationService){C.RESET}")
-
-    print(f"Processing {len(ext_ids)} external IDs...")
+    entries = filter_entries(entries, args)
+    print(f"Processing {len(entries)} external IDs...")
     print()
 
     migrated = 0
@@ -389,10 +335,10 @@ def cmd_migrate(args):
     failed = 0
     not_found = 0
 
-    for i, ext_id in enumerate(ext_ids):
+    for i, (ext_id, policy_id) in enumerate(entries):
         # Progress
         if (i + 1) % 25 == 0 or i == 0:
-            print(f"{C.DIM}[{i + 1}/{len(ext_ids)}] "
+            print(f"{C.DIM}[{i + 1}/{len(entries)}] "
                   f"migrated={migrated} skipped={skipped} failed={failed}{C.RESET}")
 
         # Skip if desk-api already has it
@@ -417,7 +363,6 @@ def cmd_migrate(args):
             continue
 
         content_json = resp.json()
-        policy_id = extract_policy_id(content_json)
 
         if args.verbose:
             aspect_names = list(content_json.get("aspects", {}).keys())
@@ -449,38 +394,19 @@ def cmd_verify(args):
     print()
 
     desk_token = login(DESK_API)
-    ref_token = login(REFERENCE)
 
-    ext_ids = discover_external_ids_from_reference(ref_token, set())
-    if not ext_ids:
-        print(f"{C.WARN}No external IDs found.{C.RESET}")
+    entries = load_external_ids()
+    if not entries:
         return
 
-    if args.filter:
-        ext_ids = [eid for eid in ext_ids if args.filter in eid]
-
-    if args.skip_sections:
-        ext_ids = [eid for eid in ext_ids if not eid.startswith("section")]
-
-    # Skip IDs already served by ConfigurationService (from config-mapping.txt)
-    if CONFIG_EXTERNAL_IDS:
-        ext_ids = [eid for eid in ext_ids if eid not in CONFIG_EXTERNAL_IDS]
+    entries = filter_entries(entries, args)
 
     ok = 0
     fail = 0
 
-    for i, ext_id in enumerate(ext_ids):
+    for i, (ext_id, policy_id) in enumerate(entries):
         if (i + 1) % 50 == 0:
-            print(f"{C.DIM}  Verified {i + 1}/{len(ext_ids)}...{C.RESET}")
-
-        # Get the policy ID from reference for verification
-        policy_id = None
-        try:
-            resp = get_content_by_external_id(REFERENCE, ref_token, ext_id)
-            if resp.status_code == 200:
-                policy_id = extract_policy_id(resp.json())
-        except Exception:
-            pass
+            print(f"{C.DIM}  Verified {i + 1}/{len(entries)}...{C.RESET}")
 
         if verify_one(desk_token, ext_id, policy_id, verbose=args.verbose):
             ok += 1
