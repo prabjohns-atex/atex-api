@@ -1500,3 +1500,115 @@ Added `POST /admin/reindex/pause` and `POST /admin/reindex/resume` endpoints to 
 | `indexing/SolrIndexProcessor.java` | Respect `PAUSED` status in live indexer loop |
 | `application.properties` | Updated datasource, Solr URL, added error/docker settings |
 
+## Increment 21 — Legacy Polopoly Content Migration
+
+Implements migration of legacy Polopoly content from the reference OneCMS server into desk-api, with alias-based resolution so existing `policy:X.Y` references work without rewriting content data.
+
+### Problem
+
+desk-api only supports "new" OneCMS content in modern tables. Legacy Polopoly content lives in `externalids` and `component` tables served by the reference server. Clients call endpoints like `GET /content/externalid/p.onecms.DamTemplateList` which return 404 from desk-api. Content also cross-references other content via `contentid/policy:X.Y` strings in aspect data.
+
+### Architecture
+
+```
+Migration Script (scripts/migrate-legacy.py)
+  ├─ Discover: list external IDs from reference server
+  ├─ Fetch: GET /content/externalid/{id} from reference → content JSON + policy:X.Y ID
+  ├─ Migrate: POST /admin/migrate/content to desk-api
+  │    └─ Creates content + registers two aliases per item:
+  │         ├─ externalId: "p.onecms.DamTemplateList"
+  │         └─ policyId: "policy:2.184"
+  └─ Verify: check both aliases resolve on desk-api
+
+Runtime Resolution (fallback for unknown delegation IDs):
+  GET /content/contentid/policy:2.184
+    └─ ContentService.resolveWithFallback("policy:2.184")
+         ├─ 1. Try normal idtype lookup → "policy" not found
+         ├─ 2. Try policyId alias → finds onecms:abc123
+         └─ 3. Resolve onecms:abc123 normally → versioned ID
+```
+
+### Bug Fix: Alias Persistence
+
+`LocalContentManager.create()` extracted `SetAliasOperation` but **never persisted it**. Fixed by adding `persistAliases()` helper that iterates all `SetAliasOperation` entries after content creation/update and calls `contentService.createAlias()`.
+
+### ContentService Changes
+
+| Method | Description |
+|--------|-------------|
+| `createAlias(delegationId, key, aliasNamespace, aliasValue)` | Inserts into `idaliases` table via `ContentAliasRepository` |
+| `resolveByAlias(aliasNamespace, aliasValue)` | Single-namespace alias lookup → canonical content ID |
+| `resolveWithFallback(idString)` | 3-step resolution: normal idtype → policyId alias → externalId alias |
+
+### ContentController Changes
+
+All content endpoints (`getContent`, `getHistory`, `updateContent`, `deleteContent`) now fall back to `resolveWithFallback()` when standard resolution fails. This handles `policy:X.Y` content IDs transparently.
+
+### LocalContentManager Changes
+
+- `resolve(ContentId, String view, Subject)` — Added fallback to alias resolution for unknown delegation IDs
+- `create()` / `update()` — Added `persistAliases()` call after content creation to persist `SetAliasOperation` entries
+
+### Migration Controller
+
+`MigrationController` at `/admin/migrate`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/admin/migrate/content` | Create content with aspects + register aliases. Returns 409 if already migrated. |
+
+Request body:
+```json
+{
+  "aspects": { "contentData": {...}, ... },
+  "aliases": [
+    {"namespace": "externalId", "value": "p.onecms.DamTemplateList"},
+    {"namespace": "policyId", "value": "policy:2.184"}
+  ]
+}
+```
+
+### Migration Script
+
+`scripts/migrate-legacy.py` — Python script for batch migration:
+
+| Flag | Description |
+|------|-------------|
+| (default) | Full migration: discover → fetch → migrate |
+| `--discover` | List what needs migrating |
+| `--verify` | Verify migrated content is accessible |
+| `--dry-run` | Show what would happen |
+| `--skip-sections` | Skip 6400+ section entries |
+| `--filter PREFIX` | Only process IDs containing PREFIX |
+| `--verbose` | Show detailed output |
+
+Reads external ID list from `scripts/external-ids.txt` (pre-extracted from DB) or falls back to scanning common prefixes.
+
+### Data Changes
+
+- `data.sql` — Added `policyId` alias namespace: `INSERT IGNORE INTO aliases (name, created_by) VALUES ('policyId', '98')`
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `controller/MigrationController.java` | `/admin/migrate/content` REST endpoint |
+| `scripts/migrate-legacy.py` | Python migration script |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `service/ContentService.java` | Added `createAlias()`, `resolveByAlias()`, `resolveWithFallback()` |
+| `onecms/LocalContentManager.java` | Fixed alias persistence in `create()`/`update()`, added resolve fallback |
+| `controller/ContentController.java` | Added fallback resolution in `getContent`, `getHistory`, `updateContent`, `deleteContent` |
+| `data.sql` | Added `policyId` alias seed |
+| `config/OpenApiConfig.java` | Added `"Migration"` tag |
+
+### Design Notes
+
+- **No `policy` idtype**: Rather than creating a `policy` idtype (which would require mapping Polopoly's major/minor numbering), aliases provide a clean indirection layer
+- **Single-pass migration**: Content references (`contentid/policy:X.Y`) are kept as-is in aspect data — they resolve at runtime via the `policyId` alias fallback
+- **Idempotent**: Migration endpoint returns 409 if an alias already exists, making re-runs safe
+- **AuthConfig**: `/admin/*` pattern already covers the migration endpoint
+

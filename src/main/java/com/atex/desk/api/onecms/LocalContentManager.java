@@ -147,7 +147,21 @@ public class LocalContentManager implements ContentManager {
     public ContentVersionId resolve(ContentId id, String view, Subject subject) throws StorageException {
         try {
             Optional<String> resolved = contentService.resolve(id.getDelegationId(), id.getKey(), view);
-            return resolved.map(IdUtil::fromVersionedString).orElse(null);
+            if (resolved.isPresent()) {
+                return IdUtil.fromVersionedString(resolved.get());
+            }
+
+            // Fallback to alias resolution for unknown delegation IDs (e.g. policy:2.184)
+            String idString = IdUtil.toIdString(id);
+            Optional<String> canonical = contentService.resolveWithFallback(idString);
+            if (canonical.isPresent()) {
+                String[] canonParts = contentService.parseContentId(canonical.get());
+                String viewName = (view != null) ? view : SYSTEM_VIEW_LATEST;
+                resolved = contentService.resolve(canonParts[0], canonParts[1], viewName);
+                return resolved.map(IdUtil::fromVersionedString).orElse(null);
+            }
+
+            return null;
         } catch (Exception e) {
             throw new StorageException("Failed to resolve " + IdUtil.toIdString(id), e);
         }
@@ -259,8 +273,10 @@ public class LocalContentManager implements ContentManager {
 
             ContentResultDto result = contentService.createContent(writeDto, userId);
 
-            ContentVersionId vid = IdUtil.fromVersionedString(result.getVersion());
+            // Persist alias operations
+            persistAliases(processed, result);
 
+            ContentVersionId vid = IdUtil.fromVersionedString(result.getVersion());
 
             // Record change event (fire-and-forget)
             recordChange("CREATE", result, vid, userId);
@@ -305,8 +321,10 @@ public class LocalContentManager implements ContentManager {
                 return ContentResult.of(null, Status.NOT_FOUND);
             }
 
-            ContentVersionId vid = IdUtil.fromVersionedString(result.get().getVersion());
+            // Persist alias operations
+            persistAliases(processed, result.get());
 
+            ContentVersionId vid = IdUtil.fromVersionedString(result.get().getVersion());
 
             // Record change event (fire-and-forget)
             recordChange("UPDATE", result.get(), vid, userId);
@@ -867,6 +885,27 @@ public class LocalContentManager implements ContentManager {
             current = typedHook.preStore(current, existing, ctx);
         }
         return current;
+    }
+
+    /**
+     * Persist all SetAliasOperation entries from a ContentWrite after content creation/update.
+     */
+    private void persistAliases(ContentWrite<?> write, ContentResultDto result) {
+        String[] idParts = contentService.parseContentId(result.getId());
+        String delegationId = idParts[0];
+        String key = idParts[1];
+
+        for (ContentOperation op : write.getOperations()) {
+            if (op instanceof SetAliasOperation aliasOp) {
+                try {
+                    contentService.createAlias(delegationId, key,
+                        aliasOp.getNamespace(), aliasOp.getAlias());
+                } catch (Exception e) {
+                    LOG.log(Level.WARNING, "Failed to persist alias: namespace="
+                        + aliasOp.getNamespace() + " value=" + aliasOp.getAlias(), e);
+                }
+            }
+        }
     }
 
     private String extractExternalId(ContentWrite<?> write) {

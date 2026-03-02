@@ -532,6 +532,89 @@ public class ContentService
         return updateContent(delegationId, key, write, userId);
     }
 
+    // --- Alias creation ---
+
+    /**
+     * Create an alias for a content item in the idaliases table.
+     * @param delegationId the idtype name (e.g. "onecms")
+     * @param key the content key
+     * @param aliasNamespace the alias namespace (e.g. "externalId", "policyId")
+     * @param aliasValue the alias value
+     */
+    @Transactional
+    public void createAlias(String delegationId, String key, String aliasNamespace, String aliasValue)
+    {
+        Integer idtype = resolveIdType(delegationId);
+        if (idtype == null)
+        {
+            throw new IllegalArgumentException("Unknown idtype: " + delegationId);
+        }
+
+        Alias alias = aliasRepository.findByName(aliasNamespace).orElse(null);
+        if (alias == null)
+        {
+            throw new IllegalArgumentException("Unknown alias namespace: " + aliasNamespace);
+        }
+
+        ContentAlias ca = new ContentAlias();
+        ca.setIdtype(idtype);
+        ca.setId(key);
+        ca.setAliasId(alias.getAliasId());
+        ca.setValue(aliasValue);
+        ca.setCreatedAt(Instant.now());
+        ca.setCreatedBy("system");
+        contentAliasRepository.save(ca);
+    }
+
+    /**
+     * Resolve a content ID by alias lookup. Tries the given alias namespace first,
+     * then falls back to other namespaces.
+     * @return the canonical unversioned content ID string (e.g. "onecms:key"), or empty
+     */
+    public Optional<String> resolveByAlias(String aliasNamespace, String aliasValue)
+    {
+        Optional<ContentAlias> alias = contentAliasRepository.findByAliasNameAndValue(aliasNamespace, aliasValue);
+        return alias.map(ca -> {
+            String delegationName = resolveIdTypeName(ca.getIdtype());
+            return formatContentId(delegationName, ca.getId());
+        });
+    }
+
+    /**
+     * Resolve a content ID string with fallback to alias lookup.
+     * 1. Try normal delegationId → idtype resolution
+     * 2. If idtype unknown, try policyId alias (for "policy:X.Y" IDs)
+     * 3. Try externalId alias as final fallback
+     * @return the canonical unversioned content ID string, or empty
+     */
+    public Optional<String> resolveWithFallback(String idString)
+    {
+        String[] parts = parseContentId(idString);
+        String delegationId = parts[0];
+        String key = parts[1];
+
+        // 1. Try normal resolution
+        Integer idtype = resolveIdType(delegationId);
+        if (idtype != null)
+        {
+            // Known idtype — resolve normally
+            Optional<String> resolved = resolve(delegationId, key);
+            if (resolved.isPresent()) return resolved;
+            // Content ID known but not found — don't fall through to aliases
+            return Optional.empty();
+        }
+
+        // 2. Unknown idtype — try policyId alias with the full ID string
+        Optional<String> byPolicyId = resolveByAlias("policyId", idString);
+        if (byPolicyId.isPresent()) return byPolicyId;
+
+        // 3. Try externalId alias as final fallback
+        Optional<String> byExternalId = resolveByAlias("externalId", idString);
+        if (byExternalId.isPresent()) return byExternalId;
+
+        return Optional.empty();
+    }
+
     // --- Internal helpers ---
 
     private Optional<ContentResultDto> buildContentResult(String delegationId, String key,

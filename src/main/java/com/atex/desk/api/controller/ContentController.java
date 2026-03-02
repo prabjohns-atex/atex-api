@@ -103,6 +103,18 @@ public class ContentController
         {
             String[] parts = contentService.parseContentId(id);
             Optional<String> versionedId = contentService.resolve(parts[0], parts[1]);
+
+            // Fallback to alias resolution for unknown delegation IDs (e.g. policy:2.184)
+            if (versionedId.isEmpty())
+            {
+                Optional<String> canonical = contentService.resolveWithFallback(id);
+                if (canonical.isPresent())
+                {
+                    String[] canonParts = contentService.parseContentId(canonical.get());
+                    versionedId = contentService.resolve(canonParts[0], canonParts[1]);
+                }
+            }
+
             return versionedId
                 .<ResponseEntity<?>>map(this::redirect)
                 .orElseGet(() -> notFound("Content not found"));
@@ -159,6 +171,18 @@ public class ContentController
 
         String[] parts = contentService.parseContentId(id);
         Optional<ContentHistoryDto> history = contentService.getHistory(parts[0], parts[1]);
+
+        // Fallback to alias resolution for unknown delegation IDs
+        if (history.isEmpty())
+        {
+            Optional<String> canonical = contentService.resolveWithFallback(id);
+            if (canonical.isPresent())
+            {
+                String[] canonParts = contentService.parseContentId(canonical.get());
+                history = contentService.getHistory(canonParts[0], canonParts[1]);
+            }
+        }
+
         return history
             .<ResponseEntity<?>>map(ResponseEntity::ok)
             .orElseGet(() -> notFound("Content not found"));
@@ -356,9 +380,24 @@ public class ContentController
         }
 
         String[] parts = contentService.parseContentId(id);
+        String delegationId = parts[0];
+        String key = parts[1];
+
+        // Fallback to alias resolution for unknown delegation IDs
+        Optional<String> currentVersion = contentService.getCurrentVersion(delegationId, key);
+        if (currentVersion.isEmpty())
+        {
+            Optional<String> canonical = contentService.resolveWithFallback(id);
+            if (canonical.isPresent())
+            {
+                String[] canonParts = contentService.parseContentId(canonical.get());
+                delegationId = canonParts[0];
+                key = canonParts[1];
+                currentVersion = contentService.getCurrentVersion(delegationId, key);
+            }
+        }
 
         // Validate If-Match against current version
-        Optional<String> currentVersion = contentService.getCurrentVersion(parts[0], parts[1]);
         if (currentVersion.isEmpty())
         {
             return notFound("Content not found");
@@ -377,9 +416,9 @@ public class ContentController
             Optional<ContentResultDto> result;
             if (localContentManager != null) {
                 // Route through LocalContentManager to run pre-store hooks
-                result = localContentManager.updateContentFromDto(parts[0], parts[1], write, userId);
+                result = localContentManager.updateContentFromDto(delegationId, key, write, userId);
             } else {
-                result = contentService.updateContent(parts[0], parts[1], write, userId);
+                result = contentService.updateContent(delegationId, key, write, userId);
             }
             return result
                 .<ResponseEntity<?>>map(r -> ResponseEntity.ok()
@@ -426,9 +465,24 @@ public class ContentController
         }
 
         String[] parts = contentService.parseContentId(id);
+        String delegationId = parts[0];
+        String key = parts[1];
+
+        // Fallback to alias resolution for unknown delegation IDs
+        Optional<String> currentVersion = contentService.getCurrentVersion(delegationId, key);
+        if (currentVersion.isEmpty())
+        {
+            Optional<String> canonical = contentService.resolveWithFallback(id);
+            if (canonical.isPresent())
+            {
+                String[] canonParts = contentService.parseContentId(canonical.get());
+                delegationId = canonParts[0];
+                key = canonParts[1];
+                currentVersion = contentService.getCurrentVersion(delegationId, key);
+            }
+        }
 
         // Validate If-Match against current version
-        Optional<String> currentVersion = contentService.getCurrentVersion(parts[0], parts[1]);
         if (currentVersion.isEmpty())
         {
             return notFound("Content not found");
@@ -443,7 +497,7 @@ public class ContentController
         }
 
         String userId = resolveUserId(request);
-        boolean deleted = contentService.deleteContent(parts[0], parts[1], userId);
+        boolean deleted = contentService.deleteContent(delegationId, key, userId);
         if (deleted)
         {
             return ResponseEntity.noContent().build();

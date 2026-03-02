@@ -18,6 +18,7 @@ INSERT IGNORE INTO `views` (`name`, `created_by`) VALUES ('p.public', '98');
 INSERT IGNORE INTO `views` (`name`, `created_by`) VALUES ('p.deleted', '98');
 
 INSERT IGNORE INTO `aliases` (`name`, `created_by`) VALUES ('externalId', '98');
+INSERT IGNORE INTO `aliases` (`name`, `created_by`) VALUES ('policyId', '98');
 
 INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('CREATE');
 INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('UPDATE');
