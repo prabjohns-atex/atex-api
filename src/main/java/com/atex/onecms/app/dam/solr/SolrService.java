@@ -447,7 +447,14 @@ public class SolrService extends SolrUtils {
                 if (prim.isBoolean()) {
                     doc.addField(field, prim.getAsBoolean());
                 } else if (prim.isNumber()) {
-                    doc.addField(field, prim.getAsNumber());
+                    // Convert Gson LazilyParsedNumber to a real Long/Double
+                    Number num = prim.getAsNumber();
+                    String numStr = num.toString();
+                    if (numStr.contains(".") || numStr.contains("e") || numStr.contains("E")) {
+                        doc.addField(field, num.doubleValue());
+                    } else {
+                        doc.addField(field, num.longValue());
+                    }
                 } else {
                     doc.addField(field, prim.getAsString());
                 }

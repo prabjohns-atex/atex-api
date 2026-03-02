@@ -1,5 +1,9 @@
--- ADM Content Service MySQL schema
--- Derived from adm-content-service sql.properties (mysql.cm_createTables)
+-- Baseline migration: ADM Content Service MySQL schema + default data
+-- Combined from schema.sql + data.sql (the state of all deployed databases)
+
+-- ============================================================================
+-- SCHEMA
+-- ============================================================================
 
 CREATE TABLE IF NOT EXISTS `idtype` (
     `id`         INTEGER AUTO_INCREMENT PRIMARY KEY NOT NULL,
@@ -223,22 +227,40 @@ CREATE TABLE IF NOT EXISTS `aclOwner` (
     KEY `aclOwner_principalId` (`principalId`)
 ) ENGINE = INNODB;
 
-CREATE TABLE IF NOT EXISTS `indexer_state` (
-    `indexer_id`      VARCHAR(64) PRIMARY KEY NOT NULL,
-    `job_type`        VARCHAR(32) NOT NULL,
-    `status`          VARCHAR(16) NOT NULL DEFAULT 'REQUESTED',
-    `last_cursor`     BIGINT NOT NULL DEFAULT 0,
-    `config`          JSON,
-    `total_items`     BIGINT,
-    `processed_items` BIGINT NOT NULL DEFAULT 0,
-    `error_count`     INT NOT NULL DEFAULT 0,
-    `error_message`   TEXT,
-    `locked_by`       VARCHAR(255),
-    `locked_at`       TIMESTAMP(3),
-    `started_at`      TIMESTAMP(3),
-    `created_at`      TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
-    `updated_at`      TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
-    KEY `indexer_state_job_type` (`job_type`),
-    KEY `indexer_state_status` (`status`)
-) ENGINE = INNODB;
+-- ============================================================================
+-- DEFAULT DATA
+-- ============================================================================
 
+INSERT IGNORE INTO `idtype` (`name`) VALUES ('onecms');
+INSERT IGNORE INTO `idtype` (`name`) VALUES ('draft');
+
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('deleted');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('created_at');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('created_by');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('insertParentId');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('securityParentId');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('objectType');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('inputTemplate');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('partition');
+
+INSERT IGNORE INTO `views` (`name`, `created_by`) VALUES ('p.latest', '98');
+INSERT IGNORE INTO `views` (`name`, `created_by`) VALUES ('p.public', '98');
+INSERT IGNORE INTO `views` (`name`, `created_by`) VALUES ('p.deleted', '98');
+
+INSERT IGNORE INTO `aliases` (`name`, `created_by`) VALUES ('externalId', '98');
+
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('CREATE');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('UPDATE');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('REMOVE');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('ASSIGN_VIEW');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('REMOVE_VIEW');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('SCHEDULED_PURGE_VERSION');
+INSERT IGNORE INTO `eventtypes` (`name`) VALUES ('PURGE_VERSION');
+
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('modifier');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('modificationTime');
+INSERT IGNORE INTO `attributes` (`name`) VALUES ('creationTime');
+
+-- Default user (OLDSHA hash of 'sysadmin' -- matches Polopoly default)
+INSERT IGNORE INTO `registeredusers` (`loginname`, `passwordhash`, `regtime`, `active`)
+VALUES ('sysadmin', 'bb40d977a94b02f2', 0, 1);

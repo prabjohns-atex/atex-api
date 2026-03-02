@@ -43,11 +43,10 @@ reporter-tool (legacy editorial UI)
 Collapses the existing multi-layer stack (Desk UI → Jersey → CmClient → OneCMS Server → Couchbase) into a single Spring Boot API talking directly to the ADM Content Service MySQL database.
 
 ### Configuration
-- **build.gradle** — MySQL (`mysql-connector-j`), Spring Data JPA, Spring Web MVC
-- **compose.yaml** — MySQL 8.0 container with `adm` database
-- **application.properties** — `ddl-auto=none`, `sql.init.mode=always`
-- **schema.sql** — Full MySQL DDL from ADM Content Service (16 tables)
-- **data.sql** — Default seed data (idtypes, attributes, views, aliases, eventtypes)
+- **build.gradle** — MySQL (`mysql-connector-j`), Spring Data JPA, Spring Web MVC, Flyway
+- **compose.yaml** — MySQL 8.0 container with `desk` database
+- **application.properties** — `ddl-auto=none`, Flyway baseline-on-migrate
+- **Database migrations** — Flyway-managed (see Increment 22)
 
 ### Entity Layer (12 entities)
 `com.atex.desk.api.entity` — JPA mappings for all ADM Content Service tables:
@@ -1512,9 +1511,9 @@ desk-api only supports "new" OneCMS content in modern tables. Legacy Polopoly co
 
 ```
 Migration Script (scripts/migrate-legacy.py)
-  ├─ Discover: list external IDs from reference server
-  ├─ Fetch: GET /content/externalid/{id} from reference → content JSON + policy:X.Y ID
-  ├─ Migrate: POST /admin/migrate/content to desk-api
+  ├─ Discover: list external IDs from scripts/external-ids.txt (pre-extracted from MySQL)
+  ├─ Fetch: GET /content/externalid/{id} from reference → content JSON
+  ├─ Migrate: POST /content to desk-api with SetAliasOperation operations
   │    └─ Creates content + registers two aliases per item:
   │         ├─ externalId: "p.onecms.DamTemplateList"
   │         └─ policyId: "policy:2.184"
@@ -1549,21 +1548,17 @@ All content endpoints (`getContent`, `getHistory`, `updateContent`, `deleteConte
 - `resolve(ContentId, String view, Subject)` — Added fallback to alias resolution for unknown delegation IDs
 - `create()` / `update()` — Added `persistAliases()` call after content creation to persist `SetAliasOperation` entries
 
-### Migration Controller
+### ContentWriteDto Operations
 
-`MigrationController` at `/admin/migrate`:
+`ContentWriteDto` now supports an `operations` list for `SetAliasOperation` entries. The standard `POST /content` endpoint handles both content creation and alias registration — no separate migration controller needed.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/admin/migrate/content` | Create content with aspects + register aliases. Returns 409 if already migrated. |
-
-Request body:
+Request body with operations:
 ```json
 {
   "aspects": { "contentData": {...}, ... },
-  "aliases": [
-    {"namespace": "externalId", "value": "p.onecms.DamTemplateList"},
-    {"namespace": "policyId", "value": "policy:2.184"}
+  "operations": [
+    {"type": "SetAliasOperation", "namespace": "externalId", "value": "p.onecms.DamTemplateList"},
+    {"type": "SetAliasOperation", "namespace": "policyId", "value": "policy:2.184"}
   ]
 }
 ```
@@ -1582,7 +1577,7 @@ Request body:
 | `--filter PREFIX` | Only process IDs containing PREFIX |
 | `--verbose` | Show detailed output |
 
-Reads external ID list from `scripts/external-ids.txt` (pre-extracted from DB) or falls back to scanning common prefixes.
+Reads external ID list from `scripts/external-ids.txt` (tab-delimited: `externalid\tmajor\tminor`, pre-extracted from MySQL). Skips entries already served by ConfigurationService (loaded from `scripts/config-mapping.txt`).
 
 ### Data Changes
 
@@ -1592,23 +1587,122 @@ Reads external ID list from `scripts/external-ids.txt` (pre-extracted from DB) o
 
 | File | Description |
 |------|-------------|
-| `controller/MigrationController.java` | `/admin/migrate/content` REST endpoint |
 | `scripts/migrate-legacy.py` | Python migration script |
+| `scripts/external-ids.txt` | Pre-extracted external IDs from MySQL (8369 entries) |
 
 ### Modified Files
 
 | File | Change |
 |------|--------|
 | `service/ContentService.java` | Added `createAlias()`, `resolveByAlias()`, `resolveWithFallback()` |
-| `onecms/LocalContentManager.java` | Fixed alias persistence in `create()`/`update()`, added resolve fallback |
+| `onecms/LocalContentManager.java` | Fixed alias persistence in `create()`/`update()`/`createContentFromDto()`, added resolve fallback, `dtoToContentWrite()` parses `SetAliasOperation` from DTO operations |
 | `controller/ContentController.java` | Added fallback resolution in `getContent`, `getHistory`, `updateContent`, `deleteContent` |
+| `dto/ContentWriteDto.java` | Added `operations` field with `OperationDto` inner class for `SetAliasOperation` |
 | `data.sql` | Added `policyId` alias seed |
-| `config/OpenApiConfig.java` | Added `"Migration"` tag |
 
 ### Design Notes
 
 - **No `policy` idtype**: Rather than creating a `policy` idtype (which would require mapping Polopoly's major/minor numbering), aliases provide a clean indirection layer
 - **Single-pass migration**: Content references (`contentid/policy:X.Y`) are kept as-is in aspect data — they resolve at runtime via the `policyId` alias fallback
-- **Idempotent**: Migration endpoint returns 409 if an alias already exists, making re-runs safe
-- **AuthConfig**: `/admin/*` pattern already covers the migration endpoint
+- **No dedicated migration endpoint**: Aliases are created via `SetAliasOperation` operations on standard `POST /content`, keeping the API surface clean
+- **Idempotent**: Migration script checks `desk_already_has()` before creating, skipping already-migrated content
+
+## Increment 22 — Flyway Database Migrations
+
+Replaces Spring's `spring.sql.init.mode=always` with Flyway for versioned, trackable database migrations. Enables schema evolution (adding columns, modifying tables, one-time data migrations) which the old `schema.sql` + `data.sql` approach couldn't handle.
+
+### Architecture
+
+```
+Flyway (runs before JPA/Hibernate)
+  ├─ V1__baseline.sql          — Legacy ADM/Polopoly schema (23 tables + seed data)
+  │    (baselined on existing DBs — skipped, only runs on fresh DBs)
+  └─ V2__DeskApiUpgrade.java   — Desk-api additions (Java migration for conditional logic)
+       ├─ ALTER TABLE registeredusers ADD COLUMN principalid
+       ├─ CREATE TABLE IF NOT EXISTS indexer_state
+       ├─ Seed: sysadmin principalid, DELETE eventtype, policyId alias, live indexer
+       └─ Backfill principalid from legacy Polopoly tables (if they exist)
+```
+
+### Migration Strategy
+
+**V1 = legacy baseline**: Represents the exact state of existing deployed databases (ADM Content Service + Polopoly user tables). On existing databases, Flyway marks this as "baseline" and skips it. On fresh databases, it runs to create all tables.
+
+**V2+ = desk-api additions**: Schema changes and data migrations specific to desk-api, layered on top of the legacy baseline. V2 is a Java migration (`BaseJavaMigration`) so it can use conditional logic (`INFORMATION_SCHEMA` checks, try/catch for missing legacy tables).
+
+**Baseline-on-migrate**: When Flyway encounters an existing database with no `flyway_schema_history` table, it creates the history table, marks V1 as already applied, and starts running from V2.
+
+### What's in V1 (baseline — legacy schema)
+
+23 `CREATE TABLE IF NOT EXISTS` statements for all ADM Content Service + Polopoly user tables:
+- ADM tables: `idtype`, `attributes`, `id`, `idversions`, `idattributes`, `views`, `idviews`, `aliases`, `idaliases`, `contents`, `aspects`, `aspectslocations`, `eventtypes`, `eventsqueue`, `changelist`, `changelistattributes`
+- Polopoly user tables: `registeredusers` (without `principalid`), `groupData`, `groupMember`, `groupOwner`, `aclData`, `acl`, `aclOwner`
+- Seed data: idtypes (onecms, draft), attributes, views, `externalId` alias, event types (CREATE through PURGE_VERSION), sysadmin user (without principalid)
+
+**Not in V1** (desk-api additions, handled by V2):
+- `registeredusers.principalid` column
+- `indexer_state` table
+- `policyId` alias namespace
+- `DELETE` event type
+
+### What's in V2 (desk-api upgrade)
+
+`com.atex.desk.api.migration.V2__DeskApiUpgrade` — Java migration:
+
+| Step | SQL | Guard |
+|------|-----|-------|
+| Add principalid column | `ALTER TABLE registeredusers ADD COLUMN principalid ...` | `INFORMATION_SCHEMA.COLUMNS` check |
+| Add principalid index | `ADD KEY registeredusers_principalid_IDX` | Same check |
+| Create indexer_state | Full DDL (14 columns) | `IF NOT EXISTS` |
+| Seed sysadmin principalid | `UPDATE ... WHERE principalid IS NULL` | NULL check |
+| Seed DELETE eventtype | `INSERT IGNORE INTO eventtypes` | `IGNORE` |
+| Seed policyId alias | `INSERT IGNORE INTO aliases` | `IGNORE` |
+| Seed live indexer | `INSERT IGNORE INTO indexer_state` | `IGNORE` |
+| Backfill principalid | JOIN component/attributeid/externalids | try/catch + table count check |
+
+### Configuration (`application.properties`)
+
+```properties
+# Flyway database migrations
+spring.flyway.baseline-on-migrate=true
+spring.flyway.baseline-version=1
+spring.flyway.locations=classpath:db/migration,classpath:com/atex/desk/api/migration
+```
+
+- `baseline-on-migrate=true` — existing DBs without `flyway_schema_history` get baselined
+- `baseline-version=1` — V1 is the baseline version (skipped on existing DBs)
+- `locations` — scans both SQL migrations and Java migration package
+
+### Deployment Scenarios
+
+| Scenario | V1 | V2 |
+|----------|----|----|
+| **Fresh database** | Runs (creates all tables + seeds) | Runs (adds principalid, indexer_state, seeds, skips backfill) |
+| **Existing legacy DB** | Baselined (skipped) | Runs (adds column, creates table, seeds, backfills from legacy) |
+| **Existing desk-api test DB** | Baselined (skipped) | Runs (IF NOT EXISTS/columnExists checks skip what's already there) |
+
+### Files
+
+| Action | File |
+|--------|------|
+| Modified | `build.gradle` — added `spring-boot-starter-flyway` |
+| Created | `src/main/resources/db/migration/V1__baseline.sql` |
+| Created | `src/main/java/com/atex/desk/api/migration/V2__DeskApiUpgrade.java` |
+| Modified | `src/main/resources/application.properties` — Flyway config, removed `sql.init.mode` |
+| Deleted | `src/main/resources/schema.sql` — replaced by V1 |
+| Deleted | `src/main/resources/data.sql` — replaced by V1 + V2 |
+| Deleted | `src/main/java/com/atex/desk/api/config/LegacyMigration.java` — replaced by V2 |
+
+### Adding Future Migrations
+
+New migrations go in `src/main/resources/db/migration/` as SQL files:
+```
+V3__add_some_column.sql
+V4__create_new_table.sql
+```
+
+For migrations needing conditional logic (check if tables/columns exist, handle missing data gracefully), use Java migrations in `com.atex.desk.api.migration`:
+```
+V3__SomeConditionalMigration.java  (extends BaseJavaMigration)
+```
 

@@ -1,6 +1,7 @@
 package com.atex.desk.api.controller;
 
 import com.atex.desk.api.auth.AuthFilter;
+import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ErrorResponseDto;
 import com.atex.desk.api.dto.GroupDto;
 import com.atex.desk.api.dto.GroupRefDto;
@@ -16,6 +17,7 @@ import com.atex.desk.api.repository.AppGroupOwnerRepository;
 import com.atex.desk.api.repository.AppGroupRepository;
 import com.atex.desk.api.repository.AppUserRepository;
 import com.atex.desk.api.entity.AppUser;
+import com.atex.desk.api.service.ContentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -50,16 +52,19 @@ public class PrincipalsController
     private final AppGroupRepository groupRepository;
     private final AppGroupMemberRepository groupMemberRepository;
     private final AppGroupOwnerRepository groupOwnerRepository;
+    private final ContentService contentService;
 
     public PrincipalsController(AppUserRepository userRepository,
                                 AppGroupRepository groupRepository,
                                 AppGroupMemberRepository groupMemberRepository,
-                                AppGroupOwnerRepository groupOwnerRepository)
+                                AppGroupOwnerRepository groupOwnerRepository,
+                                ContentService contentService)
     {
         this.userRepository = userRepository;
         this.groupRepository = groupRepository;
         this.groupMemberRepository = groupMemberRepository;
         this.groupOwnerRepository = groupOwnerRepository;
+        this.contentService = contentService;
     }
 
     // ======== User endpoints ========
@@ -279,10 +284,10 @@ public class PrincipalsController
     private PrincipalDto toUserDto(AppUser user)
     {
         PrincipalDto dto = new PrincipalDto();
-        String numericId = String.valueOf(stableNumericId(user.getLoginName()));
-        dto.setId(numericId);
+        String principalId = effectivePrincipalId(user);
+        dto.setId(principalId);
         dto.setName(user.getLoginName());
-        dto.setPrincipalId(numericId);
+        dto.setPrincipalId(principalId);
         dto.setCmUser(user.isCmUser());
         dto.setLdapUser(user.isLdap());
         dto.setRemoteUser(user.isRemote());
@@ -292,18 +297,54 @@ public class PrincipalsController
     private UserMeDto toUserMeDto(AppUser user)
     {
         UserMeDto dto = new UserMeDto();
-        int numericId = stableNumericId(user.getLoginName());
+        String principalId = effectivePrincipalId(user);
         dto.setLoginName(user.getLoginName());
         dto.setFirstName(user.getLoginName());
         dto.setLastName("");
-        dto.setId(numericId);
-        dto.setUserId(String.valueOf(numericId));
+        dto.setId(parseIntOrHash(principalId));
+        dto.setUserId(principalId);
         dto.setCmUser(user.isCmUser());
         dto.setLdapUser(user.isLdap());
         dto.setRemoteUser(user.isRemote());
 
-        // Look up group memberships
-        List<AppGroupMember> memberships = groupMemberRepository.findByPrincipalId(user.getLoginName());
+        // Enrich from migrated user content (UserDataBean) if available
+        Map<String, Object> userData = enrichFromUserContent(principalId);
+        if (userData != null)
+        {
+            Object fn = userData.get("firstname");
+            if (fn != null) dto.setFirstName(fn.toString());
+            Object sn = userData.get("surname");
+            if (sn != null) dto.setLastName(sn.toString());
+
+            // workingSites is a list of {id, name} objects — extract the IDs
+            Object ws = userData.get("workingSites");
+            if (ws instanceof List<?> wsList && !wsList.isEmpty())
+            {
+                List<String> siteIds = new ArrayList<>();
+                for (Object item : wsList)
+                {
+                    if (item instanceof Map<?, ?> siteMap)
+                    {
+                        Object siteId = siteMap.get("id");
+                        if (siteId != null) siteIds.add(siteId.toString());
+                    }
+                }
+                dto.setWorkingSites(siteIds);
+            }
+
+            // Pass through relations from content
+            Object relations = userData.get("relations");
+            if (relations instanceof Map<?, ?> relMap)
+            {
+                dto.setUserData(Map.of("relations", relMap));
+            }
+        }
+
+        if (dto.getWorkingSites() == null) dto.setWorkingSites(Collections.emptyList());
+        if (dto.getUserData() == null) dto.setUserData(Map.of("relations", Collections.emptyMap()));
+
+        // Look up group memberships using the principal ID
+        List<AppGroupMember> memberships = groupMemberRepository.findByPrincipalId(principalId);
         List<GroupRefDto> groups = memberships.stream()
             .map(m -> groupRepository.findById(m.getGroupId()).orElse(null))
             .filter(g -> g != null)
@@ -318,15 +359,58 @@ public class PrincipalsController
             .toList();
         dto.setGroups(groups);
 
-        dto.setUserData(Map.of("relations", Collections.emptyMap()));
         dto.setHomeDepartmentId(null);
-        dto.setWorkingSites(Collections.emptyList());
         return dto;
     }
 
-    private int stableNumericId(String loginName)
+    /**
+     * Fetch the migrated user content by principalId (stored as externalId alias)
+     * and return the contentData map, or null if not found.
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> enrichFromUserContent(String principalId)
     {
-        return Math.abs(loginName.hashCode());
+        try
+        {
+            var contentId = contentService.resolveExternalId(principalId);
+            if (contentId.isEmpty()) return null;
+
+            String[] parts = contentService.parseContentId(contentId.get());
+            var versionedId = contentService.resolve(parts[0], parts[1]);
+            if (versionedId.isEmpty()) return null;
+
+            String[] vParts = contentService.parseContentId(versionedId.get());
+            var result = contentService.getContent(vParts[0], vParts[1], vParts[2]);
+            if (result.isEmpty()) return null;
+
+            var aspects = result.get().getAspects();
+            if (aspects == null) return null;
+            var contentData = aspects.get("contentData");
+            if (contentData == null) return null;
+            return contentData.getData();
+        }
+        catch (Exception e)
+        {
+            return null;
+        }
+    }
+
+    /**
+     * Return the user's principalId from the registeredusers table,
+     * falling back to the login name if not yet populated.
+     */
+    private String effectivePrincipalId(AppUser user)
+    {
+        return user.getPrincipalId() != null ? user.getPrincipalId() : user.getLoginName();
+    }
+
+    private int parseIntOrHash(String value)
+    {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return Math.abs(value.hashCode());
+        }
     }
 
     private GroupDto toGroupDto(AppGroup group)

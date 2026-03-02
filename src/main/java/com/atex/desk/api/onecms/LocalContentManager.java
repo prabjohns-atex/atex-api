@@ -561,6 +561,9 @@ public class LocalContentManager implements ContentManager {
         ContentWriteDto processedDto = contentWriteToDto(processed);
         ContentResultDto result = contentService.createContent(processedDto, userId);
 
+        // Persist alias operations (SetAliasOperation from the original write)
+        persistAliases(write, result);
+
         // Record change event
         ContentVersionId vid = IdUtil.fromVersionedString(result.getVersion());
         recordChange("CREATE", result, vid, userId);
@@ -668,6 +671,15 @@ public class LocalContentManager implements ContentManager {
                     if (a.getData() != null) {
                         builder.aspect(name, a.getData());
                     }
+                }
+            }
+        }
+
+        // Convert DTO operations to ContentOperations
+        if (writeDto.getOperations() != null) {
+            for (ContentWriteDto.OperationDto op : writeDto.getOperations()) {
+                if ("SetAliasOperation".equals(op.getType()) && op.getNamespace() != null) {
+                    builder.operation(new SetAliasOperation(op.getNamespace(), op.getValue()));
                 }
             }
         }

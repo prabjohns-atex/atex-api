@@ -45,8 +45,7 @@ public class OpenApiConfig
                 new Tag().name("Reindex").description("SOLR reindex job management — full, filtered, and manual reindex operations"),
                 new Tag().name("Files").description("File upload, download, and metadata"),
                 new Tag().name("Activities").description("Content locking and activity tracking"),
-                new Tag().name("Preview").description("Content preview URL generation"),
-                new Tag().name("Migration").description("Legacy content migration endpoints")
+                new Tag().name("Preview").description("Content preview URL generation")
             ));
     }
 }

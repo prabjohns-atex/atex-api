@@ -61,7 +61,7 @@ def load_config_external_ids():
 
 
 CONFIG_EXTERNAL_IDS = load_config_external_ids()
-remove
+
 # ---------------------------------------------------------------------------
 # Console colours
 # ---------------------------------------------------------------------------
@@ -164,22 +164,22 @@ def load_external_ids():
 
 
 def migrate_one(desk_token, ext_id, content_json, policy_id, dry_run=False, verbose=False):
-    """Migrate a single content item to desk-api."""
+    """Migrate a single content item to desk-api via POST /content."""
     aspects = content_json.get("aspects", {})
 
-    aliases = [{"namespace": "externalId", "value": ext_id}]
+    operations = [{"type": "SetAliasOperation", "namespace": "externalId", "value": ext_id}]
     if policy_id:
-        aliases.append({"namespace": "policyId", "value": policy_id})
+        operations.append({"type": "SetAliasOperation", "namespace": "policyId", "value": policy_id})
 
     payload = {
         "aspects": aspects,
-        "aliases": aliases
+        "operations": operations
     }
 
     if dry_run:
-        alias_str = ", ".join(f"{a['namespace']}={a['value']}" for a in aliases)
+        op_str = ", ".join(f"{o['namespace']}={o['value']}" for o in operations)
         aspect_count = len(aspects)
-        print(f"  {C.DIM}[dry-run] Would create: {aspect_count} aspects, aliases: {alias_str}{C.RESET}")
+        print(f"  {C.DIM}[dry-run] Would create: {aspect_count} aspects, aliases: {op_str}{C.RESET}")
         return True
 
     headers = {
@@ -189,7 +189,7 @@ def migrate_one(desk_token, ext_id, content_json, policy_id, dry_run=False, verb
 
     try:
         resp = requests.post(
-            f"{DESK_API}/admin/migrate/content",
+            f"{DESK_API}/content",
             headers=headers,
             json=payload,
             timeout=30
@@ -200,10 +200,6 @@ def migrate_one(desk_token, ext_id, content_json, policy_id, dry_run=False, verb
                 result = resp.json()
                 print(f"  {C.DIM}Created: {result.get('id', '?')}{C.RESET}")
             return True
-        elif resp.status_code == 409:
-            if verbose:
-                print(f"  {C.DIM}Already exists (skipped){C.RESET}")
-            return True  # Already migrated
         else:
             print(f"  {C.FAIL}Failed ({resp.status_code}): {resp.text[:200]}{C.RESET}")
             return False
@@ -428,6 +424,8 @@ def cmd_verify(args):
 # ---------------------------------------------------------------------------
 
 def main():
+    global DESK_API, REFERENCE
+
     parser = argparse.ArgumentParser(
         description="Migrate legacy Polopoly content from reference OneCMS to desk-api"
     )
@@ -453,7 +451,6 @@ def main():
 
     args = parser.parse_args()
 
-    global DESK_API, REFERENCE
     DESK_API = args.desk_url
     REFERENCE = args.ref_url
 

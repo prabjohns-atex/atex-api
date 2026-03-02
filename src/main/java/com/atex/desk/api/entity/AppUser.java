@@ -40,6 +40,9 @@ public class AppUser
     @Column(name = "active", nullable = false)
     private int active;
 
+    @Column(name = "principalid", length = 64)
+    private String principalId;
+
     public String getLoginName()
     {
         return loginName;
@@ -153,6 +156,16 @@ public class AppUser
     public boolean isRemote()
     {
         return isRemoteUser != 0;
+    }
+
+    public String getPrincipalId()
+    {
+        return principalId;
+    }
+
+    public void setPrincipalId(String principalId)
+    {
+        this.principalId = principalId;
     }
 
     public boolean isCmUser()

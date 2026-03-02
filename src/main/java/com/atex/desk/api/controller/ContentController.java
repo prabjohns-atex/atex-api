@@ -148,6 +148,19 @@ public class ContentController
     }
 
     /**
+     * GET /content/contentid/externalid/{externalId}
+     * Handles "externalid/X" content ID format used by OneCMS clients.
+     * Tomcat decodes %2F to / (via EncodedSolidusHandling.DECODE in WebConfig),
+     * so this endpoint catches the resulting two-segment path.
+     */
+    @GetMapping("/contentid/externalid/{externalId}")
+    public ResponseEntity<?> getContentByExternalIdViaContentId(
+        @PathVariable String externalId)
+    {
+        return getContentByExternalId(externalId);
+    }
+
+    /**
      * GET /content/contentid/{id}/history
      */
     @GetMapping("/contentid/{id}/history")
