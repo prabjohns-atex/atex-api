@@ -732,7 +732,7 @@ Hooks registered for both original Polopoly type names (`atex.dam.standard.*`) a
 
 **Wildcard merging**: `LocalContentManager.runPreStoreHooks()` merges hooks from `"*"` key first, then appends type-specific hooks. All hooks chain in registration order.
 
-### Phase 4: Index Composer Pipeline
+### Index Composer Pipeline
 
 Post-store indexing that converts content to Solr documents and pushes to Solr after create/update/delete.
 
@@ -748,1153 +748,8 @@ Post-store indexing that converts content to Solr documents and pushes to Solr a
 
 | Class | Change |
 |---|---|
-| `SolrService` | Added `indexBatch(collection, List<SolrInputDocument>)` and `deleteBatch(collection, List<String>)` — single `add()`/`deleteById()` + `commit()` call per batch. `index()` and `delete()` delegate to batch methods with singleton lists. |
-| `LocalContentManager` | Indexing is decoupled — see Increment 15. Content writes record to changelist only; background `SolrIndexProcessor` handles indexing. |
-
-**Circular dependency resolution**: `ContentIndexer` does NOT depend on `ContentManager`. Instead, `LocalContentManager` passes the already-fetched `ContentResult` directly to `ContentIndexer.index()`, breaking the cycle.
-
-### Configuration
-
-```properties
-# Partition → security parent mapping (for SecParentPreStoreHook)
-# desk.partitions.mapping.default=site.default.d
-
-# Content indexing (requires desk.solr-url to be set)
-desk.indexing.enabled=true
-
-# Image metadata service (for OneImagePreStore)
-desk.image-metadata-service.url=
-desk.image-metadata-service.enabled=false
-```
-
-**Gradle dependency added:** `implementation 'org.jsoup:jsoup:1.18.3'`
-
-### Files Summary
-
-**New files (22):**
-
-| File | Description |
-|---|-------------|
-| `content/CachingFetcher.java` | Per-request content cache |
-| `content/SetStatusOperation.java` | Status change operation |
-| `content/AddEngagement.java` | Engagement add operation |
-| `standard/aspects/PrestigeItemStateAspectBean.java` | Spike/unspike state |
-| `standard/aspects/DamContentAccessAspectBean.java` | Content access control |
-| `standard/aspects/DamAudioAspectBean.java` | Audio content bean |
-| `lifecycle/wordcount/OneWordCountPreStoreHook.java` | Word counter |
-| `lifecycle/wordcount/OneWordCountPreStoreConfig.java` | Word counter config |
-| `lifecycle/charcount/OneCharCountPreStoreHook.java` | Char counter |
-| `lifecycle/charcount/OneCharCountPreStoreConfig.java` | Char counter config |
-| `lifecycle/audio/DamAudioPreStoreHook.java` | Audio name/link setter |
-| `lifecycle/status/SetStatusPreStoreHook.java` | Workflow status handler |
-| `lifecycle/engagement/AddEngagementPreStoreHook.java` | Engagement tracking |
-| `lifecycle/onecontent/OneContentPreStore.java` | Content initialization |
-| `lifecycle/onecontent/OneImagePreStore.java` | Image metadata extraction |
-| `lifecycle/partition/SecParentPreStoreHook.java` | Partition ↔ security parent |
-| `lifecycle/handleItemState/HandleItemStatePreStore.java` | Spike/unspike |
-| `lifecycle/collection/CollectionPreStore.java` | Collection item processing |
-| `plugin/BuiltInHookRegistrar.java` | Registers hooks per content type |
-| `plugin/PartitionProperties.java` | Partition config properties |
-| `indexing/ContentIndexer.java` | Post-store Solr indexing |
-| `indexing/DamIndexComposer.java` | Content → Solr JSON |
-
-**Modified files (8):**
-
-| File | Change |
-|---|---|
-| `OneArticleBean.java` | Extend `OneContentBean`; add missing fields |
-| `OneImageBean.java` | Extend `OneContentBean`; add missing fields |
-| `DamCollectionAspectBean.java` | Extend `OneContentBean`; add missing fields |
-| `DamArticleAspectBean.java` | Simplified to extend `OneArticleBean` |
-| `DamImageAspectBean.java` | Simplified to extend `OneImageBean` |
-| `LifecycleContextPreStore.java` | Add optional `FileService` field |
-| `LocalContentManager.java` | Wildcard hook matching, post-store indexing, `FileService` + `ContentIndexer` injection |
-| `SolrService.java` | Add `index()` and `delete()` methods |
-
-## Increment 7 — Resource-Based Configuration System
-
-Replaces database-stored configuration with a 5-tier resource-based system. All existing consumers that call `ContentManager.resolve(externalId)` → `ContentManager.get(vid)` work without code changes.
-
-### Architecture
-
-```
-Configuration Lookup (precedence order):
-
-1. DATABASE (live)     — config modified via UI at runtime
-2. PLUGIN (classpath)  — config/project/*.json inside PF4J plugin JARs
-3. PROJECT (classpath) — classpath:config/project/{id}.json
-4. FLAVOR (classpath)  — classpath:config/flavor/{hseries|pseries}/{id}.json
-5. PRODUCT (classpath) — classpath:config/defaults/{id}.json
-
-                        ┌──────────────────────┐
-  WFStatusUtils ──────→ │                      │
-  RemotesConfigFactory → │  LocalContentManager │
-  RestrictContentCfg ──→ │    resolve(extId)    │──→ ConfigurationService
-  BeanMapperConfig ────→ │    get(versionId)    │     ├─ check DB (live)
-  DamDataResource ─────→ │                      │     ├─ check plugin resources
-  ContentController ───→ │                      │     ├─ check project resources
-                        └──────────────────────┘     ├─ check flavor overlay
-                                                     └─ check product defaults
-```
-
-Projects are expected to be PF4J plugins — a JAR containing `config/project/*.json` overrides plus any custom `DeskPreStoreHook` or `DeskContentComposer` extensions. The plugin classloader is scanned at startup so project config files are automatically discovered.
-
-### Flavor System (hseries / pseries)
-
-The original adm-starterkit has two flavors controlled by a Maven build property (`-Ddesk=hseries` or `-Ddesk=pseries`). Only ~22 files differ between them (menus, toolbars, widgets, search forms, permissions, print templates). In desk-api, flavors are handled at runtime via `desk.config.flavor`:
-
-- `config/flavor/hseries/` — only the files that differ for H-Series integration
-- `config/flavor/pseries/` — only the files that differ for P-Series integration
-- Files NOT present in the flavor directory fall through to product defaults
-- A system doesn't change flavors at runtime — this is a deployment-time setting
-
-### Config Interception
-
-**`LocalContentManager.resolve(externalId)`**: tries DB first; if not found and `ConfigurationService.isConfigId(externalId)`, returns a synthetic `ContentVersionId` with delegation ID `"config"`.
-
-**`LocalContentManager.get(vid)`**: if `vid.getDelegationId() == "config"`, returns config from `ConfigurationService.toContentResult()` instead of hitting DB.
-
-**`ContentController.getContentByExternalId()`**: if `ContentService.resolveExternalId()` returns empty and `ConfigurationService.isConfigId(id)`, returns the config directly as `ContentResultDto` (no redirect).
-
-### File Format
-
-All config files use the **`.json5`** extension. This allows comments (`//`, `/* */`), trailing commas, and other JSON5 syntax without IDE validation errors. `ConfigurationService` scans for `.json5` first, then `.json` as a fallback (for backwards compatibility with plugins using `.json`).
-
-The `parseJson()` method tries standard JSON parsing first; if that fails, it falls back to `Json5Reader.toJson()` which strips comments/trailing commas and uses Gson's lenient mode. This means both strict JSON and JSON5 content work regardless of file extension.
-
-### Resource File Layout
-
-```
-src/main/resources/config/
-  defaults/                              ← product defaults (187 files, shipped with desk-api)
-    audioai/
-      com.atex.onecms.audioAI.Configuration.json5
-    ayrshare/
-      com.atex.onecms.ayrshare.Configuration.json5
-    camel-routes/
-      dam.camelroutes.conf.json5
-    cfg/
-      com.atex.onecms.beanmapper.Configuration.json5
-      dam.thirdpartiescfg.conf.json5
-    chains-list/
-      dam.chains.list.conf.json5
-      chain.configuration.*.conf.json5    (5 chain configs)
-    desk-configuration/
-      atex.configuration.desk.*.json5     (~17 desk UI configs)
-      form/
-        atex.configuration.desk.*.json5   (7 form configs)
-      permission/
-        atex.configuration.desk.disable-*.json5  (~26 permission rules)
-      result-set/
-        atex.configuration.desk.*.json5   (7 result-set configs)
-    desk-system-configuration/
-      atex.configuration.desk-system-configuration.json5
-    distributionlist/
-      dam.distributionlist.conf.json5
-    editor-configuration/
-      atex.configuration.act.*.json5       (5 ACT editor configs)
-      com.atex.onecms.texteditor.EditorConfigurationContent.json5
-      permission/
-        atex.configuration.act.disable-publish-rules.json5
-    export/
-      dam.export.conf.json5
-    form-templates/
-      dam*Template*.json5                  (38 form definitions from desk)
-      atex.onecms.Template-*.json5         (7 from content/common)
-    gallery-configurations/
-      dam.galleryconfigurations.conf.json5
-    image-service/
-      com.atex.onecms.image.ImageFormatConfigurationContent.json5
-    importer/
-      com.atex.onecms.dam.beanImporter.Configuration.json5
-    index/
-      desk.content.indexing.indexComposer.json5
-      desk.content.indexing.liveblog.indexComposer.json5
-    localization/
-      desk/
-        atex.onecms.desk.locale.{lang}.json5  (10 languages)
-      locale/
-        atex.onecms.custom.locale.{lang}.json5 (10 languages)
-    mail-service/
-      com.atex.onecms.mail-service.Configuration.json5
-    markas/
-      dam.colorcoding.conf.json5
-      dam.iconcoding.conf.json5
-      dam.multiiconcoding.conf.json5
-    partition/
-      dam.partitions.conf.json5
-    permissions/
-      com.atex.onecms.permission.PermissionConfigurationContent.json5
-    processors-list/
-      dam.processors.list.conf.json5
-      processor.configuration.*.conf.json5 (7 processor configs)
-    publish/
-      com.atex.onecms.dam.beanPublisher.Configuration.json5
-      com.atex.onecms.ace.publish.Configuration.json5
-      publish.page.configuration.json5
-    remotes/
-      com.atex.onecms.dam.remotes.Configuration.json5
-    reset-password/
-      com.atex.onecms.reset-password.Configuration.json5
-    restrictContent/
-      atex.configuration.desk.restrictContent.json5
-    routes-list/
-      dam.routes.list.conf.json5
-      route.configuration.*.conf.json5    (6 route configs)
-    sendcontent/
-      dam.sendcontent.conf.json5
-    settings/
-      com.atex.onecms.general.default.Configuration.json5
-    smartupdates/
-      dam.smartupdates.conf.json5
-    tag-manager/
-      atex.configuration.tag-manager-configuration.json5
-    widgets-configuration/
-      configuration.widget.*.json5         (9 widget configs)
-    workflow/
-      dam.wfstatuslist.d.json5            ← empty default: {"statuses": []}
-      dam.webstatuslist.d.json5           ← empty default: {"statuses": []}
-  flavor/                                 ← flavor-specific overrides (only files that differ)
-    hseries/
-      .gitkeep
-    pseries/                              ← 14 P-Series override files
-      desk-configuration/
-        atex.configuration.desk.copyfit-configurations.json5
-        atex.configuration.desk.menus.json5
-        atex.configuration.desk.toolbars.json5
-        atex.configuration.desk.widgets.json5
-        form/
-          atex.configuration.desk.search-forms.json5
-          atex.configuration.desk.smart-folder-filters.json5
-        permission/
-          atex.configuration.desk.disable-queues-panel-rules.json5
-        result-set/
-          atex.configuration.desk.thumbnail-list.json5
-      editor-configuration/
-        atex.configuration.act.toolbar-configurations.json5
-        permission/
-          atex.configuration.act.disable-publish-rules.json5
-      form-templates/
-        atex.onecms.Template-atex.onecms.article.print.json5
-        atex.onecms.Template-atex.onecms.article.print.preview.json5
-        atex.onecms.Template-atex.onecms.article.production.dam.preview.json5
-      widgets-configuration/
-        configuration.widget.activePreview.json5
-  project/                                ← project overrides (empty by default)
-    .gitkeep
-```
-
-External ID = filename without `.json5` extension. Subdirectories are for organization only.
-
-**201 config files total**: 187 product defaults (from gong/desk + gong/content/common) + 14 P-Series flavor overrides (from adm-starterkit).
-
-### Config Sync Scripts
-
-Python scripts in `scripts/` automate re-syncing config files from the original source codebases.
-
-**`scripts/config-mapping.txt`** — Pipe-delimited mapping file (201 entries) tracing every config file back to its source. Format:
-```
-type|source_base|source_path|dest_tier|dest_subdir|external_id
-```
-
-Columns:
-- `type`: `xml-cdata` (extract JSON from XML component CDATA), `json-ref` (XML references separate JSON file), `json` (direct copy), `manual` (no source)
-- `source_base`: `gong-desk`, `gong-common`, `adm-starterkit-pseries`, `none`
-- `source_path`: relative path within source_base
-- `dest_tier`: `defaults` or `flavor/pseries`
-- `dest_subdir`: subdirectory under the tier
-- `external_id`: output filename without `.json5`
-
-To add a new config: append a line to this file and run the sync script.
-
-**`scripts/config-sync.py`** — Reads the mapping and extracts/copies configs:
-```bash
-python scripts/config-sync.py              # Dry run (show what would change)
-python scripts/config-sync.py --apply      # Actually write files
-python scripts/config-sync.py --check      # Exit 1 if out of sync (CI-friendly)
-python scripts/config-sync.py --verbose    # Show all entries including unchanged
-python scripts/config-sync.py --filter X   # Only process entries matching X
-```
-
-Handles three XML component patterns (`data/value`, `contentData/contentData`, `model/pojo`), file-reference resolution (locale `.json5` files, template JSON via `file=` attributes), and direct JSON copies. Idempotent — re-running after `--apply` shows `201 unchanged, 0 errors`.
-
-Source base directories (relative to project parent):
-| Shorthand | Path |
-|---|---|
-| `gong-desk` | `../gong/desk/content/src/main/content` |
-| `gong-common` | `../gong/content/common/src/main/content` |
-| `adm-starterkit` | `../adm-starterkit/content/custom-content/src/main/content` |
-| `adm-starterkit-pseries` | `../adm-starterkit/content/custom-pseries-content/src/main/content` |
-
-### Configuration Admin REST API
-
-`ConfigurationController` at `/admin/config` (auth required via `AuthFilter`):
-
-| Method | Path | Behaviour |
-|--------|------|-----------|
-| GET | `/admin/config` | List all known config IDs with source tier (product/project/plugin/live) |
-| GET | `/admin/config/{externalId}` | Get effective config JSON (merged precedence) |
-| GET | `/admin/config/{externalId}/sources` | Get all tiers separately (for diff/audit) |
-| PUT | `/admin/config/{externalId}` | Save live override to DB |
-| DELETE | `/admin/config/{externalId}` | Delete live override (reverts to resource defaults) |
-| GET | `/admin/config/export` | Export all live (DB) overrides as a JSON bundle |
-| GET | `/admin/config/patch` | Unified diff of DB overrides against resource defaults (text/plain) |
-
-### Configuration (`application.properties`)
-
-```properties
-desk.config.enabled=true
-# Flavor overlay: hseries or pseries (empty = no flavor overlay)
-desk.config.flavor=
-```
-
-### New Files
-
-| File | Description |
-|------|-------------|
-| `auth/CognitoTokenVerifier.java` | JWK fetching, key parsing (RSA/EC), JWT signature verification, `Locator<Key>` implementation |
-| `config/ConfigProperties.java` | `@ConfigurationProperties(prefix = "desk.config")`: `enabled` (boolean), `flavor` (String) |
-| `config/ConfigurationService.java` | 5-tier config lookup, classpath + plugin scanning, cache, synthetic ContentResult |
-| `config/Json5Reader.java` | JSON5 → JSON converter (strip comments, trailing commas, Gson lenient) |
-| `controller/ConfigurationController.java` | Admin REST API for config management |
-| `resources/config/defaults/**/*.json5` | 187 product default config files (migrated from gong/desk + gong/content/common XML) |
-| `resources/config/flavor/pseries/**/*.json5` | 14 P-Series flavor override files (from adm-starterkit) |
-| `resources/config/flavor/hseries/.gitkeep` | H-Series flavor directory (empty — H-Series is the default) |
-| `resources/config/project/.gitkeep` | Empty project override directory |
-| `scripts/config-mapping.txt` | Source mapping file (201 entries): source path → dest path + extraction type |
-| `scripts/config-sync.py` | Python sync script: reads mapping, extracts JSON from XML, copies to config dirs |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `build.gradle` | Replace webjar deps with `springdoc-openapi-starter-webmvc-ui` + `spring-boot-jackson2` |
-| `application.properties` | Add SpringDoc config properties |
-| `config/WebConfig.java` | Remove resource handler, update redirect to `/swagger-ui.html` |
-| `controller/SecurityController.java` | `@Tag`, `@Operation`, `@ApiResponse`, `@SecurityRequirements` |
-| `controller/ContentController.java` | `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter` |
-| `controller/WorkspaceController.java` | `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter` |
-| `controller/PrincipalsController.java` | `@Tag`, `@Operation` |
-| `controller/ConfigurationController.java` | `@Tag`, `@Operation`, `@Parameter` |
-| `controller/DashboardController.java` | `@Tag`, `@Operation`, `@SecurityRequirements`, `@Qualifier` |
-| `DamDataResource.java` | `@Tag(name = "DAM")`, `@Hidden` on 5 stubs |
-| `dto/*.java` (11 files) | `@Schema` annotations on classes and fields |
-| `static/dashboard.html` | Update swagger/api-docs links |
-
-## Increment 7.1 — SpringDoc OpenAPI Generation
-
-Replaces the hand-authored `static/openapi.yaml` (1830 lines) and manually-configured Swagger UI WebJar with SpringDoc-generated OpenAPI from annotations. The Polopoly Swagger 2 annotations (`@ApiOperation`, `@ApiModelProperty`) are mapped to OpenAPI 3 equivalents (`@Operation`, `@Schema`).
-
-### Architecture
-
-```
-SpringDoc OpenAPI 3.0.1
-  ├─ Auto-generates /v3/api-docs JSON from controller annotations
-  ├─ Bundles Swagger UI at /swagger-ui.html (no manual WebJar config)
-  └─ spring-boot-jackson2 bridge (swagger-core needs Jackson 2)
-```
-
-### Dependencies
-
-**Removed:** `org.webjars:swagger-ui:5.21.0`, `org.webjars:webjars-locator-core:0.59`
-**Added:** `org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1`, `org.springframework.boot:spring-boot-jackson2`
-
-### Configuration (`application.properties`)
-
-```properties
-springdoc.api-docs.path=/v3/api-docs
-springdoc.swagger-ui.path=/swagger-ui.html
-springdoc.swagger-ui.persist-authorization=true
-springdoc.swagger-ui.deep-linking=true
-springdoc.swagger-ui.operations-sorter=alpha
-springdoc.swagger-ui.tags-sorter=alpha
-springdoc.packages-to-scan=com.atex.desk.api.controller,com.atex.onecms.app.dam.ws
-```
-
-### OpenApiConfig
-
-`com.atex.desk.api.config.OpenApiConfig` — `@Configuration` providing an `OpenAPI` bean with security scheme (`authToken` apiKey in header `X-Auth-Token`), global security requirement, and tag definitions (Authentication, Content, Workspace, Principals, Configuration, Dashboard, DAM, Search).
-
-### DTO Annotations
-
-All DTOs annotated with `@Schema` (class-level + field-level): `ContentResultDto`, `ContentWriteDto`, `AspectDto`, `MetaDto`, `ContentHistoryDto`, `ContentVersionInfoDto`, `ErrorResponseDto`, `CredentialsDto`, `TokenResponseDto`, `PrincipalDto`, `WorkspaceInfoDto`.
-
-### Controller Annotations
-
-All controllers annotated with `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter`. Unauthenticated endpoints use `@SecurityRequirements` (standalone). DamDataResource: `@Tag(name = "DAM")`, `@Hidden` on 5 stub endpoints.
-
-### Actuator Enhancements
-
-- **`MetricsConfig`** — `@Configuration` adding `application=desk-api` common tag to all Micrometer metrics
-- **`SolrHealthIndicator`** — `@Component` implementing `HealthIndicator` for Solr connectivity at `/actuator/health`
-
-## Increment 8 — Cognito JWT Verification & User Lifecycle
-
-Completes Cognito integration: JWT signature verification (consolidating Polopoly's 4-class JWK infrastructure into one), OAuth callback endpoints, and user lifecycle management.
-
-### CognitoTokenVerifier
-
-`com.atex.desk.api.auth.CognitoTokenVerifier` — implements `io.jsonwebtoken.Locator<Key>` (JJWT 0.12.x):
-- JWK fetching from Cognito `.well-known/jwks.json` via Java 11+ `HttpClient` + Gson
-- RSA key parsing: base64url `n` + `e` → `RSAPublicKeySpec`
-- EC key parsing: `x`, `y` + `crv` (P-256/P-384/P-521) → `ECPublicKeySpec`
-- `ConcurrentHashMap<String, Key>` cache by `kid`
-- `verify(token)` → validates signature + issuer, extracts `cognito:username`, `email`, `cognito:groups`
-
-### SecurityController OAuth Endpoints
-
-| Method | Path | Behaviour |
-|--------|------|-----------|
-| GET | `/security/oauth/url` | Returns Cognito hosted UI login URL (query param: `callbackUrl`) |
-| POST | `/security/oauth/callback` | Exchanges OAuth code/token for desk-api JWT |
-
-### CognitoAuthService New Methods
-
-`verifyToken`, `verifyOAuthUrl`, `getLastModified`, `inviteUser`, `disableUser`, `enableUser`, `deleteUser`, `groupExists`, `parseQueryString`, `parseFragments`.
-
-## Increment 9 — Principals, Groups, ACLs & Auth Providers
-
-Full Polopoly-compatible principal infrastructure: multi-scheme password verification, LDAP authentication with user provisioning and group sync, Cognito configuration properties, group/ACL database tables with JPA entities, and expanded PrincipalsController.
-
-### PasswordService
-
-`com.atex.desk.api.auth.PasswordService` — `@Component`, multi-scheme password verification: OLDSHA (SHA-1 + static secret), SHA-256, {SHA}, {SSHA}, {MD5}, {SMD5}, {CLEARTEXT}, {LDAPUSER}/{REMOTEUSER}/{COGNITOUSER} (markers).
-
-### LdapAuthService
-
-`com.atex.desk.api.auth.LdapAuthService` — `@Component @ConditionalOnProperty(name = "desk.ldap.enabled", havingValue = "true")`:
-- Authentication via admin search + user bind
-- DN resolution, user attributes with attribute mapping
-- User provisioning (write mode), password encoding
-- Group operations with nested group support and caching
-
-### Database Schema Changes
-
-New tables: `registeredusers` (expanded from `users`), `groupData`, `groupMember`, `groupOwner`, `aclData`, `acl`, `aclOwner`.
-
-### Entity Layer (7 new entities)
-
-`AppUser` (expanded), `AppGroup`, `AppGroupMember`/`AppGroupMemberId`, `AppGroupOwner`/`AppGroupOwnerId`, `AppAcl`, `AppAclEntry`/`AppAclEntryId`, `AppAclOwner`/`AppAclOwnerId`.
-
-### PrincipalsController (expanded to 11 endpoints)
-
-| Method | Path | Behaviour |
-|--------|------|-----------|
-| GET | `/principals/users/me` | Current authenticated user |
-| GET | `/principals/users` | List all active users (optional `addGroupsToUsers` param) |
-| GET | `/principals/users/{userId}` | Get user by login name |
-| GET | `/principals/groups` | List all groups |
-| GET | `/principals/groups/{groupId}` | Get group by ID (optional `members` param) |
-| POST | `/principals/groups` | Create group |
-| PUT | `/principals/groups/{groupId}` | Update group name |
-| DELETE | `/principals/groups/{groupId}` | Delete group + memberships + owners |
-| POST | `/principals/groups/{groupId}/members` | Add member (idempotent) |
-| DELETE | `/principals/groups/{groupId}/members/{principalId}` | Remove member |
-
-### Configuration
-
-LDAP: 30+ properties under `desk.ldap.*`. Cognito: 20+ properties under `desk.cognito.*`. Both disabled by default.
-
-## Increment 10 — Search Resource, SolrSearchClient & DamSearchResource
-
-Ports the search endpoint infrastructure from the Polopoly platform: the `/search/{core}/select` REST endpoint for direct Solr proxy access with format negotiation (JSON/XML), permission filtering, and working-sites decoration; the `SearchClient` API interface for programmatic Solr queries; legacy Polopoly search types; and the `/dam/search/{core}/select` remote proxy endpoint.
-
-### Architecture
-
-```
-Desk UI / OneCMS clients
-  ├─ /search/{core}/select  → SearchController
-  │    └─ LocalSearchClient (implements SearchClient)
-  │         └─ SolrService.rawQuery() → Solr
-  │              ├─ Permission filtering (content_readers_ss / content_writers_ss / content_owners_ss)
-  │              ├─ Working-sites decoration (page_ss filter via SolrQueryDecorator)
-  │              └─ Format negotiation: JSON (Gson) or XML (DOM)
-  │
-  └─ /dam/search/{core}/select → DamSearchController
-       └─ DamPublisherFactory.createContext() → RemoteUtils.callRemoteWs()
-            → Remote CMS REST API
-```
-
-### Search API Types (preserving original packages)
-
-**Package `com.atex.onecms.search`** (from polopoly/core/data-api-api):
-- `SearchClient` — Interface: `query(core, SolrQuery, Subject, SearchOptions)` → `SearchResponse`. Constants: `CORE_ONECMS`, `CORE_LATEST`, `CORE_DEFAULT`. Default convenience methods for core/options
-- `SearchResponse` — Interface: `getCore()`, `response()` → `QueryResponse`, `json()` → `String`, `jsonTree()` → `JsonElement`, `getStatus()`, `getErrorMessage()`
-- `SearchOptions` — Options class: `filterWorkingSites`, `postMethod`, `permission` (`ACCESS_PERMISSION` enum: OFF/READ/WRITE/OWNER). Static factories: `none()`, `filterWorkingSites()`, `withPermission()`, `postMethod()`
-
-**Package `com.atex.onecms.ws.search`**:
-- `SolrFormat` — Enum: `json`, `xml`
-- `SearchMethod` — Enum: `GET`, `POST`
-- `ChildFactory<E>` — Generic tree builder interface for NamedList → JSON/XML conversion
-- `ChildFactoryJSON` — Gson-based implementation using `JsonObject`/`JsonArray`
-- `ChildFactoryXML` — DOM-based implementation using `Element`/`Document`
-- `SearchServiceUtil` — Full implementation (replaced 4-line stub): `parseQueryString()`, `deduceResponseType()`, `toJSON()`, `toXML()`, `formatResponse()`, `solrError()`, recursive NamedList walker
-
-**Package `com.polopoly.search.solr`**:
-- `SearchClient` — Legacy interface: `search(SolrQuery, pageSize)` → `SearchResult`
-- `SearchResult` — Paginated result: `getApproximateNumberOfPages()`, `iterator()`, `getPage(int)`
-- `SearchResultPage` — Page: `getHits()` → `List<ContentId>`, `getQueryResponses()`, `isEmpty()`, `isIncomplete()`
-- `SolrIndexName` — Simple wrapper: `name` field, `getName()`, `toString()`
-- `SolrSearchClient` — Simplified class implementing legacy `SearchClient`; methods throw `UnsupportedOperationException("Use LocalSearchClient")`
-
-### LocalSearchClient
-
-`com.atex.desk.api.search.LocalSearchClient` — `@Component` implementing `com.atex.onecms.search.SearchClient`:
-- Constructor: `@Nullable SolrService`, `DeskProperties`
-- Core name mapping: `"onecms"` → `deskProperties.getSolrCore()`, `"latest"` → `deskProperties.getSolrLatestCore()`, others → as-is
-- `ConcurrentHashMap<String, SolrService>` cache for per-core `SolrService` instances via `solrService.forCore()`
-- Working-sites filter: delegates to `SolrQueryDecorator.decorateWithWorkingSites()` (ready for when user working sites are in DB)
-- Permission filter: adds `fq` for `content_readers_ss`/`content_writers_ss`/`content_owners_ss` per permission level
-
-`com.atex.desk.api.search.LocalSearchResponse` — Implements `SearchResponse`, wraps `QueryResponse`. Lazy JSON serialization via `SearchServiceUtil.toJSON()`.
-
-### SolrService Changes
-
-Added three public methods:
-- `rawQuery(SolrQuery)` → `QueryResponse` — exposes the private `executeQuery` for direct query access
-- `forCore(String coreName)` → `SolrService` — creates instance for a different core, reusing the same server URL
-- `getCoreName()` → `String` — returns the core name this instance is configured for
-
-### SearchController
-
-`com.atex.desk.api.controller.SearchController` at `/search`:
-
-| Method | Path | Consumes | Description |
-|--------|------|----------|-------------|
-| GET | `/{core}/select` | — | Query string params |
-| POST | `/{core}/select` | `application/x-www-form-urlencoded` | Form params |
-| POST | `/{core}/select` | `application/json` | JSON body |
-
-All route to private `process()` which:
-1. Parses query via `SearchServiceUtil.parseQueryString()`
-2. Determines format via `SearchServiceUtil.deduceResponseType(wt)`
-3. Extracts `variant` and `permission` params from query
-4. Builds `SearchOptions` from method + permission
-5. Executes via `LocalSearchClient.query()`
-6. If `variant` set → inlines content data (resolves each doc's `id` via `ContentManager`, adds as `_data` field)
-7. Formats response via `SearchServiceUtil.formatResponse()` or `SearchServiceUtil.solrError()`
-
-JSON POST: parses body via Gson `JsonParser` into query string params.
-
-### DamSearchController
-
-`com.atex.desk.api.controller.DamSearchController` at `/dam/search`:
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/{core}/select` | Proxy to remote CMS backend |
-
-Flow:
-1. `DamUserContext.from(req).assertLoggedIn()` → `Caller`
-2. `damPublisherFactory.createContext(backendId, caller)` → `PublishingContext`
-3. Builds URL: `remoteApiUrl + "search/" + core + "/select?" + queryString`
-4. Calls `RemoteUtils.callRemoteWs("GET", url, auth)`
-5. Returns response as `ResponseEntity` with `application/json`
-
-### Auth & Config Changes
-
-- `AuthConfig` — Added `/search/*` to `addUrlPatterns()` (note: `/dam/search/*` already covered by `/dam/*`)
-- `OpenApiConfig` — Added `"Search"` tag: "Solr search proxy with format negotiation and permission filtering"
-
-### New Files
-
-| File | Description |
-|------|-------------|
-| `com/atex/onecms/search/SearchClient.java` | Public search client interface |
-| `com/atex/onecms/search/SearchResponse.java` | Search response interface |
-| `com/atex/onecms/search/SearchOptions.java` | Search options with permissions |
-| `com/atex/onecms/ws/search/SolrFormat.java` | json/xml enum |
-| `com/atex/onecms/ws/search/SearchMethod.java` | GET/POST enum |
-| `com/atex/onecms/ws/search/ChildFactory.java` | Generic tree builder interface |
-| `com/atex/onecms/ws/search/ChildFactoryJSON.java` | Gson-based ChildFactory |
-| `com/atex/onecms/ws/search/ChildFactoryXML.java` | DOM-based ChildFactory |
-| `com/polopoly/search/solr/SearchClient.java` | Legacy search interface |
-| `com/polopoly/search/solr/SearchResult.java` | Paginated result interface |
-| `com/polopoly/search/solr/SearchResultPage.java` | Result page interface |
-| `com/polopoly/search/solr/SolrIndexName.java` | Index name wrapper |
-| `com/polopoly/search/solr/SolrSearchClient.java` | Simplified SolrSearchClient |
-| `com/atex/desk/api/search/LocalSearchClient.java` | Spring component wrapping SolrService |
-| `com/atex/desk/api/search/LocalSearchResponse.java` | SearchResponse implementation |
-| `com/atex/desk/api/controller/SearchController.java` | `/search/{core}/select` REST controller |
-| `com/atex/desk/api/controller/DamSearchController.java` | `/dam/search/{core}/select` proxy |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `com/atex/onecms/ws/search/SearchServiceUtil.java` | Replaced 4-line stub with full implementation: query parsing, JSON/XML format conversion, error formatting |
-| `com/atex/onecms/app/dam/solr/SolrService.java` | Added `rawQuery()`, `forCore()`, `getCoreName()` methods |
-| `com/atex/desk/api/auth/AuthConfig.java` | Added `/search/*` to auth filter URL patterns |
-| `com/atex/desk/api/config/OpenApiConfig.java` | Added "Search" tag |
-
-## Increment 11 — Additional DAM Resource Controllers
-
-Ports the remaining 11 JAX-RS resource files from `gong/desk/module-desk-onecms/.../ws/` to Spring MVC `@RestController` classes. These were identified by cross-referencing the original codebase — DamDataResource (68 endpoints) was already ported in Increment 3, and DamSearchResource was ported in Increment 10 as `DamSearchController`. This increment covers all the other resource files.
-
-### Architecture
-
-```
-Desk UI
-  ├─ /dam/ui/*          → DamUIResource         (system version info)
-  ├─ /dam/locales/*     → DamLocaleResource      (i18n locale bundles)
-  ├─ /dam/image/*       → DamImageResource       (print variant creation)
-  ├─ /dam/tagmanager/*  → DamTagManagerResource   (tag taxonomy CRUD)
-  ├─ /dam/print-page/*  → DamPrintPageResource    (15 print edition endpoints)
-  ├─ /dam/page/*        → DamPageResource         (page publishing pipeline)
-  ├─ /dam/pdftool/*     → DamPdfToolResource      (PDF conversion)
-  ├─ /dam/scheduling/*  → DamSchedulingResource   (scheduled publishing)
-  ├─ /dam/content/social/*     → SocialResource        (social media accounts)
-  ├─ /dam/content/statistics/* → StatisticsResource    (analytics embeds)
-  └─ /dam/search/*      → DamSearchController    (already in Increment 10)
-```
-
-### Annotation Conversion Pattern
-
-Same mechanical conversion as Increment 3 Phase 5:
-
-| JAX-RS | Spring MVC |
-|--------|------------|
-| `@Path("/dam/ui")` on class | `@RequestMapping("/dam/ui")` |
-| `@GET @Path("system/versions")` | `@GetMapping("system/versions")` |
-| `@PathParam` | `@PathVariable` |
-| `@QueryParam` | `@RequestParam` |
-| `@DefaultValue` | `@RequestParam(defaultValue = ...)` |
-| `@HeaderParam("X-Auth-Token")` | `@RequestHeader("X-Auth-Token")` |
-| `@Produces/@Consumes` | Removed (Spring defaults) |
-| `Response` return type | `ResponseEntity<?>` |
-| `Response.ok(entity).build()` | `ResponseEntity.ok(entity)` |
-| `Response.status(404).build()` | `ResponseEntity.status(HttpStatus.NOT_FOUND).build()` |
-
-### Controllers Created (10 new, 1 already existed)
-
-| Controller | Base Path | Endpoints | Original File |
-|------------|-----------|-----------|---------------|
-| `DamUIResource` | `/dam/ui` | `GET system/versions` | DamUIResource.java (72 lines) |
-| `SocialResource` | `/dam/content/social` | `GET accounts` | SocialResource.java (74 lines) |
-| `DamImageResource` | `/dam/image` | `POST create-print-variant/{id}` | DamImageResource.java (166 lines) |
-| `StatisticsResource` | `/dam/content/statistics` | `GET embed/site/{domain}`, `GET embed/contentid/{id}` | StatisticsResource.java (226 lines) |
-| `DamLocaleResource` | `/dam/locales` | `GET {app}/locale/{fileName}` | DamLocaleResource.java (301 lines) |
-| `DamTagManagerResource` | `/dam/tagmanager` | `GET lookup/{parentId}/{dimensionId}`, `GET search/{parentId}/{dimensionId}`, `POST create/{parentId}/{dimensionId}` | DamTagManagerResource.java (180 lines) |
-| `DamSchedulingResource` | `/dam/scheduling` | `POST implementScheduleInstance` | DamSchedulingResource.java (118 lines) |
-| `DamPdfToolResource` | `/dam/pdftool` | `POST /convertFile`, `POST /convert`, `POST /convert/{scheme}/{host}/{path}` | DamPdfToolResource.java (245 lines) |
-| `DamPrintPageResource` | `/dam/print-page` | 15 endpoints (see below) | DamPrintPageResource.java (480 lines) |
-| `DamPageResource` | `/dam/page` | `POST publish`, `GET contentid/{id}/slots`, `GET externalid/{id}/slots`, `POST duplicate` | DamPageResource.java (800 lines) |
-| ~~`DamSearchResource`~~ | `/dam/search` | `GET {core}/select` | Already ported as `DamSearchController` in Increment 10 |
-
-### DamPrintPageResource Endpoints (15)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `publications/autocomplete` | Autocomplete publications by term |
-| GET | `publications` | List all publications |
-| GET | `publications/{publication}/dates` | Publication dates |
-| GET | `publications/{publication}/{edition}/dates` | Publication edition dates |
-| GET | `publications/editions` | All editions |
-| GET | `publications/{publication}/editions` | Editions for publication + date |
-| GET | `publications/{publication}/{edition}/zones` | Zones for publication/edition/date |
-| GET | `publications/{publication}/{edition}/sections` | Sections for publication/edition/date |
-| GET | `publications/{publication}/pubeditions` | Pub-edition editions |
-| GET | `pubeditions/{publication}/{edition}/zones` | Pub-edition zones |
-| GET | `pubeditions/{publication}/{edition}/sections` | Pub-edition sections |
-| GET | `publications/contentData` | Content data profiles |
-| GET | `publications/contentData/{profile}/publications` | Publications for profile |
-| GET | `publications/contentData/{profile}/{publication}/editions` | Editions for profile/publication |
-| GET | `publications/contentData/{profile}/{publication}/{edition}/zones` | Zones for profile/pub/edition |
-| GET | `publications/contentData/{profile}/{publication}/{edition}/{zone}/sections` | Sections for profile/pub/edition/zone |
-
-All endpoints support `partition=archive` query param where applicable.
-
-### DamPageResource Endpoints (4)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `publish` | Publish page — resolves articles, publishes content, transforms IDs, sends to remote backend |
-| GET | `externalid/{id}/slots` | Get page slots by external ID |
-| GET | `contentid/{id}/slots` | Get page slots by content ID (with optional `backend` param) |
-| POST | `duplicate` | Duplicate page — creates copy on remote backend with optional ACE site sync |
-
-### Supporting Stub/Service Classes Created
-
-| Class | Package | Description |
-|-------|---------|-------------|
-| `AyrShareService` | `c.a.o.a.d.ayrshare` | Social media integration: `getActiveAccounts()` → `SocialAccountResponse`. Stub returning empty accounts. |
-| `TagManagerService` | `c.a.o.a.d.tagmanager` | Tag taxonomy CRUD: `lookupTag()`, `searchTag()`, `createTag()`, `tagToEntity()`. Stub returning empty results. |
-| `PublicationsService` | `c.a.o.a.d.publication` | Print publication data: `profiles()`, `publications()`, `editions()`, `zones()`, `sections()`. Stub returning empty lists. |
-| `AtexPdfium` | `c.a.tools.pdfconverter` | PDF→image conversion: `convertPdf(input, output)`. Stub throwing `UnsupportedOperationException`. |
-| `VersionInfo` | `c.a.o.a.d.ui` | System version info for About dialog: `getVersions()`, `getModules()`. Returns desk-api build info. |
-| `MavenProject` | `c.a.o.a.d.ui` | Maven project metadata: `groupId`, `artifactId`, `version`. |
-| `DamPublishingScheduleUtils` | `c.a.o.a.d.publishingschedule` | Scheduled publishing: `implementPlan(contentId, pubDate)`. Stub throwing `UnsupportedOperationException`. |
-| `ConfigurationDataBean` | `c.a.o.content` | Configuration content bean with `json` field for locale storage. |
-| `StringUtils` | `c.a.o.a.d.util` | Simple utility: `notNull(String)` — null/empty check for DamPrintPageResource. |
-| `GsonFactory` | `c.a.gong.data.publish.page` | Gson factory: `create()` → default `Gson` instance. |
-| `Page` | `c.a.gong.data.publish.page` | Page data model: name, externalId, aceId, containers. `from(JsonElement)`, `toJson()`. |
-| `PageResponse` | `c.a.gong.data.publish.page` | Page response model: contentId, containers. |
-| `Container` | `c.a.gong.data.publish.page` | Container: name, articles list. |
-| `Article` | `c.a.gong.data.publish.page` | Article: contentId, teaserMap. |
-| `DuplicatePage` | `c.a.gong.data.publish.page` | Duplicate page request: sourcePageId, targetParentId, aceId, title, description. |
-
-### Existing Classes Modified
-
-| Class | Change |
-|-------|--------|
-| `DeskSystemConfiguration` | Added `fetch(cm, subject)` static factory, `plausibleDomains`, `plausibleEmbeds`, `plausibleDefaultEmbed`, `usePlausibleEmbed()` fields and methods |
-| `SolrPrintPageService` | Replaced empty stub with full method signatures: `publications()`, `publicationDates()`, `editions()`, `zones()`, `sections()` + archive variants. All return empty lists (stub). |
-| `SSOUtil` | Added `isEnabled()`, `getSSOQueryName()`, `encode()`, `getSSOTTL()` methods. Disabled by default. |
-| `DamPublisherFactory` | Added `getBackendIdFromApiDomain(String, Caller)` overload returning `Optional<String>` |
-| `ContentPublisher` | Added `publishPage()`, `duplicatePage()`, `getContent(Function, UnaryOperator)`, `toRemoteContentId()`, `fromRemoteContentId()` as default methods |
-| `ContentOperationUtils` | Added overloaded `duplicate(List<ContentId>, Subject, String, UnaryOperator, UnaryOperator)` with edit operators for original and duplicated content |
-| `standard/aspects/OneImageBean.java` | Added `noUsePrint`, `noUseWeb` boolean fields with getters/setters |
-| `util/HttpDamUtils.java` | Added `isFailed()` and `getError()` convenience aliases for `isError()` and `getErrorMessage()` |
-| `remote/RemoteUtils.java` | Added `callRemoteService(String url)` returning `JsonObject` via Gson parsing |
-| `PublicationLinkSupport` | Populated empty file with interface: `getPublicationLink()`, `setPublicationLink(String)` |
-
-## Increment 12 — Content Change Feed (ChangesResource)
-
-Implements a DB-backed content change feed (`GET /changes`) using the existing MySQL tables (`changelist`, `changelistattributes`, `eventtypes`, `eventsqueue`). Hooks into `LocalContentManager` to record events after create/update/delete.
-
-### Architecture
-
-```
-LocalContentManager
-  ├─ create() → recordChange("CREATE", result, vid, userId)
-  ├─ update() → recordChange("UPDATE", result, vid, userId)
-  └─ delete() → recordDelete(contentId, userId)
-       │
-       ▼
-  ChangeListService (@Service)
-    ├─ AtomicInteger commitId (seeded from MAX(changelist.id))
-    ├─ recordEvent() — @Transactional(REQUIRES_NEW), fire-and-forget
-    │    ├─ Upsert changelist (delete old + insert new)
-    │    ├─ Store attributes (objectType, securityParentId, partition, etc.)
-    │    └─ Append to eventsqueue (audit log)
-    ├─ recordDelete() — similar but limited metadata
-    └─ queryChanges() — dynamic native SQL with filters
-         └─ JOIN changelist ↔ changelistattributes ↔ eventtypes
-```
-
-### Endpoint
-
-`GET /changes` (auth required via `AuthFilter /changes/*`):
-
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `commitId` | long | — | Return changes with commitId > value (cursor) |
-| `changedSince` | long (UTC ms) | — | Return changes since time (ignored if commitId set) |
-| `content` | string (multi) | — | Content type filter (aspect names) |
-| `object` | string (multi) | article,image,page,graphic,collection | Object type filter (`*` = disable) |
-| `partition` | string (multi) | — | Partition filter |
-| `event` | string (multi) | CREATE,UPDATE,DELETE | Event type filter (`*` = disable) |
-| `rows` | int | 100 | Max results (capped at 10000) |
-
-Response: `{ runTime, maxCommitId, numFound, size, events: [{contentId, contentVersionId, commitId, commitTime, eventType, objectType, contentType, creationTime, creator, modificationTime, modifier, securityParentId, insertionParentId, partitions}] }`
-
-### New Files
-
-| File | Description |
-|------|-------------|
-| `entity/EventTypeEntity.java` | JPA entity for `eventtypes` table |
-| `entity/ChangeListEntry.java` | JPA entity for `changelist` table (non-auto-generated PK) |
-| `entity/ChangeListAttribute.java` | JPA entity for `changelistattributes` table |
-| `entity/ChangeListAttributeId.java` | Composite PK class for changelist attributes |
-| `entity/EventQueueEntry.java` | JPA entity for `eventsqueue` table |
-| `repository/EventTypeRepository.java` | `findByName(String)` |
-| `repository/AttributeRepository.java` | `findByName(String)` (uses existing `Attribute` entity) |
-| `repository/ChangeListRepository.java` | `findMaxId()`, `findByContentid()`, `deleteByContentid()` |
-| `repository/ChangeListAttributeRepository.java` | `findByIdIn()`, `deleteByIdIn()` |
-| `repository/EventQueueRepository.java` | Basic save only |
-| `service/ChangeListService.java` | Event recording + change feed querying |
-| `service/InvalidCommitIdException.java` | Exception for commitId > max |
-| `dto/ChangeEventDto.java` | Change event DTO with `@Schema` annotations |
-| `dto/ChangeFeedDto.java` | Change feed response wrapper |
-| `controller/ChangesController.java` | `GET /changes` endpoint |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `LocalContentManager.java` | Added `@Nullable ChangeListService` (8th constructor param), `recordChange()` after create/update, `recordDelete()` after delete |
-| `AuthConfig.java` | Added `/changes/*` to auth filter URL patterns |
-| `OpenApiConfig.java` | Added "Changes" tag |
-| `data.sql` | Added DELETE event type + modifier/modificationTime/creationTime attribute seeds |
-| `schema.sql` | Added `changelist_commit_at` index |
-| `application.properties` | Added `desk.changes.enabled=true` |
-
-### Design Notes
-
-- **Commit ID**: `AtomicInteger` seeded from `MAX(changelist.id)` — safe for single-instance deployment
-- **Upsert semantics**: `changelist_contentid_UNIQUE` constraint means only latest change per content ID stored (matches original Solr behavior)
-- **Fire-and-forget**: `@Transactional(REQUIRES_NEW)` — recording failures don't affect content operations
-- **AuthConfig patterns**: `/content/*`, `/dam/*`, `/principals/*`, `/admin/*`, `/search/*`, `/changes/*`
-
-## Increment 13 — Variant/Composer System
-
-Adds variant-based content composition to `ContentManager.get()`. When a non-null `variant` is passed, the system looks up a registered `ContentComposer` for that variant (optionally narrowed by content type), executes it to transform the raw `ContentResult`, and returns the composed result. This mirrors the original Polopoly `ExecutorReadComposer` pipeline.
-
-### Architecture
-
-```
-contentManager.get(contentId, "atex.onecms.indexing", Object.class, params, subject)
-  │
-  ├─ 1. Fetch raw content from DB (existing path)
-  ├─ 2. Build raw ContentResult via dtoToContentResult()
-  ├─ 3. If variant != null → look up composer registry
-  │      ├─ Match by variant name + content type (type-specific first)
-  │      ├─ Fall back to variant name + wildcard ("*")
-  │      └─ If no match → return raw result with variant tag (current behaviour)
-  ├─ 4. Build RequestImpl (params, subject, options) and Context (CM, null config, util, fileService)
-  └─ 5. Call composer.compose(rawResult, variant, request, context)
-         → Return composed ContentResult
-
-Composer Registry (Map<String, List<ComposerRegistration>>):
-  "atex.onecms.indexing"  → [("*", DamIndexComposerAdapter)]   ← registered
-  [plugin variants]       → [registered via PF4J DeskContentComposer extensions]
-
-Future built-in composers (not yet ported):
-  "atex.onecms.preview"   → DamContentPreviewComposer (from gong/onecms-common)
-  "ppage"                 → DamPrintPageComposer (from gong/onecms-common)
-  "jobExplorer"           → DamJobExplorerComposer (from gong/onecms-common)
-
-Registration order:
-  BuiltInComposerRegistrar (@PostConstruct)  ← built-in composers first
-  PluginLoader (@DependsOn builtInComposerRegistrar) ← PF4J plugin composers after
-```
-
-### ContentComposer Interface
-
-Updated `com.atex.onecms.content.mapping.ContentComposer<IN, OUT, CONFIG>` signature to match the original Polopoly API:
-
-```java
-ContentResult<OUT> compose(ContentResult<IN> source, String variant,
-                            Request request, Context<CONFIG> context) throws CallbackException;
-```
-
-Previously the desk-api stub had a simplified signature with `Map<String,Object> params, CONFIG config` — now uses `Request` and `Context<CONFIG>` for full compatibility with ported composers.
-
-### Mapping Infrastructure (new classes)
-
-| Class | Package | Description |
-|-------|---------|-------------|
-| `Request` | `c.a.o.content.mapping` | Interface: `getRequestParameters()`, `getSubject()`, `getOptions()` |
-| `RequestImpl` | `c.a.o.content.mapping` | Concrete implementation with static factory `RequestImpl.of(params, subject)` |
-| `Context<C>` | `c.a.o.content.mapping` | Composer context: `getContentManager()`, `getConfig()`, `getContentComposerUtil()`, `getFileService()`. No `ModelDomain` (desk-api doesn't have one). |
-| `ContentComposerUtil` | `c.a.o.content.mapping` | Utility interface: `filterUnmappedAspects()`, `getOriginalContent()`, `isAspectMapped()`, `notFoundInVariant()` |
-| `ContentComposerUtilImpl` | `c.a.o.content.mapping` | Simplified implementation — no AspectMapper infrastructure, `filterUnmappedAspects()` returns as-is, `isAspectMapped()` returns false |
-
-### Composer Registry in LocalContentManager
-
-`LocalContentManager` now has:
-
-- `Map<String, List<ComposerRegistration>> composerRegistry` — keyed by variant name
-- `record ComposerRegistration(String contentType, ContentComposer<Object,Object,Object> composer)` — inner record
-- `registerComposer(String variant, String contentType, ContentComposer)` — appends to registry, logs registration
-- `executeComposer(ContentResult, variant, params, subject, options)` — private method called from `get()` when variant is non-null:
-  1. Looks up `composerRegistry.get(variant)`
-  2. Finds best match: type-specific first, then wildcard (`"*"`)
-  3. Builds `RequestImpl` + `Context<Object>` (with `this` as ContentManager, `fileService`, null config)
-  4. Calls `composer.compose()`, returns result
-  5. On error: logs warning, returns raw result (graceful fallback)
-
-### BuiltInComposerRegistrar
-
-`com.atex.desk.api.plugin.BuiltInComposerRegistrar` — `@Component("builtInComposerRegistrar")` with `@PostConstruct`:
-
-Currently registers one composer:
-
-| Variant | Content Type | Composer | Notes |
-|---------|-------------|----------|-------|
-| `atex.onecms.indexing` | `*` (all) | Lambda adapter wrapping existing `DamIndexComposer` `@Component` | Calls `damIndexComposer.compose(source, versionId)`, wraps `JsonObject` result into `ContentResult<Object>` |
-
-### DeskContentComposer Enhancement
-
-Added `default String[] contentTypes()` returning `{"*"}` — plugin authors can override to target specific content types. Mirrors `DeskPreStoreHook.contentTypes()`.
-
-### PluginLoader Wiring
-
-- Changed `@DependsOn("builtInHookRegistrar")` → `@DependsOn({"builtInHookRegistrar", "builtInComposerRegistrar"})`
-- Replaced `"not yet wired"` log with actual registration loop:
-  - For each `DeskContentComposer`: adapts to `ContentComposer<Object,Object,Object>` via lambda, calls `contentManager.registerComposer()` for each `contentTypes()`
-
-### SearchController Fix
-
-`inlineContentData()` now passes the `variant` parameter through to `contentManager.get(vid, variant, Object.class, null, Subject.NOBODY_CALLER)` — previously it called `contentManager.get(vid, Object.class, Subject.NOBODY_CALLER)` ignoring the variant entirely.
-
-### ContentController Variant Support
-
-- Added `ContentManager` as constructor parameter (`@Nullable`)
-- `getContent()` now accepts `@RequestParam(value = "variant", required = false) String variant`
-- When variant is set: routes to `getContentWithVariant()` which resolves the ID via `ContentManager`, calls `contentManager.get(vid, variant, Object.class, null, subject)`, and returns the composed `ContentResult`
-- When variant is null: uses existing `ContentService` path (no change)
-
-### New Files (6)
-
-| File | Description |
-|------|-------------|
-| `plugin/BuiltInComposerRegistrar.java` | Registers built-in composers at startup |
-| `mapping/Request.java` | Request interface for composers |
-| `mapping/RequestImpl.java` | Concrete Request implementation |
-| `mapping/Context.java` | Composer context (CM, config, util, FileService) |
-| `mapping/ContentComposerUtil.java` | Utility interface for composers |
-| `mapping/ContentComposerUtilImpl.java` | Simplified implementation |
-
-### Modified Files (6)
-
-| File | Change |
-|------|--------|
-| `mapping/ContentComposer.java` | Updated signature: `compose(source, variant, Request, Context)` with `CallbackException` |
-| `onecms/LocalContentManager.java` | Added `composerRegistry`, `ComposerRegistration` record, `registerComposer()`, `executeComposer()` in `get()` |
-| `plugin/DeskContentComposer.java` | Added `default contentTypes()` method |
-| `plugin/PluginLoader.java` | `@DependsOn` updated, wires PF4J composers into registry |
-| `controller/SearchController.java` | Passes variant to `contentManager.get()` in `inlineContentData()` |
-| `controller/ContentController.java` | Added `ContentManager` injection, `variant` query param, `getContentWithVariant()` |
-
-### Future Work
-
-The following composers from the gong codebase can be ported and registered in `BuiltInComposerRegistrar`:
-
-| Composer | Variant | Source | Priority |
-|----------|---------|--------|----------|
-| `DamContentPreviewComposer` | `atex.onecms.preview` | gong/onecms-common | High — used by search result previews |
-| `DamPrintPageComposer` | `ppage` | gong/onecms-common | Medium — print page flattening |
-| `DamJobExplorerComposer` | `jobExplorer` | gong/onecms-common | Medium — job explorer view |
-| `CustomDamComposer` | (base class) | gong/onecms-common | Required by DamContentPreviewComposer |
-
-## Increment 14 — Copyfit Layout Proxy
-
-Ports the copyfit layout module from `gong/desk` into desk-api as a Spring MVC reverse proxy. The layout proxy forwards requests to external HandJ/print layout servers and relays responses back — no business logic runs in the proxy itself.
-
-### Architecture
-
-```
-Desk UI / mytype-new
-  └─ /layout/handj/*  → LayoutResource (@RestController)
-       └─ LayoutService (@Service)
-            ├─ Config from ContentManager (atex.plugins.layout.LayoutServerConfiguration)
-            ├─ Server routing:
-            │    ├─ fieldType == "content" → print server
-            │    ├─ URL contains "-NewsRoom" → newsroom layout server
-            │    └─ default → layout server
-            ├─ Apache HttpClient with pooling + configurable timeouts
-            ├─ Streaming responses (StreamingResponseBody)
-            └─ Bidirectional header pass-through
-```
-
-### Configuration
-
-Default config file at `config/defaults/layout/atex.plugins.layout.LayoutServerConfiguration.json5`, loaded via `ConfigurationService` (Increment 7). Cached with 5-second Guava memoization.
-
-```properties
-desk.layout.enabled=true
-```
-
-### Domain Beans (7 POJOs, original packages preserved)
-
-| Class | Package | Description |
-|-------|---------|-------------|
-| `PrintVariantsAspectBean` | `com.atex.plugins.copyfit` | `@AspectDefinition("atex.PrintVariants")` — shape/doc IDs, poll time, attributes list, status |
-| `PrintAttribute` | `com.atex.plugins.copyfit` | 19-field print attribute (name, element, content, lock info, channel, flags, status) |
-| `PrintWorkflowStatus` | `com.atex.plugins.copyfit` | 7-field workflow status (statusId, name, sequence, colours, workflowId) |
-| `AttributeContent` | `com.atex.plugins.copyfit` | 5-field attribute content (name, channel, modification time, content) |
-| `ReconcileAttributesAspectBean` | `com.atex.plugins.copyfit` | `@AspectDefinition("atex.ReconcileAttributes")` — list of AttributeContent |
-| `PrintOperationsAspectBean` | `com.atex.plugins.copyfit.operations` | `@AspectDefinition("atex.PrintOperations")` — operations list + slots list |
-| `PrintSlotBean` | `com.atex.plugins.copyfit.operations` | Slot POJO (name, contentId, slot number, image flag, layoutTag, layoutCommand) |
-
-### LayoutService
-
-`com.atex.plugins.layout.LayoutService` — `@Service @ConditionalOnProperty(name = "desk.layout.enabled")`:
-
-| Original Pattern | Spring Conversion |
-|---|---|
-| `static getInstance()` singleton | `@Service` with constructor-injected `ContentManager` |
-| `Suppliers.memoizeWithExpiration(5s)` | Kept as-is (Guava already in deps) |
-| `javax.ws.rs.core.UriBuilder` | `java.net.URI.create()` |
-| `javax.ws.rs.core.Response` | `ResponseEntity<?>` |
-| `javax.ws.rs.core.StreamingOutput` | `StreamingResponseBody` (8KB buffer) |
-| `javax.ws.rs.core.HttpHeaders` | `HttpServletRequest` (read headers via `getHeaderNames()`) |
-| `javax.ws.rs.core.UriInfo` | `HttpServletRequest.getQueryString()` |
-| `ErrorResponseException` | `ContentApiException` |
-| `StringUtils.isNotBlank()` (commons-lang) | Inline null/empty check |
-
-Key methods preserved:
-- `executeHttpRequest()` — core HTTP proxy with streaming, error counting (max 25), header pass-through
-- `buildUrl()` / `buildServerUrl()` / `buildNewsRoomServerUrl()` — server routing logic
-- `getClient()` — Apache HttpClient with configurable pool size and timeouts
-- `getPerRequestConfig()` — per-request timeout with slow URL regex multipliers (2x/4x)
-- `passOnHeaders()` / `passOnReturnHeaders()` — bidirectional header proxying (skips hop-by-hop headers)
-- `previewURL()` — preview image proxy with NewsRoom detection
-- `decodeUriString()` — URI decoding for embedded URLs
-
-### LayoutResource
-
-`com.atex.plugins.layout.LayoutResource` — `@RestController @RequestMapping("/layout/handj")`:
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `preview-url/{id}` | Preview image proxy (routes to layout or newsroom server) |
-| GET | `{type}/{id}` | GET proxy by type and content ID |
-| GET | `{type}/{subtype}/{id}` | GET proxy by type, subtype, and content ID |
-| POST | `{type}/{id}` | POST proxy by type and content ID |
-| POST | `{type}/{subtype}/{id}` | POST proxy by type, subtype, and content ID |
-
-### New Files (12)
-
-| File | Description |
-|------|-------------|
-| `config/defaults/layout/atex.plugins.layout.LayoutServerConfiguration.json5` | Default layout server config |
-| `com/atex/plugins/copyfit/PrintVariantsAspectBean.java` | Print variants aspect bean |
-| `com/atex/plugins/copyfit/PrintAttribute.java` | Print attribute POJO |
-| `com/atex/plugins/copyfit/PrintWorkflowStatus.java` | Print workflow status POJO |
-| `com/atex/plugins/copyfit/AttributeContent.java` | Attribute content POJO |
-| `com/atex/plugins/copyfit/ReconcileAttributesAspectBean.java` | Reconcile attributes aspect |
-| `com/atex/plugins/copyfit/operations/PrintOperationsAspectBean.java` | Print operations aspect |
-| `com/atex/plugins/copyfit/operations/PrintSlotBean.java` | Print slot POJO |
-| `com/atex/plugins/layout/LayoutServerConfigurationBean.java` | Config POJO |
-| `com/atex/plugins/layout/PreviewResponse.java` | Preview response POJO |
-| `com/atex/plugins/layout/LayoutService.java` | Spring `@Service` — HTTP reverse proxy |
-| `com/atex/plugins/layout/LayoutResource.java` | Spring `@RestController` at `/layout/handj` |
-
-### Modified Files (4)
-
-| File | Change |
-|------|--------|
-| `auth/AuthConfig.java` | Added `/layout/*` to auth filter URL patterns |
-| `config/OpenApiConfig.java` | Added `"Layout"` tag |
-| `application.properties` | Added `desk.layout.enabled=true`, added `com.atex.plugins.layout` to SpringDoc scan packages |
-| `scripts/config-mapping.txt` | Added layout config mapping entry |
-
-## Increment 15 — Decoupled SOLR Indexing with Reindex Jobs
-
-Replaces the synchronous in-process indexing (where `LocalContentManager.indexAsync()` called `ContentIndexer` → `DamIndexComposer` → `SolrService.index()` inline on every create/update) with a decoupled background processor that polls the `changelist` table by cursor. Content writes become fully independent of Solr availability. Three types of reindex job (full, filtered, manual ID list) are supported via REST API, with resumable state persisted in a new `indexer_state` table. Multiple desk-api instances coordinate via lease-based row locking.
-
-### Architecture
-
-```
-Content Write Path (unchanged):
-  LocalContentManager.create()/update()/delete()
-    └─ ChangeListService.recordEvent()  →  changelist table (upsert by contentId)
-       (no more indexAsync() call — Solr is fully decoupled)
-
-Background Indexing (new):
-  SolrIndexProcessor (@Scheduled, ThreadPoolTaskScheduler poolSize=2)
-    ├─ Live Indexer Thread (every 2s):
-    │    ├─ Acquire lease on indexer_state row 'solr' (job_type=LIVE)
-    │    ├─ SELECT FROM changelist WHERE id > last_cursor ORDER BY id ASC LIMIT batch_size
-    │    ├─ For each entry: fetch content via ContentManager, compose via DamIndexComposer
-    │    ├─ SolrService.indexBatch() — single add() + commit()
-    │    └─ Advance last_cursor, release lease
-    │
-    └─ Reindex Worker Thread (every 5s):
-         ├─ Find oldest indexer_state row with status IN (REQUESTED, RUNNING)
-         │   and job_type IN (REINDEX_FULL, REINDEX_FILTERED, REINDEX_MANUAL)
-         ├─ Acquire lease
-         ├─ Process batch according to job_type:
-         │    ├─ REINDEX_FULL: walk idversions+idviews (p.latest), cursor on versionid
-         │    ├─ REINDEX_FILTERED: same + WHERE clauses from config JSON
-         │    └─ REINDEX_MANUAL: iterate content ID array from config JSON, cursor = array index
-         ├─ SolrService.indexBatch()
-         ├─ Advance last_cursor, increment processed_items, update updated_at
-         └─ On completion: status=COMPLETED. On failure: error_count++, cursor stays put
-
-Multi-Instance Coordination:
-  indexer_state row locking:
-    ├─ locked_by = instance identifier (hostname or desk.indexing.instance-id)
-    ├─ locked_at = timestamp when lease acquired
-    ├─ Lease expiry = desk.indexing.lease-seconds (default 60)
-    └─ If locked_at older than lease period, another instance can claim the row
-
-indexer_state table:
-    ├─ 'solr' row (LIVE) — permanent, cursor into changelist.id
-    └─ 'reindex-{timestamp}' rows — created via REST, deletable via REST
-```
-
-### New Table: `indexer_state`
-
-```sql
-CREATE TABLE IF NOT EXISTS indexer_state (
-    indexer_id      VARCHAR(64) PRIMARY KEY NOT NULL,
-    job_type        VARCHAR(32) NOT NULL,
-    status          VARCHAR(16) NOT NULL DEFAULT 'REQUESTED',
-    last_cursor     BIGINT NOT NULL DEFAULT 0,
-    config          JSON,
-    total_items     BIGINT,
-    processed_items BIGINT NOT NULL DEFAULT 0,
-    error_count     INT NOT NULL DEFAULT 0,
-    error_message   TEXT,
-    locked_by       VARCHAR(255),
-    locked_at       TIMESTAMP(3),
-    started_at      TIMESTAMP(3),
-    created_at      TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
-    updated_at      TIMESTAMP(3) DEFAULT NOW(3) NOT NULL
-);
-```
-
-Seeded with: `INSERT IGNORE INTO indexer_state (indexer_id, job_type, status, last_cursor) VALUES ('solr', 'LIVE', 'RUNNING', 0);`
-
-### SolrService Batch Methods
-
-Added `indexBatch(collection, List<SolrInputDocument>)` and `deleteBatch(collection, List<String>)` — single `add()`/`deleteById()` + `commit()` call per batch. Existing `index()` and `delete()` now delegate to batch methods with singleton lists.
-
-### SolrIndexProcessor
-
-`@Component @EnableScheduling @ConditionalOnProperty(desk.indexing.enabled)` with two `@Scheduled` methods:
-
-- **`processLiveIndex()`** — polls changelist by cursor, composes via `DamIndexComposer`, batch-sends to Solr. DELETE events trigger `deleteBatch()`.
-- **`processReindexJobs()`** — picks oldest actionable reindex job:
-  - `REINDEX_FULL`: walks `idversions` + `idviews` (p.latest) by `versionid` cursor
-  - `REINDEX_FILTERED`: same + WHERE from config JSON (`contentTypes`, `dateFrom`, `dateTo`)
-  - `REINDEX_MANUAL`: iterates content ID array from config JSON, `last_cursor` = array index
-- Sets `started_at` on first batch (for ETA). Checks `status` each tick (PAUSED stops).
-
-### Removed Synchronous Indexing
-
-- Removed `ContentIndexer` field and constructor parameter from `LocalContentManager`
-- Removed `indexAsync()` method and all three call sites (create, update, delete)
-- Content writes are fully independent of Solr availability
-- `ContentIndexer` class retained as helper (used by `SolrIndexProcessor`)
-
-### Reindex REST API
-
-`ReindexController` at `/admin/reindex`:
-
-| Endpoint | Description |
-|---|---|
-| `POST /admin/reindex` | Create job: `{"type":"full"}`, `{"type":"filtered","contentTypes":[...],"dateFrom":"...","dateTo":"..."}`, `{"type":"manual","contentIds":[...]}`. Returns 201 + `ReindexJobDto` |
-| `GET /admin/reindex` | List all reindex jobs (descending by created_at) |
-| `GET /admin/reindex/{id}` | Single job with progress + ETA |
-| `DELETE /admin/reindex/{id}` | Active jobs → PAUSED; inactive jobs → physically deleted (204) |
-
-**ETA calculation** (computed at read time, not stored):
-- `rate = processed_items / (now - started_at)`
-- `estimatedRemainingSeconds = (total_items - processed_items) / rate`
-- `estimatedCompletionTime = now + estimatedRemainingSeconds`
-- Null when not yet started or 0 items processed
-
-### Configuration
-
-| Property | Default | Description |
-|---|---|---|
-| `desk.indexing.poll-interval` | `2000` | Live indexer poll interval (ms) |
-| `desk.indexing.reindex-poll-interval` | `5000` | Reindex worker poll interval (ms) |
-| `desk.indexing.batch-size` | `100` | Documents per batch |
-| `desk.indexing.lease-seconds` | `60` | Lock lease expiry |
-| `desk.indexing.instance-id` | hostname | Instance identifier for lease |
-
-### New Files (6)
-
-| File | Description |
-|---|---|
-| `entity/IndexerState.java` | JPA entity for `indexer_state` |
-| `repository/IndexerStateRepository.java` | Repository with finder methods |
-| `indexing/SolrIndexProcessor.java` | Background processor with live + reindex scheduled methods |
-| `controller/ReindexController.java` | REST API for reindex job management |
-| `dto/ReindexRequestDto.java` | Reindex request body |
-| `dto/ReindexJobDto.java` | Reindex job response with progress and ETA |
-
-### Modified Files (6)
-
-| File | Change |
-|---|---|
-| `solr/SolrService.java` | Added `indexBatch()` and `deleteBatch()`, refactored `index()`/`delete()` to delegate |
-| `onecms/LocalContentManager.java` | Removed `ContentIndexer` field, constructor param, `indexAsync()` method and 3 call sites |
+| `SolrService` | Added `indexBatch()` and `deleteBatch()`, refactored `index()`/`delete()` to delegate |
+| `LocalContentManager` | Removed `ContentIndexer` field, constructor param, `indexAsync()` method and 3 call sites |
 | `schema.sql` | Added `indexer_state` table DDL |
 | `data.sql` | Seeded `solr` LIVE indexer row |
 | `application.properties` | Added `desk.indexing.*` properties |
@@ -2103,4 +958,390 @@ Both endpoints: auth via `AuthFilter.USER_ATTRIBUTE`, resolve content version (w
 |------|--------|
 | `auth/AuthConfig.java` | Added `/preview/*` to auth filter URL patterns |
 | `config/OpenApiConfig.java` | Added `"Preview"` tag |
+
+## Increment 18 — Compatibility Test Suite & Fix Plan
+
+### Compatibility Test Script
+
+`scripts/compat-test.py` — Python test suite exercising core API endpoints on both desk-api (localhost:8081) and reference OneCMS (localhost:38084/onecms), comparing responses.
+
+**Usage:**
+```bash
+python scripts/compat-test.py                    # Compare both servers
+python scripts/compat-test.py --desk-only        # Single-server CRUD cycle
+python scripts/compat-test.py --ref-only         # Single-server CRUD cycle
+python scripts/compat-test.py --verbose           # Show full response bodies
+python scripts/compat-test.py --test <substring>  # Filter tests
+```
+
+**16 comparison tests:** login, validate token, create article, get versioned, get unversioned redirect, update, history, external ID resolve, config content, search, DAM content, DAM configuration, principals /me, workspace CRUD, changes feed, delete.
+
+**Key discovery:** Reference server requires `If-Match: "quoted-etag"` header for PUT and DELETE operations. Returns 400 without it.
+
+### Compatibility Issues Found (desk-api vs reference OneCMS)
+
+#### Issue 1: Redirect Status Code 302 vs 303
+
+**Reference:** Returns `303 See Other` with JSON body for unversioned content and external ID resolution:
+```json
+{"statusCode":"30300","message":"Symbolic version resolved","location":"/onecms/content/contentid/..."}
+```
+
+**desk-api:** Returns `302 Found` with `Location` header only (no JSON body).
+
+**Fix:** Change `HttpStatus.FOUND` (302) to `HttpStatus.SEE_OTHER` (303) in `ContentController` for all redirect endpoints (5 locations). Add JSON body to redirect responses matching reference format.
+
+**Files:** `ContentController.java` (lines 101, 198, 222, 252, 280)
+
+#### Issue 2: If-Match Header Not Enforced
+
+**Reference:** Returns `400` with `{"statusCode":40000,"message":"Tried to update content with an If-Match header not corresponding to this content."}` when If-Match is missing on PUT. Returns `{"statusCode":40000,"message":"Deleting requires an If-Match header"}` when missing on DELETE. ETag must be quoted: `If-Match: "onecms:id:version"`.
+
+**desk-api:** Accepts `If-Match` as optional parameter but **ignores it entirely** — never validates, never rejects missing values. No optimistic locking.
+
+**Fix:**
+1. `ContentController.updateContent()` — make `If-Match` required, validate against current version, return 400 if missing, 409 if stale
+2. `ContentController.deleteContent()` — same: require `If-Match`, validate, return 400 if missing
+3. `ContentService` — add version-aware resolve method to check If-Match against `p.latest` view
+
+**Files:** `ContentController.java`, `ContentService.java`
+
+#### Issue 3: Error Response Format Mismatch
+
+**Reference** error format:
+```json
+{"extraInfo":{},"statusCode":40400,"message":"NOT_FOUND"}
+```
+
+**desk-api** error format:
+```json
+{"detailCode":"NOT_FOUND","name":"Content not found"}
+```
+
+**Fix:** Change `ErrorResponseDto` to match reference format: rename `detailCode`→`statusCode` (as integer), `name`→`message`, add `extraInfo` object field. Update all error construction sites across controllers.
+
+**Files:** `ErrorResponseDto.java`, all controllers that construct `ErrorResponseDto`
+
+#### Issue 4: Missing Default Aspects on Content Creation
+
+**Reference** creates 6 aspects for a new article:
+1. `contentData` — main bean with enriched fields
+2. `atex.WFContentStatus` — default workflow status (e.g., "PRIVATE")
+3. `p.InsertionInfo` — security parent, associated sites
+4. `art.Inbox` — `{showInInbox: true}` **(legacy, ignored)**
+5. `atex.WebContentStatus` — default web status (e.g., "Draft")
+6. `atex.Metadata` — partition dimension, taxonomy IDs
+
+**desk-api** creates only `contentData` (plus `p.InsertionInfo` and `p.Metadata` from SecParentPreStoreHook if partition is configured). Missing: `atex.WFContentStatus`, `atex.WebContentStatus`.
+
+**Root cause:** `SetStatusPreStoreHook` only acts when an explicit `SetStatusOperation` is in the request operations list. It should also set a **default status** on new content when no operation is present.
+
+**Fix:**
+1. `SetStatusPreStoreHook` — on create (existing content is null), if no `SetStatusOperation` present, auto-create `WFContentStatusAspectBean` and `WebContentStatusAspectBean` with the first status from the workflow status list config (`dam.wfstatuslist.d` / `dam.webstatuslist.d`)
+2. `OneContentPreStore` — ensure `atex.Metadata` is always created on new content with partition dimension from insertion info
+
+**Note:** `art.Inbox` is legacy and not needed — skip `InboxPreStoreHook`.
+
+**Files:** `SetStatusPreStoreHook.java`, `OneContentPreStore.java`, `BuiltInHookRegistrar.java`
+
+#### Issue 5: ContentData Bean Field Enrichment
+
+**Reference** contentData for a new article includes many computed/default fields:
+```
+objectType: "article", inputTemplate: "p.NosqlArticle", contentType: "parentDocument",
+priority: 3, related: [], creationdate: "epoch", words: N, chars: N,
+propertyBag: {custom_type: "java.util.HashMap", custom: {_type: "java.util.HashMap"}},
+wordCount: N, depth: N.NN, depthWithUm: "N.NN cm", commonContentIds: [],
+showTopMediaOnWeb: true, publishingTime: 0, publishingUpdateTime: 0,
+premiumContent: false, rating: 0, publicationDate: epoch, hold: false,
+printFirst: false, initialisedFromPrint: false, premiumType: "inherit",
+pushNotification: false, noIndex: false, showAuthorOnWeb: false, markForArchive: false
+```
+
+**desk-api** only returns fields that were explicitly set in the request (headline, lead, body, _type) plus fields set by hooks (creationdate, words, chars, author).
+
+**Root cause:** When content is created via `ContentManager` with `Object.class`, the data is a `Map<String, Object>` — the `OneArticleBean` constructor (which sets defaults like `priority=3`, `objectType="article"`) is never called.
+
+**Fix:** In `OneContentPreStore`, after setting creationdate/author/name, detect the `_type` field and apply bean-class defaults. For `atex.onecms.article`: set `objectType`, `inputTemplate`, `contentType`, `priority`, `propertyBag`, and boolean defaults. This could use a type→defaults registry or Gson round-trip through the bean class.
+
+**Files:** `OneContentPreStore.java`, possibly `OneArticleBean.java` (add static defaults method)
+
+#### Issue 6: Principals Response Format Mismatch
+
+**Reference** `GET /principals/users/me`:
+```json
+{
+  "loginName": "sysadmin", "firstName": "System", "lastName": "Administrator",
+  "id": 98, "userId": "98", "cmUser": true, "ldapUser": false, "remoteUser": false,
+  "groups": [{"type":"group","id":"group:7","name":"...","principalId":"group:7"}],
+  "userData": {"relations": {}},
+  "homeDepartmentId": "policy:2.0",
+  "workingSites": ["policy:2.248","policy:2.220"]
+}
+```
+
+**Reference** `GET /principals/users` (list):
+```json
+[{"ldapUser":false,"remoteUser":false,"cmUser":true,"type":"user","id":"1","name":"webmaster","principalId":"1"}]
+```
+
+**desk-api** `GET /principals/users/me`:
+```json
+{"userId":"sysadmin","username":"sysadmin","createdAt":"..."}
+```
+
+**desk-api** `GET /principals/users`:
+```json
+[{"userId":"sysadmin","username":"sysadmin","createdAt":"..."}]
+```
+
+**Mismatches:**
+- `/me` missing: `loginName`, `firstName`, `lastName`, `id` (numeric), `cmUser`, `ldapUser`, `remoteUser`, `groups` (as objects), `userData`, `homeDepartmentId`, `workingSites`
+- `/users` list uses wrong field names: should be `type`, `id` (numeric), `name`, `principalId`, `cmUser`, `ldapUser`, `remoteUser`
+- `PrincipalDto` fields don't match either response format
+
+**Fix:**
+1. Create `UserMeDto` for the `/me` response with all fields from reference
+2. Rework `PrincipalDto` to match list format: `type`, `id`, `name`, `principalId`, `cmUser`, `ldapUser`, `remoteUser`
+3. Expose `isLdapUser` and `isRemoteUser` from `AppUser` entity (already in DB)
+4. `groups` for `/me`: look up group memberships and return as objects `{type, id, name, principalId}`
+5. `workingSites`, `homeDepartmentId` — need new DB columns or content-based storage (defer or stub with empty values)
+
+**Files:** new `UserMeDto.java`, `PrincipalDto.java` (rework), `PrincipalsController.java`
+
+#### Issue 7: Changes Feed Empty Response
+
+**Reference** returns minimal `{"runTime": epoch}` when no events match.
+
+**desk-api** returns full structure `{"runTime":..., "maxCommitId":0, "numFound":0, "size":0, "events":[]}`.
+
+**Impact:** Low — the extra fields with 0/empty values shouldn't break clients. But for strict compatibility, `ChangeFeedDto` should use `@JsonInclude(JsonInclude.Include.NON_DEFAULT)` or similar to omit zero-valued fields.
+
+**Files:** `ChangeFeedDto.java`
+
+### Priority Order
+
+| Priority | Issue | Impact | Effort |
+|----------|-------|--------|--------|
+| **P1** | Issue 4: Missing default aspects | Clients crash expecting WFContentStatus | Medium |
+| **P1** | Issue 2: If-Match enforcement | Data integrity — concurrent edits not detected | Medium |
+| **P1** | Issue 3: Error response format | All clients parsing errors break | Low |
+| **P2** | Issue 6: Principals format | mytype-new UI expects reference format | Medium |
+| **P2** | Issue 5: ContentData defaults | UI displays empty fields, search indexing misses data | Medium |
+| **P3** | Issue 1: 302→303 redirect | Most HTTP clients follow both — low breakage | Low |
+| **P3** | Issue 7: Changes empty response | Extra fields in response shouldn't break clients | Low |
+
+## Increment 18a — P1 Compatibility Fixes
+
+Implements the three P1 (critical) fixes identified by the compatibility test suite (`scripts/compat-test.py`).
+
+### Fix 1: Error Response Format
+
+**Problem:** desk-api returned `{"detailCode":"NOT_FOUND","name":"Content not found"}` but reference OneCMS returns `{"extraInfo":{},"statusCode":40400,"message":"NOT_FOUND"}`.
+
+**Changes:**
+- `ErrorResponseDto` — Reworked fields: `statusCode` (int, HTTP status × 100), `message` (String), `extraInfo` (Map, always `{}`). Added `HttpStatus` convenience constructor.
+- `ContentApiExceptionHandler` — Updated to emit `extraInfo`, `statusCode`, `message` matching reference format.
+- All 39 `new ErrorResponseDto(...)` call sites across 6 controllers updated to use `HttpStatus` enum constructor.
+
+**Files modified:** `ErrorResponseDto.java`, `ContentApiExceptionHandler.java`, `ContentController.java`, `SecurityController.java`, `WorkspaceController.java`, `PrincipalsController.java`, `ConfigurationController.java`, `ChangesController.java`
+
+### Fix 2: If-Match Enforcement + 303 Redirects
+
+**Problem:** Reference requires quoted `If-Match: "onecms:id:version"` header for PUT and DELETE, returns 400 without it. desk-api accepted but ignored If-Match. Also, reference uses 303 (not 302) for redirects with a JSON body.
+
+**Changes:**
+- `ContentService.getCurrentVersion()` — New method resolving current `p.latest` versioned ID for ETag validation.
+- `ContentController.updateContent()` — Returns 400 if `If-Match` missing or doesn't match current version. Error messages match reference exactly.
+- `ContentController.deleteContent()` — Same: requires `If-Match`, validates against current version.
+- `ContentController.redirect()` — New helper. All 5 redirect locations changed from `302 FOUND` to `303 SEE_OTHER` with JSON body `{"statusCode":"30300","message":"Symbolic version resolved","location":"..."}`.
+- `ContentController.stripETagQuotes()` — Strips surrounding quotes from If-Match header values.
+
+**Files modified:** `ContentService.java`, `ContentController.java`
+
+### Fix 3: Default Workflow Status Aspects on Create
+
+**Problem:** When creating content without explicit `SetStatusOperation`, reference auto-creates `atex.WFContentStatus` and `atex.WebContentStatus`. desk-api created neither, causing client crashes expecting these aspects.
+
+**Changes:**
+- `SetStatusPreStoreHook` — For new content (existing==null) without an explicit `SetStatusOperation`, auto-creates `WFContentStatusAspectBean` and `WebContentStatusAspectBean` using the first status from workflow config (`dam.wfstatuslist.d` / `dam.webstatuslist.d`). Skips if status aspects already present.
+- `OneContentPreStore` — On create, now always initializes both `InsertionInfoAspectBean` and `MetadataInfo` (`atex.Metadata`) if missing. Previously only created `InsertionInfoAspectBean` conditionally and didn't create `MetadataInfo` at all.
+
+**Files modified:** `SetStatusPreStoreHook.java`, `OneContentPreStore.java`
+
+### Remaining Compatibility Issues (P2/P3)
+
+| Priority | Issue | Status |
+|----------|-------|--------|
+| **P2** | Issue 6: Principals response format mismatch | Not yet fixed |
+| **P2** | Issue 5: ContentData bean field defaults | Not yet fixed |
+| **P3** | Issue 7: Changes feed empty response format | Not yet fixed |
+
+## Increment 19 — Full Content Data Bean Migration
+
+Ports the complete content data bean hierarchy from gong source to desk-api, replacing minimal stubs with full API-compatible beans. All beans retain their original packages (`com.atex.onecms.app.dam.standard.aspects`, `com.atex.onecms.app.dam`, `com.atex.onecms.app.dam.types`, etc.) for binary compatibility with existing serialized content.
+
+### Problem
+
+The existing desk-api beans (`OneArticleBean`, `OneImageBean`, etc.) were minimal stubs with 3-10 fields each. The original gong beans have 50+ fields per type. When content with all fields is deserialized into these stubs and re-saved, **unmapped fields are silently dropped** — a data loss risk. Additionally, the bean hierarchy was flat (`OneContentBean` → `OneArticleBean`) when it should have an intermediate `OneArchiveBean` class.
+
+### Bean Hierarchy (after migration)
+
+```
+IDamBean (interface, com.atex.onecms.app.dam)
+├─ OneContentBean (com.atex.onecms.app.dam.standard.aspects)
+│   implements IDamBean, PropertyBag
+│   Fields: _type, objectType, inputTemplate, securityParentId, contentType, name,
+│           creationdate, author, words, chars, subject, newsId, source, section,
+│           markForArchive, aceSlugInfo, aceMigrationInfo, propertyBag
+│   ├─ OneArchiveBean
+│   │   Fields: lastPublication, lastEdition, lastPage, lastPubdate, lastPagelevel,
+│   │           lastSection, domain, legacyid, legacyUrl, archiveComment, related
+│   │   ├─ OneArticleBean (50+ fields, StructuredText headline/lead/body/subTitle/caption/teaserTitle)
+│   │   │   implements RelatedSectionsAware, PublicationLinkSupport, PushNotificationSupport,
+│   │   │             PremiumTypeSupport, MinorChangeSupport, PublishUpdatedTimeAware, AuthorsSupport
+│   │   │   └─ LiveBlogArticleBean
+│   │   ├─ OneImageBean (20+ fields: rights, webStatement, alternativeText, useWatermark, etc.)
+│   │   ├─ DamCollectionAspectBean (25+ fields, 7 interfaces)
+│   │   ├─ DamAudioAspectBean (20+ fields, 9 interfaces)
+│   │   ├─ DamVideoAspectBean (25+ fields, 9 interfaces)
+│   │   ├─ DamGraphicAspectBean
+│   │   ├─ DamPageAspectBean
+│   │   └─ DamBulkImagesBean
+│   ├─ DamFolderAspectBean (18 fields, smart folder query support)
+│   ├─ DamDocumentAspectBean (8 fields, 3 interfaces)
+│   ├─ DamEmbedAspectBean
+│   ├─ DamTweetAspectBean
+│   ├─ DamInstagramAspectBean (12 fields)
+│   ├─ DamAutoPageAspectBean
+│   ├─ DamShapeDBAspectBean
+│   ├─ DamNewsListItemAspectBean (25+ fields)
+│   └─ LiveBlogEventBean
+├─ DamContentBean (legacy, com.atex.onecms.app.dam) @Deprecated
+│   implements IDamBean
+│   ├─ DamArchiveAspectBean @Deprecated
+│   │   implements IDamArchiveAspectBean
+│   │   ├─ DamArticleAspectBean @Deprecated
+│   │   ├─ DamImageAspectBean @Deprecated
+│   │   └─ DamContentShareAspectBean @Deprecated
+│   ├─ DamWireArticleAspectBean @Deprecated
+│   └─ DamWireImageAspectBean @Deprecated
+```
+
+### Supporting Types Created
+
+| Package | Class | Source |
+|---------|-------|--------|
+| `c.a.plugins.structured.text` | `StructuredText` | structured-text symlink |
+| `c.a.plugins.structured.text` | `Note` | structured-text symlink |
+| `c.a.onecms` | `GeoLocation` | gong/common-beans |
+| `c.a.o.app.dam` | `IDamBean` | gong/onecms-common/beans |
+| `c.a.o.app.dam` | `DamContentBean` | gong/desk/module-desk |
+| `c.a.o.app.dam` | `DamAssigneeBean` | gong/onecms-common/beans |
+| `c.a.o.app.dam.types` | `TimeState` | gong/onecms-common/beans |
+| `c.a.o.app.dam.types` | `AceSlugInfo` | gong/onecms-common/beans |
+| `c.a.o.app.dam.types` | `AceMigrationInfo` | gong/onecms-common/beans |
+| `c.a.o.app.dam.types` | `AceWebMetadata` | gong/onecms-common/beans |
+| `c.a.o.app.dam.types` | `SocialPostingAccount` | gong/onecms-common/beans |
+| `c.a.o.app.dam.types` | `SocialPostingPlatform` | gong/onecms-common/beans |
+| `c.a.o.app.dam.twitter` | `TweetMediaEntity` | gong/onecms-common/beans |
+| `c.a.o.app.dam.twitter` | `TweetUrlEntity` | gong/onecms-common/beans |
+| `c.a.o.ace.annotations` | `AceAspect` | stub annotation |
+
+### Interfaces Created (all in `c.a.o.app.dam.standard.aspects`)
+
+| Interface | Methods |
+|-----------|---------|
+| `PropertyBag` | `getPropertyBag()`, `setPropertyBag()` |
+| `MinorChangeSupport` | `isMinorChange()`, `setMinorChange()` |
+| `PushNotificationSupport` | `isPushNotification()`, `setPushNotification()` |
+| `PremiumTypeSupport` | `getPremiumType()`, `setPremiumType()` + `DEFAULT_PREMIUM_TYPE="inherit"` |
+| `AuthorsSupport` | `getAuthors()`, `setAuthors()` |
+| `RelatedSectionsAware` | `getRelatedSections()`, `setRelatedSections()` |
+| `PublishUpdatedTimeAware` | `getPublishingUpdateTime()`, `setPublishingUpdateTime()` |
+| `DigitalPublishingTimeAware` | `getDigitalPublishingTime()`, `setDigitalPublishingTime()` |
+| `TimeStateAware` | `getTimeState()`, `setTimeState()` |
+| `TranscribeSupport` | `getTranscriptionText()`, `setTranscriptionText()`, `isTranscribeFlag()`, `setTranscribeFlag()` |
+| `BinaryUrlSupport` | `getBinaryUrl()`, `setBinaryUrl()` |
+| `PostPublishUpdate` | `postPublishUpdate()` |
+| `IDamArchiveAspectBean` | extends `IDamBean`, archive field accessors |
+
+### New Files (45)
+
+| File | Description |
+|------|-------------|
+| `plugins/structured/text/StructuredText.java` | Text with editorial notes |
+| `plugins/structured/text/Note.java` | Single editorial note |
+| `onecms/GeoLocation.java` | Lat/long/label POJO |
+| `dam/IDamBean.java` | Base DAM bean interface |
+| `dam/DamContentBean.java` | Legacy base class (deprecated) |
+| `dam/DamAssigneeBean.java` | Assignee POJO |
+| `dam/types/TimeState.java` | On/off time POJO |
+| `dam/types/AceSlugInfo.java` | ACE slug info |
+| `dam/types/AceMigrationInfo.java` | ACE migration info |
+| `dam/types/AceWebMetadata.java` | ACE web metadata |
+| `dam/types/SocialPostingAccount.java` | Social posting account |
+| `dam/types/SocialPostingPlatform.java` | Social posting platform |
+| `dam/twitter/TweetMediaEntity.java` | Tweet media entity |
+| `dam/twitter/TweetUrlEntity.java` | Tweet URL entity |
+| `ace/annotations/AceAspect.java` | Stub annotation |
+| `aspects/OneArchiveBean.java` | Archive intermediate class |
+| `aspects/PropertyBag.java` | Interface |
+| `aspects/MinorChangeSupport.java` | Interface |
+| `aspects/PushNotificationSupport.java` | Interface |
+| `aspects/PremiumTypeSupport.java` | Interface |
+| `aspects/AuthorsSupport.java` | Interface |
+| `aspects/RelatedSectionsAware.java` | Interface |
+| `aspects/PublishUpdatedTimeAware.java` | Interface |
+| `aspects/DigitalPublishingTimeAware.java` | Interface |
+| `aspects/TimeStateAware.java` | Interface |
+| `aspects/TranscribeSupport.java` | Interface |
+| `aspects/BinaryUrlSupport.java` | Interface |
+| `aspects/PostPublishUpdate.java` | Interface |
+| `aspects/IDamArchiveAspectBean.java` | Legacy archive interface |
+| `aspects/DamArchiveAspectBean.java` | Legacy archive class (deprecated) |
+| `aspects/AudioAI.java` | Audio AI settings POJO |
+| `aspects/LogicalPage.java` | Print logical page POJO |
+| `aspects/DamVideoAspectBean.java` | Video bean (25+ fields) |
+| `aspects/DamGraphicAspectBean.java` | Graphic bean |
+| `aspects/DamDocumentAspectBean.java` | Document bean |
+| `aspects/DamEmbedAspectBean.java` | Embed bean |
+| `aspects/DamTweetAspectBean.java` | Tweet bean |
+| `aspects/DamInstagramAspectBean.java` | Instagram bean |
+| `aspects/DamFolderAspectBean.java` | Folder/smart folder bean |
+| `aspects/DamPageAspectBean.java` | Page bean |
+| `aspects/DamAutoPageAspectBean.java` | Auto-page bean |
+| `aspects/DamBulkImagesBean.java` | Bulk images bean |
+| `aspects/DamCollectionLinkAspectBean.java` | Collection link bean |
+| `aspects/DamShapeDBAspectBean.java` | ShapeDB bean |
+| `aspects/DamNewsListItemAspectBean.java` | News list item bean |
+| `aspects/LiveBlogArticleBean.java` | Live blog article |
+| `aspects/LiveBlogEventBean.java` | Live blog event |
+| `aspects/PrintPageAspectBean.java` | Print page bean |
+| `aspects/PrintDeadlineAspectBean.java` | Print deadline bean |
+| `aspects/SocialPostingAspect.java` | Social posting aspect |
+| `aspects/DamWireArticleAspectBean.java` | Wire article (deprecated) |
+| `aspects/DamContentShareAspectBean.java` | Content share (deprecated) |
+
+### Hook Updates (3)
+
+| File | Change |
+|------|--------|
+| `lifecycle/wordcount/OneWordCountPreStoreHook.java` | `bean.getBody()` returns `StructuredText` → added `extractText()` helper |
+| `lifecycle/charcount/OneCharCountPreStoreHook.java` | Same: extract `.getText()` from `StructuredText` body |
+| `lifecycle/onecontent/OneContentPreStore.java` | `deriveName()` now handles `StructuredText` via `asString()` helper |
+
+### Caller Updates (1)
+
+| File | Change |
+|------|--------|
+| `lifecycle/collection/CollectionPreStore.java` | `getContentIds()` → `getContents()` (`List<ContentId>`) |
+
+### Design Notes
+
+- **StructuredText vs String**: `OneArticleBean.headline`, `lead`, `body`, `subTitle`, `caption`, `teaserTitle` are now `StructuredText` (matching gong original). This preserves editorial notes embedded in rich text. Gson handles deserialization of both `{"text":"...","notes":{}}` objects and plain strings.
+- **Legacy `Dam*AspectBean` hierarchy**: The deprecated `DamContentBean` → `DamArchiveAspectBean` → `DamArticleAspectBean`/`DamImageAspectBean` tree is separate from the `OneContentBean` tree. Both exist for backward compatibility with content created under different schemas.
+- **No `@AspectStorage` annotation**: The original beans used `@AspectStorage(ignoreFields=...)` for field filtering during persistence. desk-api stores all fields as JSON, so this annotation is unnecessary.
+- **`@AceAspect` stub**: Created as a minimal `@Retention(RUNTIME)` annotation in `com.atex.onecms.ace.annotations` — required by `AceSlugInfo` and `AceMigrationInfo` for compatibility but not used at runtime.
+- **`QueryField` data-only port**: `DamFolderAspectBean` references `QueryField` from `com.atex.onecms.app.dam.util`. This class already existed in desk-api. The Solr query-building methods (which depend on Polopoly classes) are omitted; only the data fields for JSON serialization are retained.
 
