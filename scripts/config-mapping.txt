@@ -35,7 +35,8 @@
 #   - "json-ref" sources have companion JSON/JSON5 files relative to the XML location
 #   - For desk locale files, the XML references .json5 files in a locales/ subdirectory
 #   - For custom locale files, the XML parent content has <file> elements referencing locale/*.json
-#   - For form-templates (dam*Template*), the XML is dam-json-template-list.xml and JSON files are in files/
+#   - For form-templates from dam-json-template-list.xml, external IDs come from <externalid> in the XML
+#     (e.g. atex.onecms.Template-com.atex.onecms.app.dam.image.DamImageBean), NOT from the JSON filename
 #   - Some files exist in multiple sources (gong-desk, adm-starterkit); the first source listed is
 #     the primary/original, the second is the starterkit override layer
 #   - Entries are sorted by dest_tier, then dest_subdir, then external_id
@@ -148,9 +149,11 @@ xml-cdata|gong-common|content/editor-configuration/ui-configuration/permission/a
 # --- defaults/export ---
 xml-cdata|gong-desk|export/dam-export-conf.xml|defaults|export|dam.export.conf
 #
-# --- defaults/form-templates (JSON file references from dam-json-template-list.xml) ---
-json|gong-desk|files/act-nosql-image.json|defaults|form-templates|act-nosql-image
-json|gong-desk|files/act-nosql-image.view.json|defaults|form-templates|act-nosql-image.view
+# --- defaults/form-templates ---
+# Templates from dam-json-template-list.xml: external ID is from <externalid> in the XML,
+# NOT from the JSON filename (which was the source of the original ID mismatch).
+json-ref|gong-desk|dam-json-template-list.xml + files/act-nosql-image.json|defaults|form-templates|atex.onecms.Template-com.atex.nosql.image.ImageContentDataBean
+json-ref|gong-desk|dam-json-template-list.xml + files/act-nosql-image.view.json|defaults|form-templates|atex.onecms.Template-com.atex.nosql.image.ImageContentDataBean.view
 json-ref|gong-common|content/onecms-templates/article/atex.onecms.Template-act.template.Article.xml|defaults|form-templates|atex.onecms.Template-act.template.Article
 json-ref|gong-common|content/onecms-templates/configuration/atex.onecms.Template-act.template.EditorConfiguration.edit.xml|defaults|form-templates|atex.onecms.Template-act.template.EditorConfiguration.edit
 json-ref|gong-common|content/onecms-templates/configuration/atex.onecms.Template-act.template.EditorConfiguration.view.xml|defaults|form-templates|atex.onecms.Template-act.template.EditorConfiguration.view
@@ -158,42 +161,42 @@ json-ref|gong-common|content/onecms-templates/image/atex.onecms.Template-act.tem
 json-ref|gong-common|content/onecms-templates/image/atex.onecms.Template-act.template.Image.view.xml|defaults|form-templates|atex.onecms.Template-act.template.Image.view
 json-ref|gong-common|content/onecms-templates/permission/atex.onecms.Template-act.template.PermissionConfiguration.edit.xml|defaults|form-templates|atex.onecms.Template-act.template.PermissionConfiguration.edit
 json-ref|gong-common|content/onecms-templates/permission/atex.onecms.Template-act.template.PermissionConfiguration.view.xml|defaults|form-templates|atex.onecms.Template-act.template.PermissionConfiguration.view
-json|gong-desk|files/damArticleTemplate.json|defaults|form-templates|damArticleTemplate
-json|gong-desk|files/damArticleTemplate.view.json|defaults|form-templates|damArticleTemplate.view
-json|gong-desk|files/damChainConfigurationTemplate.json|defaults|form-templates|damChainConfigurationTemplate
-json|gong-desk|files/damChainConfigurationTemplate.view.json|defaults|form-templates|damChainConfigurationTemplate.view
-json|gong-desk|files/damChainsListTemplate.json|defaults|form-templates|damChainsListTemplate
-json|gong-desk|files/damChainsListTemplate.view.json|defaults|form-templates|damChainsListTemplate.view
-json|gong-desk|files/damDistributionListTemplate.edit.json|defaults|form-templates|damDistributionListTemplate.edit
-json|gong-desk|files/damDistributionListTemplate.view.json|defaults|form-templates|damDistributionListTemplate.view
-json|gong-desk|files/damExportTemplate.json|defaults|form-templates|damExportTemplate
-json|gong-desk|files/damExportTemplate.view.json|defaults|form-templates|damExportTemplate.view
-json|gong-desk|files/damImageTemplate.json|defaults|form-templates|damImageTemplate
-json|gong-desk|files/damImageTemplate.view.json|defaults|form-templates|damImageTemplate.view
-json|gong-desk|files/damJobTemplate.json|defaults|form-templates|damJobTemplate
-json|gong-desk|files/damJobTemplate.view.json|defaults|form-templates|damJobTemplate.view
-json|gong-desk|files/damProcessorConfigurationTemplate.json|defaults|form-templates|damProcessorConfigurationTemplate
-json|gong-desk|files/damProcessorConfigurationTemplate.view.json|defaults|form-templates|damProcessorConfigurationTemplate.view
-json|gong-desk|files/damProcessorsListTemplate.json|defaults|form-templates|damProcessorsListTemplate
-json|gong-desk|files/damProcessorsListTemplate.view.json|defaults|form-templates|damProcessorsListTemplate.view
-json|gong-desk|files/damRenderTemplateListTemplate.edit.json|defaults|form-templates|damRenderTemplateListTemplate.edit
-json|gong-desk|files/damRenderTemplateListTemplate.view.json|defaults|form-templates|damRenderTemplateListTemplate.view
-json|gong-desk|files/damRouteConfigurationTemplate.json|defaults|form-templates|damRouteConfigurationTemplate
-json|gong-desk|files/damRouteConfigurationTemplate.security.parent.json|defaults|form-templates|damRouteConfigurationTemplate.security.parent
-json|gong-desk|files/damRouteConfigurationTemplate.view.json|defaults|form-templates|damRouteConfigurationTemplate.view
-json|gong-desk|files/damRoutesListTemplate.json|defaults|form-templates|damRoutesListTemplate
-json|gong-desk|files/damRoutesListTemplate.view.json|defaults|form-templates|damRoutesListTemplate.view
-json|gong-desk|files/damSendContentTemplate.json|defaults|form-templates|damSendContentTemplate
-json|gong-desk|files/damSendContentTemplate.view.json|defaults|form-templates|damSendContentTemplate.view
-json|gong-desk|files/damTaskTemplate.json|defaults|form-templates|damTaskTemplate
-json|gong-desk|files/damTaskTemplate.view.json|defaults|form-templates|damTaskTemplate.view
-json|gong-desk|files/damThirdPartiesCfgTemplate.json|defaults|form-templates|damThirdPartiesCfgTemplate
-json|gong-desk|files/damWireArticleTemplate.json|defaults|form-templates|damWireArticleTemplate
-json|gong-desk|files/damWireArticleTemplate.view.json|defaults|form-templates|damWireArticleTemplate.view
-json|gong-desk|files/damWireGraphicTemplate.json|defaults|form-templates|damWireGraphicTemplate
-json|gong-desk|files/damWireGraphicTemplate.view.json|defaults|form-templates|damWireGraphicTemplate.view
-json|gong-desk|files/damWireImageTemplate.json|defaults|form-templates|damWireImageTemplate
-json|gong-desk|files/damWireImageTemplate.view.json|defaults|form-templates|damWireImageTemplate.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damArticleTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.article.DamArticleBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damArticleTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.article.DamArticleBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damChainConfigurationTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamChainConfigurationBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damChainConfigurationTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamChainConfigurationBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damChainsListTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamChainsListBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damChainsListTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamChainsListBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damDistributionListTemplate.edit.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.distribution.list.DistributionListAspectBean.edit
+json-ref|gong-desk|dam-json-template-list.xml + files/damDistributionListTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.distribution.list.DistributionListAspectBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damExportTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.export.DamExportBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damExportTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.export.DamExportBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damImageTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.image.DamImageBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damImageTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.image.DamImageBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damJobTemplate.json|defaults|form-templates|atex.onecms.Template-atex.dam.standard.Job
+json-ref|gong-desk|dam-json-template-list.xml + files/damJobTemplate.view.json|defaults|form-templates|atex.onecms.Template-atex.dam.standard.Job.dam.preview
+json-ref|gong-desk|dam-json-template-list.xml + files/damProcessorConfigurationTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamProcessorConfigurationBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damProcessorConfigurationTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamProcessorConfigurationBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damProcessorsListTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamProcessorsListBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damProcessorsListTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamProcessorsListBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damRenderTemplateListTemplate.edit.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.render.template.RenderTemplateListBean.edit
+json-ref|gong-desk|dam-json-template-list.xml + files/damRenderTemplateListTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.render.template.RenderTemplateListBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damRouteConfigurationTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damRouteConfigurationTemplate.security.parent.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean.security.parent
+json-ref|gong-desk|dam-json-template-list.xml + files/damRouteConfigurationTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damRoutesListTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamRoutesListBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damRoutesListTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.camel.configuration.DamRoutesListBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damSendContentTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.sendcontent.DamSendContentBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damSendContentTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.sendcontent.DamSendContentBean.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damTaskTemplate.json|defaults|form-templates|atex.onecms.Template-atex.Planning
+json-ref|gong-desk|dam-json-template-list.xml + files/damTaskTemplate.view.json|defaults|form-templates|atex.onecms.Template-atex.Planning.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damThirdPartiesCfgTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.cfg.ThirdPartiesCfgBean
+json-ref|gong-desk|dam-json-template-list.xml + files/damWireArticleTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.template.DamWireArticle
+json-ref|gong-desk|dam-json-template-list.xml + files/damWireArticleTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.template.DamWireArticle.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damWireGraphicTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.template.DamWireGraphic
+json-ref|gong-desk|dam-json-template-list.xml + files/damWireGraphicTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.template.DamWireGraphic.view
+json-ref|gong-desk|dam-json-template-list.xml + files/damWireImageTemplate.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.template.DamWireImage
+json-ref|gong-desk|dam-json-template-list.xml + files/damWireImageTemplate.view.json|defaults|form-templates|atex.onecms.Template-com.atex.onecms.app.dam.template.DamWireImage.view
 #
 # --- defaults/gallery-configurations ---
 xml-cdata|gong-desk|gallery-configurations/gallery-configurations-conf.xml|defaults|gallery-configurations|dam.galleryconfigurations.conf
