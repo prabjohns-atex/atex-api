@@ -44,7 +44,8 @@ public class OpenApiConfig
                 new Tag().name("Layout").description("Print layout proxy for HandJ/P-Series layout servers"),
                 new Tag().name("Reindex").description("SOLR reindex job management — full, filtered, and manual reindex operations"),
                 new Tag().name("Files").description("File upload, download, and metadata"),
-                new Tag().name("Activities").description("Content locking and activity tracking")
+                new Tag().name("Activities").description("Content locking and activity tracking"),
+                new Tag().name("Preview").description("Content preview URL generation")
             ));
     }
 }

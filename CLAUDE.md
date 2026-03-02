@@ -2021,5 +2021,86 @@ The `unlock` endpoint in `DamDataResource` (called via `sendBeacon` on page unlo
 - **Retry logic**: `ActivityService.retry()` handles `Status.CONFLICT` (from concurrent updates or alias creation race) with 10 attempts at 10ms intervals.
 - **Auth model**: Write (lock) requires matching user identity. Delete (unlock) allows any authenticated user — the UI needs to let admins force-unlock content.
 - **Gson serialization**: ActivityController uses Gson (not Jackson) for JSON, matching the DamDataResource pattern and avoiding Jackson 3 annotation requirements on the activity beans.
-- **AuthConfig patterns**: `/content/*`, `/dam/*`, `/principals/*`, `/admin/*`, `/search/*`, `/changes/*`, `/layout/*`, `/file/*`, `/activities/*`
+- **AuthConfig patterns**: `/content/*`, `/dam/*`, `/principals/*`, `/admin/*`, `/search/*`, `/changes/*`, `/layout/*`, `/file/*`, `/activities/*`, `/preview/*`
+
+## Increment 17 — Preview Endpoint
+
+Adds `POST /preview/contentid/{id}` and `POST /preview/externalid/{id}` endpoints for generating web preview URLs. Used by the mytype-new frontend's web preview workflow to get a preview URL after staging edited content in a workspace.
+
+### Architecture
+
+```
+POST /preview/contentid/{id}?channel=web&workspace=webpreview-{token}
+  └─ PreviewController
+       └─ PreviewService (@Service)
+            ├─ DamPublisherFactory.createContext(contentId, caller) → RemoteConfigBean
+            ├─ Read previewAdapterClassName + previewConfig from matched backend
+            ├─ Dispatch by adapter class name:
+            │    ├─ "AceWebPreviewAdapter" → acePreview()
+            │    │    ├─ Push workspace drafts to remote via HttpDamUtils.callDataApiWs() PUT
+            │    │    ├─ Call remote preview API POST {acePreviewBaseUrl}/preview/contentid/{id}
+            │    │    └─ Return {previewUrl, contentId}
+            │    └─ "WebPreviewAdapter" → webPreview()
+            │         └─ Construct URL from {remoteApiUrl}{previewDispatcherUrl}{contentId}
+            └─ Return JSON response
+```
+
+### Preview API Types (preserving original package)
+
+**Package `com.atex.onecms.preview`**:
+- `PreviewAdapter<CONFIG>` — interface: `preview(ContentVersionId, workspace, body, PreviewContext)`
+- `PreviewContext<CONFIG>` — interface: `getChannelName()`, `getConfiguration()`, `getContentManager()`, `getUserName()`, `getSubject()`
+- `PreviewContextImpl<CONFIG>` — simple implementation holding all fields
+
+### ACE Preview Adapter
+
+**`AceWebPreviewServiceChannelConfiguration`** — config POJO: `acePreviewBaseUrl`, `acePreviewVariant`, `acePreviewStatusList`. Parsed from the remotes configuration `previewConfig` object via Gson.
+
+**`AceWebPreviewAdapter`** — implements `PreviewAdapter<AceWebPreviewServiceChannelConfiguration>`:
+1. Resolves remote backend config via `DamPublisherFactory`
+2. Gets auth token for remote backend via `HttpDamUtils.getAuthToken()`
+3. Pushes all workspace drafts to remote via `PUT {remoteApiUrl}/content/workspace/{ws}/contentid/{id}`
+4. Calls `POST {acePreviewBaseUrl}/preview/contentid/{id}?channel={ch}&workspace={ws}`
+5. Parses response for `previewUrl` or `url` field
+6. Falls back to `{acePreviewBaseUrl}/preview/{contentId}` on failure
+
+### PreviewService
+
+`com.atex.desk.api.preview.PreviewService` — `@Service`:
+- Constructor: `ContentManager`, `@Nullable DamPublisherFactory`, `WorkspaceStorage`
+- Dispatches by `previewAdapterClassName` string match:
+  - Contains `"AceWebPreviewAdapter"` → creates `AceWebPreviewAdapter`, parses config via Gson
+  - Contains `"WebPreviewAdapter"` → reads `previewDispatcherUrl` from previewConfig, constructs URL
+  - Null/empty → falls back to web preview
+  - Unknown → returns 501 error
+
+### PreviewController
+
+`com.atex.desk.api.controller.PreviewController` at `/preview`:
+
+| Method | Path | Query Params | Description |
+|--------|------|-------------|-------------|
+| POST | `/contentid/{contentId}` | `channel` (required), `workspace` (optional) | Preview by content ID |
+| POST | `/externalid/{id}` | `channel` (required), `workspace` (optional) | Preview by external ID |
+
+Both endpoints: auth via `AuthFilter.USER_ATTRIBUTE`, resolve content version (workspace-aware), parse JSON body via Gson, delegate to `PreviewService`, return `application/json`.
+
+### New Files (7)
+
+| File | Description |
+|------|-------------|
+| `com/atex/onecms/preview/PreviewAdapter.java` | Generic adapter interface |
+| `com/atex/onecms/preview/PreviewContext.java` | Context interface for adapters |
+| `com/atex/onecms/preview/PreviewContextImpl.java` | Simple context implementation |
+| `com/atex/onecms/ace/AceWebPreviewServiceChannelConfiguration.java` | ACE preview config POJO (replaced stub) |
+| `com/atex/onecms/ace/AceWebPreviewAdapter.java` | ACE preview adapter (replaced stub) |
+| `com/atex/desk/api/preview/PreviewService.java` | Preview orchestration service |
+| `com/atex/desk/api/controller/PreviewController.java` | `/preview` REST controller |
+
+### Modified Files (2)
+
+| File | Change |
+|------|--------|
+| `auth/AuthConfig.java` | Added `/preview/*` to auth filter URL patterns |
+| `config/OpenApiConfig.java` | Added `"Preview"` tag |
 
