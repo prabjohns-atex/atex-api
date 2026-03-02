@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.lang.Nullable;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -60,16 +61,16 @@ public class ContentController
 
     /**
      * GET /content/contentid/{id}
-     * If unversioned → 302 redirect to versioned URL.
+     * If unversioned → 303 redirect to versioned URL with JSON body.
      * If versioned → 200 with content.
      */
     @GetMapping("/contentid/{id}")
     @Operation(summary = "Read a content",
-               description = "Versioned ID returns 200 with content and ETag. Unversioned ID returns 302 redirect to versioned URL.")
+               description = "Versioned ID returns 200 with content and ETag. Unversioned ID returns 303 redirect to versioned URL.")
     @ApiResponse(responseCode = "200", description = "Content found (versioned ID)",
                  headers = @Header(name = "ETag", description = "The versioned content ID"),
                  content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
-    @ApiResponse(responseCode = "302", description = "Redirect to versioned URL (unversioned ID)")
+    @ApiResponse(responseCode = "303", description = "Redirect to versioned URL (unversioned ID)")
     @ApiResponse(responseCode = "404", description = "Content not found",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> getContent(
@@ -98,9 +99,7 @@ public class ContentController
             String[] parts = contentService.parseContentId(id);
             Optional<String> versionedId = contentService.resolve(parts[0], parts[1]);
             return versionedId
-                .<ResponseEntity<?>>map(vid -> ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create("/content/contentid/" + vid))
-                    .build())
+                .<ResponseEntity<?>>map(this::redirect)
                 .orElseGet(() -> notFound("Content not found"));
         }
     }
@@ -127,7 +126,7 @@ public class ContentController
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseDto("VARIANT_ERROR", "Failed to compose variant: " + e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to compose variant: " + e.getMessage()));
         }
     }
 
@@ -150,7 +149,7 @@ public class ContentController
         if (contentService.isVersionedId(id))
         {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("VERSIONED_ID", "History requires an unversioned content ID"));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "History requires an unversioned content ID"));
         }
 
         String[] parts = contentService.parseContentId(id);
@@ -169,7 +168,7 @@ public class ContentController
                description = "Resolves an external ID to a content ID and redirects to the versioned content URL")
     @ApiResponse(responseCode = "200", description = "Configuration content found (for config external IDs)",
                  content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
-    @ApiResponse(responseCode = "302", description = "Redirect to versioned content URL")
+    @ApiResponse(responseCode = "303", description = "Redirect to versioned content URL")
     @ApiResponse(responseCode = "404", description = "External ID not found",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> getContentByExternalId(
@@ -195,9 +194,7 @@ public class ContentController
         String[] parts = contentService.parseContentId(contentId.get());
         Optional<String> versionedId = contentService.resolve(parts[0], parts[1]);
         return versionedId
-            .<ResponseEntity<?>>map(vid -> ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create("/content/contentid/" + vid))
-                .build())
+            .<ResponseEntity<?>>map(this::redirect)
             .orElseGet(() -> notFound("Content not found for external ID: " + id));
     }
 
@@ -207,7 +204,7 @@ public class ContentController
     @GetMapping("/externalid/{id}/history")
     @Operation(summary = "Read a content history by external ID",
                description = "Resolves the external ID and redirects to the content history endpoint")
-    @ApiResponse(responseCode = "302", description = "Redirect to content history URL")
+    @ApiResponse(responseCode = "303", description = "Redirect to content history URL")
     @ApiResponse(responseCode = "404", description = "External ID not found",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> getHistoryByExternalId(
@@ -219,9 +216,12 @@ public class ContentController
             return notFound("External ID not found: " + id);
         }
 
-        return ResponseEntity.status(HttpStatus.FOUND)
-            .location(URI.create("/content/contentid/" + contentId.get() + "/history"))
-            .build();
+        String location = "/content/contentid/" + contentId.get() + "/history";
+        return ResponseEntity.status(HttpStatus.SEE_OTHER)
+            .location(URI.create(location))
+            .body(Map.of("statusCode", "30300",
+                          "message", "Symbolic version resolved",
+                          "location", location));
     }
 
     /**
@@ -231,7 +231,7 @@ public class ContentController
     @GetMapping("/view/{view}/contentid/{id}")
     @Operation(summary = "Read a content from a view",
                description = "Resolve a content ID in a specific view and redirect to the versioned URL")
-    @ApiResponse(responseCode = "302", description = "Redirect to versioned content URL")
+    @ApiResponse(responseCode = "303", description = "Redirect to versioned content URL")
     @ApiResponse(responseCode = "400", description = "Versioned ID not allowed",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     @ApiResponse(responseCode = "404", description = "Content not found in view",
@@ -243,15 +243,13 @@ public class ContentController
         if (contentService.isVersionedId(id))
         {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("VERSIONED_ID", "View lookup requires an unversioned content ID"));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "View lookup requires an unversioned content ID"));
         }
 
         String[] parts = contentService.parseContentId(id);
         Optional<String> versionedId = contentService.resolve(parts[0], parts[1], view);
         return versionedId
-            .<ResponseEntity<?>>map(vid -> ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create("/content/contentid/" + vid))
-                .build())
+            .<ResponseEntity<?>>map(this::redirect)
             .orElseGet(() -> notFound("Content not found in view: " + view));
     }
 
@@ -261,7 +259,7 @@ public class ContentController
     @GetMapping("/view/{view}/externalid/{id}")
     @Operation(summary = "Read a content from a view by external ID",
                description = "Resolve an external ID in a specific view and redirect to the versioned URL")
-    @ApiResponse(responseCode = "302", description = "Redirect to versioned content URL")
+    @ApiResponse(responseCode = "303", description = "Redirect to versioned content URL")
     @ApiResponse(responseCode = "404", description = "External ID or content not found",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> getContentFromViewByExternalId(
@@ -277,9 +275,7 @@ public class ContentController
         String[] parts = contentService.parseContentId(contentId.get());
         Optional<String> versionedId = contentService.resolve(parts[0], parts[1], view);
         return versionedId
-            .<ResponseEntity<?>>map(vid -> ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create("/content/contentid/" + vid))
-                .build())
+            .<ResponseEntity<?>>map(this::redirect)
             .orElseGet(() -> notFound("Content not found in view: " + view));
     }
 
@@ -308,15 +304,19 @@ public class ContentController
 
     /**
      * PUT /content/contentid/{id}
-     * Update existing content. Requires unversioned ID.
+     * Update existing content. Requires unversioned ID and If-Match header.
      */
     @PutMapping("/contentid/{id}")
     @Operation(summary = "Update a content",
-               description = "Update an existing content by creating a new version")
+               description = "Update an existing content by creating a new version. Requires If-Match header with current ETag.")
     @ApiResponse(responseCode = "200", description = "Content updated",
                  headers = @Header(name = "ETag", description = "The new versioned content ID"),
                  content = @Content(schema = @Schema(implementation = ContentResultDto.class)))
+    @ApiResponse(responseCode = "400", description = "Missing or invalid If-Match header",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     @ApiResponse(responseCode = "404", description = "Content not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    @ApiResponse(responseCode = "409", description = "If-Match header does not match current version",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> updateContent(
         @Parameter(description = "Unversioned content ID") @PathVariable String id,
@@ -327,12 +327,35 @@ public class ContentController
         if (contentService.isVersionedId(id))
         {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("VERSIONED_ID", "Update requires an unversioned content ID"));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "Update requires an unversioned content ID"));
+        }
+
+        // Enforce If-Match header
+        if (ifMatch == null || ifMatch.isBlank())
+        {
+            return ResponseEntity.badRequest()
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST,
+                    "Tried to update content with an If-Match header not corresponding to this content."));
         }
 
         String[] parts = contentService.parseContentId(id);
-        String userId = resolveUserId(request);
 
+        // Validate If-Match against current version
+        Optional<String> currentVersion = contentService.getCurrentVersion(parts[0], parts[1]);
+        if (currentVersion.isEmpty())
+        {
+            return notFound("Content not found");
+        }
+
+        String strippedIfMatch = stripETagQuotes(ifMatch);
+        if (!currentVersion.get().equals(strippedIfMatch))
+        {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST,
+                    "Tried to update content with an If-Match header not corresponding to this content."));
+        }
+
+        String userId = resolveUserId(request);
         Optional<ContentResultDto> result = contentService.updateContent(parts[0], parts[1], write, userId);
         return result
             .<ResponseEntity<?>>map(r -> ResponseEntity.ok()
@@ -344,11 +367,14 @@ public class ContentController
 
     /**
      * DELETE /content/contentid/{id}
+     * Requires If-Match header.
      */
     @DeleteMapping("/contentid/{id}")
     @Operation(summary = "Delete a content",
-               description = "Soft delete a content by reassigning its view to p.deleted")
+               description = "Soft delete a content by reassigning its view to p.deleted. Requires If-Match header.")
     @ApiResponse(responseCode = "204", description = "Content deleted")
+    @ApiResponse(responseCode = "400", description = "Missing If-Match header",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     @ApiResponse(responseCode = "404", description = "Content not found",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> deleteContent(
@@ -359,12 +385,35 @@ public class ContentController
         if (contentService.isVersionedId(id))
         {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("VERSIONED_ID", "Delete requires an unversioned content ID"));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "Delete requires an unversioned content ID"));
+        }
+
+        // Enforce If-Match header
+        if (ifMatch == null || ifMatch.isBlank())
+        {
+            return ResponseEntity.badRequest()
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST,
+                    "Deleting requires an If-Match header"));
         }
 
         String[] parts = contentService.parseContentId(id);
-        String userId = resolveUserId(request);
 
+        // Validate If-Match against current version
+        Optional<String> currentVersion = contentService.getCurrentVersion(parts[0], parts[1]);
+        if (currentVersion.isEmpty())
+        {
+            return notFound("Content not found");
+        }
+
+        String strippedIfMatch = stripETagQuotes(ifMatch);
+        if (!currentVersion.get().equals(strippedIfMatch))
+        {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST,
+                    "Deleting requires an If-Match header"));
+        }
+
+        String userId = resolveUserId(request);
         boolean deleted = contentService.deleteContent(parts[0], parts[1], userId);
         if (deleted)
         {
@@ -384,6 +433,32 @@ public class ContentController
     private ResponseEntity<ErrorResponseDto> notFound(String message)
     {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponseDto("NOT_FOUND", message));
+            .body(new ErrorResponseDto(HttpStatus.NOT_FOUND, message));
+    }
+
+    /**
+     * Build a 303 See Other redirect response with JSON body matching reference OneCMS format.
+     */
+    private ResponseEntity<?> redirect(String versionedId)
+    {
+        String location = "/content/contentid/" + versionedId;
+        return ResponseEntity.status(HttpStatus.SEE_OTHER)
+            .location(URI.create(location))
+            .body(Map.of("statusCode", "30300",
+                          "message", "Symbolic version resolved",
+                          "location", location));
+    }
+
+    /**
+     * Strip surrounding quotes from ETag/If-Match header value.
+     * Reference OneCMS expects/sends quoted ETags: "onecms:id:version"
+     */
+    private static String stripETagQuotes(String etag)
+    {
+        if (etag != null && etag.startsWith("\"") && etag.endsWith("\""))
+        {
+            return etag.substring(1, etag.length() - 1);
+        }
+        return etag;
     }
 }

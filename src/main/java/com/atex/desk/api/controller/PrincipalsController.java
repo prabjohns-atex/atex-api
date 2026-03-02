@@ -73,7 +73,7 @@ public class PrincipalsController
         if (loginName == null)
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED", "No authenticated user"));
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "No authenticated user"));
         }
 
         return userRepository.findByLoginName(loginName)
@@ -170,12 +170,12 @@ public class PrincipalsController
         if (name == null || name.isBlank())
         {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("BAD_REQUEST", "Group name is required"));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "Group name is required"));
         }
         if (groupRepository.findByName(name).isPresent())
         {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponseDto("CONFLICT", "Group already exists: " + name));
+                .body(new ErrorResponseDto(HttpStatus.CONFLICT, "Group already exists: " + name));
         }
         String currentUser = resolveUserId(request);
         AppGroup group = new AppGroup();
@@ -256,7 +256,7 @@ public class PrincipalsController
         if (principalId == null || principalId.isBlank())
         {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("BAD_REQUEST", "principalId is required"));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "principalId is required"));
         }
         if (!groupRepository.existsById(groupId))
         {
@@ -320,6 +320,6 @@ public class PrincipalsController
     private ResponseEntity<ErrorResponseDto> notFound(String message)
     {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponseDto("NOT_FOUND", message));
+            .body(new ErrorResponseDto(HttpStatus.NOT_FOUND, message));
     }
 }

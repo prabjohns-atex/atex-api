@@ -20,6 +20,10 @@ import java.util.logging.Logger;
 /**
  * Pre-store hook that processes SetStatusOperation from the content write operations list.
  * Resolves status ID to WFStatusBean and updates the workflow status aspects.
+ *
+ * For new content (existing == null) without an explicit SetStatusOperation,
+ * auto-creates default WFContentStatus and WebContentStatus aspects using
+ * the first status from the workflow status list configuration.
  */
 public class SetStatusPreStoreHook implements LifecyclePreStore<Object, Object> {
 
@@ -30,10 +34,22 @@ public class SetStatusPreStoreHook implements LifecyclePreStore<Object, Object> 
                                           LifecycleContextPreStore<Object> context)
             throws CallbackException {
         SetStatusOperation statusOp = findStatusOperation(input);
-        if (statusOp == null) {
-            return input;
+
+        if (statusOp != null) {
+            return applyExplicitStatus(input, statusOp, context);
         }
 
+        // Auto-create default status for new content if not already present
+        if (existing == null && !hasExistingStatus(input)) {
+            return applyDefaultStatus(input, context);
+        }
+
+        return input;
+    }
+
+    private ContentWrite<Object> applyExplicitStatus(ContentWrite<Object> input,
+                                                      SetStatusOperation statusOp,
+                                                      LifecycleContextPreStore<Object> context) {
         try {
             ContentManager cm = context.getContentManager();
             WFStatusUtils statusUtils = new WFStatusUtils(cm);
@@ -64,6 +80,43 @@ public class SetStatusPreStoreHook implements LifecyclePreStore<Object, Object> 
             return builder.build();
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Error processing SetStatusOperation", e);
+            return input;
+        }
+    }
+
+    private boolean hasExistingStatus(ContentWrite<Object> input) {
+        return input.getAspect(WFContentStatusAspectBean.ASPECT_NAME) != null
+            || input.getAspect(WebContentStatusAspectBean.ASPECT_NAME) != null;
+    }
+
+    private ContentWrite<Object> applyDefaultStatus(ContentWrite<Object> input,
+                                                     LifecycleContextPreStore<Object> context) {
+        try {
+            ContentManager cm = context.getContentManager();
+            WFStatusUtils statusUtils = new WFStatusUtils(cm);
+
+            WFStatusBean initialStatus = statusUtils.getInitialStatus(
+                input.getContentDataType(), null);
+            WFStatusBean initialWebStatus = statusUtils.getInitialWebStatus();
+
+            if (initialStatus == null && initialWebStatus == null) {
+                return input;
+            }
+
+            ContentWriteBuilder<Object> builder = ContentWriteBuilder.from(input);
+
+            if (initialStatus != null) {
+                builder.aspect(WFContentStatusAspectBean.ASPECT_NAME,
+                    new WFContentStatusAspectBean(initialStatus, null));
+            }
+            if (initialWebStatus != null) {
+                builder.aspect(WebContentStatusAspectBean.ASPECT_NAME,
+                    new WebContentStatusAspectBean(initialWebStatus, null));
+            }
+
+            return builder.build();
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Error applying default status for new content", e);
             return input;
         }
     }

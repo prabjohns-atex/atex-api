@@ -89,10 +89,10 @@ public class WorkspaceController {
             return ResponseEntity.ok(dto);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("BAD_REQUEST", "Invalid content ID: " + id));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "Invalid content ID: " + id));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseDto("INTERNAL_ERROR", e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
         }
     }
 
@@ -121,7 +121,7 @@ public class WorkspaceController {
                 .body(dto);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseDto("INTERNAL_ERROR", e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
         }
     }
 
@@ -151,10 +151,10 @@ public class WorkspaceController {
                 .body(dto);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("BAD_REQUEST", "Invalid content ID: " + id));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "Invalid content ID: " + id));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseDto("INTERNAL_ERROR", e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
         }
     }
 
@@ -183,10 +183,10 @@ public class WorkspaceController {
             return notFound("Draft not found in workspace: " + wsId);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("BAD_REQUEST", "Invalid content ID: " + id));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "Invalid content ID: " + id));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseDto("INTERNAL_ERROR", e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
         }
     }
 
@@ -207,7 +207,7 @@ public class WorkspaceController {
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseDto("INTERNAL_ERROR", e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
         }
     }
 
@@ -264,7 +264,7 @@ public class WorkspaceController {
             return ResponseEntity.ok(promotedIds);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseDto("INTERNAL_ERROR", e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage()));
         }
     }
 
@@ -278,7 +278,7 @@ public class WorkspaceController {
 
     private ResponseEntity<ErrorResponseDto> notFound(String message) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponseDto("NOT_FOUND", message));
+            .body(new ErrorResponseDto(HttpStatus.NOT_FOUND, message));
     }
 
     @SuppressWarnings("unchecked")

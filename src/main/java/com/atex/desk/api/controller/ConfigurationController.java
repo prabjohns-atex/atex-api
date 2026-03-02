@@ -84,7 +84,7 @@ public class ConfigurationController
         return data
             .<ResponseEntity<?>>map(ResponseEntity::ok)
             .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponseDto("NOT_FOUND", "Configuration not found: " + externalId)));
+                .body(new ErrorResponseDto(HttpStatus.NOT_FOUND, "Configuration not found: " + externalId)));
     }
 
     /**
@@ -110,7 +110,7 @@ public class ConfigurationController
         if (sources.isEmpty())
         {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponseDto("NOT_FOUND", "Configuration not found: " + externalId));
+                .body(new ErrorResponseDto(HttpStatus.NOT_FOUND, "Configuration not found: " + externalId));
         }
 
         sources.put("effective_source", resolveEffectiveTier(externalId));
@@ -133,7 +133,7 @@ public class ConfigurationController
         if (!userContext.isLoggedIn())
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED", "Authentication required"));
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "Authentication required"));
         }
 
         String userId = userContext.getCaller() != null
@@ -182,7 +182,7 @@ public class ConfigurationController
         if (!userContext.isLoggedIn())
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED", "Authentication required"));
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "Authentication required"));
         }
 
         // Delete from DB if it exists

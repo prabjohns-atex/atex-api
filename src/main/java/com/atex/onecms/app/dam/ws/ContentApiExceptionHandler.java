@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 
 /**
  * Centralized error handling for DAM endpoints.
- * Converts ContentApiException to JSON error responses.
+ * Converts ContentApiException to JSON error responses matching reference OneCMS format.
  */
 @RestControllerAdvice(basePackages = "com.atex.onecms.app.dam.ws")
 public class ContentApiExceptionHandler {
@@ -27,9 +27,9 @@ public class ContentApiExceptionHandler {
         }
 
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", ex.getMessage());
-        body.put("status", ex.getHttpStatus().value());
-        body.put("detailCode", ex.getDetailCode());
+        body.put("extraInfo", Map.of());
+        body.put("statusCode", ex.getDetailCode());
+        body.put("message", ex.getMessage());
 
         return ResponseEntity.status(ex.getHttpStatus()).body(body);
     }

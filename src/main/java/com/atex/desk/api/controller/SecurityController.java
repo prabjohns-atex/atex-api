@@ -76,25 +76,25 @@ public class SecurityController
         if (credentials.getUsername() == null || credentials.getUsername().isBlank())
         {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("BAD_REQUEST", "No username present"));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "No username present"));
         }
         if (credentials.getPassword() == null || credentials.getPassword().isBlank())
         {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponseDto("BAD_REQUEST", "No password present"));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "No password present"));
         }
 
         AppUser user = userRepository.findByLoginName(credentials.getUsername()).orElse(null);
         if (user == null)
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED", "Authentication failed"));
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "Authentication failed"));
         }
 
         if (!user.isActive())
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED", "Account is disabled"));
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "Account is disabled"));
         }
 
         // Dispatch to appropriate auth provider
@@ -105,7 +105,7 @@ public class SecurityController
             if (ldapAuthService == null)
             {
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "LDAP authentication not configured"));
+                    .body(new ErrorResponseDto(HttpStatus.SERVICE_UNAVAILABLE, "LDAP authentication not configured"));
             }
             authenticated = ldapAuthService.authenticate(credentials.getUsername(), credentials.getPassword());
         }
@@ -114,7 +114,7 @@ public class SecurityController
             if (cognitoAuthService == null)
             {
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "Remote authentication not configured"));
+                    .body(new ErrorResponseDto(HttpStatus.SERVICE_UNAVAILABLE, "Remote authentication not configured"));
             }
             authenticated = cognitoAuthService.authenticate(credentials.getUsername(), credentials.getPassword());
         }
@@ -127,7 +127,7 @@ public class SecurityController
         if (!authenticated)
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED", "Authentication failed"));
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "Authentication failed"));
         }
 
         // Update login stats
@@ -170,7 +170,7 @@ public class SecurityController
         if (authToken == null || authToken.isBlank())
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED", "Missing X-Auth-Token header"));
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "Missing X-Auth-Token header"));
         }
 
         try
@@ -188,7 +188,7 @@ public class SecurityController
         catch (InvalidTokenException e)
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED", "Invalid token: " + e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "Invalid token: " + e.getMessage()));
         }
     }
 
@@ -207,14 +207,14 @@ public class SecurityController
         if (cognitoAuthService == null)
         {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "Cognito authentication not configured"));
+                .body(new ErrorResponseDto(HttpStatus.SERVICE_UNAVAILABLE, "Cognito authentication not configured"));
         }
 
         String url = cognitoAuthService.getOAuthUrl(callbackUrl);
         if (url == null)
         {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "Cognito domain not configured"));
+                .body(new ErrorResponseDto(HttpStatus.SERVICE_UNAVAILABLE, "Cognito domain not configured"));
         }
 
         return ResponseEntity.ok(Map.of("url", url));
@@ -240,7 +240,7 @@ public class SecurityController
         if (cognitoAuthService == null)
         {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(new ErrorResponseDto("SERVICE_UNAVAILABLE", "Cognito authentication not configured"));
+                .body(new ErrorResponseDto(HttpStatus.SERVICE_UNAVAILABLE, "Cognito authentication not configured"));
         }
 
         CognitoAuthService.CognitoUser cognitoUser = null;
@@ -267,7 +267,7 @@ public class SecurityController
         if (cognitoUser == null || cognitoUser.getUsername() == null)
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED", "OAuth authentication failed"));
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "OAuth authentication failed"));
         }
 
         // Ensure local user exists
@@ -275,7 +275,7 @@ public class SecurityController
         if (loginName == null)
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponseDto("UNAUTHORIZED",
+                .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED,
                     "No local user found and auto-creation is disabled"));
         }
 

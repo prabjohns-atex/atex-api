@@ -1,6 +1,7 @@
 package com.atex.desk.api.controller;
 
 import com.atex.desk.api.dto.ChangeFeedDto;
+import com.atex.desk.api.dto.ErrorResponseDto;
 import com.atex.desk.api.service.ChangeListService;
 import com.atex.desk.api.service.InvalidCommitIdException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -76,10 +77,10 @@ public class ChangesController
 
         } catch (InvalidCommitIdException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(java.util.Map.of("error", e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.NOT_FOUND, e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(java.util.Map.of("error", e.getMessage()));
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, e.getMessage()));
         }
     }
 

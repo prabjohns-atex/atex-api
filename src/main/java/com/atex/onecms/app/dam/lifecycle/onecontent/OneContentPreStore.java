@@ -1,6 +1,8 @@
 package com.atex.onecms.app.dam.lifecycle.onecontent;
 
 import com.atex.onecms.app.dam.standard.aspects.OneContentBean;
+import com.atex.onecms.content.metadata.MetadataInfo;
+import com.atex.plugins.structured.text.StructuredText;
 import com.atex.onecms.content.CachingFetcher;
 import com.atex.onecms.content.Content;
 import com.atex.onecms.content.ContentManager;
@@ -11,6 +13,7 @@ import com.atex.onecms.content.Subject;
 import com.atex.onecms.content.callback.CallbackException;
 import com.atex.onecms.content.lifecycle.LifecycleContextPreStore;
 import com.atex.onecms.content.lifecycle.LifecyclePreStore;
+import com.polopoly.metadata.Metadata;
 
 import java.util.Date;
 import java.util.logging.Level;
@@ -21,6 +24,7 @@ import java.util.logging.Logger;
  * Handles:
  * - Setting creation date if null (new content)
  * - Initializing InsertionInfoAspectBean
+ * - Initializing MetadataInfo (atex.Metadata)
  * - Deriving name from headline/title/caption when empty
  * - Adding "Copy of" prefix for duplicated content
  */
@@ -28,6 +32,7 @@ public class OneContentPreStore implements LifecyclePreStore<Object, Object> {
 
     private static final Logger LOG = Logger.getLogger(OneContentPreStore.class.getName());
     private static final String COPY_PREFIX = "Copy of ";
+    private static final String METADATA_ASPECT_NAME = "atex.Metadata";
 
     @Override
     public ContentWrite<Object> preStore(ContentWrite<Object> input, Content<Object> existing,
@@ -62,16 +67,24 @@ public class OneContentPreStore implements LifecyclePreStore<Object, Object> {
                 }
             }
 
-            // Initialize InsertionInfoAspectBean for new content
+            // For new content, always build to ensure InsertionInfo and Metadata are initialized
             if (isCreate) {
-                Object iiObj = input.getAspect(InsertionInfoAspectBean.ASPECT_NAME);
-                if (iiObj == null) {
-                    InsertionInfoAspectBean iiBean = new InsertionInfoAspectBean();
-                    ContentWriteBuilder<Object> builder = ContentWriteBuilder.from(input);
-                    builder.mainAspectData(bean);
-                    builder.aspect(InsertionInfoAspectBean.ASPECT_NAME, iiBean);
-                    return builder.build();
+                ContentWriteBuilder<Object> builder = ContentWriteBuilder.from(input);
+                builder.mainAspectData(bean);
+
+                // Initialize InsertionInfoAspectBean if missing
+                if (input.getAspect(InsertionInfoAspectBean.ASPECT_NAME) == null) {
+                    builder.aspect(InsertionInfoAspectBean.ASPECT_NAME, new InsertionInfoAspectBean());
                 }
+
+                // Initialize MetadataInfo (atex.Metadata) if missing
+                if (input.getAspect(METADATA_ASPECT_NAME) == null) {
+                    MetadataInfo metadataInfo = new MetadataInfo();
+                    metadataInfo.setMetadata(new Metadata());
+                    builder.aspect(METADATA_ASPECT_NAME, metadataInfo);
+                }
+
+                return builder.build();
             }
 
             return ContentWriteBuilder.from(input).mainAspectData(bean).build();
@@ -91,7 +104,8 @@ public class OneContentPreStore implements LifecyclePreStore<Object, Object> {
         try {
             var method = bean.getClass().getMethod("getHeadline");
             Object val = method.invoke(bean);
-            if (val instanceof String s && !s.isEmpty()) return truncate(s);
+            String s = asString(val);
+            if (s != null && !s.isEmpty()) return truncate(s);
         } catch (NoSuchMethodException ignored) {
             // Not an article-like type
         } catch (Exception e) {
@@ -101,7 +115,8 @@ public class OneContentPreStore implements LifecyclePreStore<Object, Object> {
         try {
             var method = bean.getClass().getMethod("getTitle");
             Object val = method.invoke(bean);
-            if (val instanceof String s && !s.isEmpty()) return truncate(s);
+            String s = asString(val);
+            if (s != null && !s.isEmpty()) return truncate(s);
         } catch (NoSuchMethodException ignored) {
             // Not an image-like type
         } catch (Exception e) {
@@ -111,7 +126,8 @@ public class OneContentPreStore implements LifecyclePreStore<Object, Object> {
         try {
             var method = bean.getClass().getMethod("getCaption");
             Object val = method.invoke(bean);
-            if (val instanceof String s && !s.isEmpty()) return truncate(s);
+            String s = asString(val);
+            if (s != null && !s.isEmpty()) return truncate(s);
         } catch (NoSuchMethodException ignored) {
             // Not a captioned type
         } catch (Exception e) {
@@ -119,6 +135,12 @@ public class OneContentPreStore implements LifecyclePreStore<Object, Object> {
         }
 
         return null;
+    }
+
+    private static String asString(Object val) {
+        if (val instanceof String s) return s;
+        if (val instanceof StructuredText st) return st.getText();
+        return val != null ? val.toString() : null;
     }
 
     private static String truncate(String s) {

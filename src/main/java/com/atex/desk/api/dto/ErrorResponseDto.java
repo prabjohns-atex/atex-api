@@ -1,30 +1,46 @@
 package com.atex.desk.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.http.HttpStatus;
+
+import java.util.Map;
 
 /**
  * Matches the OneCMS ErrorResponse JSON structure.
+ * Reference format: {"extraInfo":{},"statusCode":40400,"message":"NOT_FOUND"}
  */
 @Schema(description = "Error response with status code and message")
 public class ErrorResponseDto
 {
-    @Schema(description = "The internal status code", example = "40400")
-    private String detailCode;
+    @Schema(description = "Extra information about the error", example = "{}")
+    private Map<String, Object> extraInfo = Map.of();
+
+    @Schema(description = "The internal status code (HTTP status × 100)", example = "40400")
+    private int statusCode;
 
     @Schema(description = "The error message")
-    private String name;
+    private String message;
 
     public ErrorResponseDto() {}
 
-    public ErrorResponseDto(String detailCode, String name)
+    public ErrorResponseDto(int statusCode, String message)
     {
-        this.detailCode = detailCode;
-        this.name = name;
+        this.statusCode = statusCode;
+        this.message = message;
     }
 
-    public String getDetailCode() { return detailCode; }
-    public void setDetailCode(String detailCode) { this.detailCode = detailCode; }
+    public ErrorResponseDto(HttpStatus status, String message)
+    {
+        this.statusCode = status.value() * 100;
+        this.message = message;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public Map<String, Object> getExtraInfo() { return extraInfo; }
+    public void setExtraInfo(Map<String, Object> extraInfo) { this.extraInfo = extraInfo; }
+
+    public int getStatusCode() { return statusCode; }
+    public void setStatusCode(int statusCode) { this.statusCode = statusCode; }
+
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
 }

@@ -165,6 +165,15 @@ public class ContentService
     }
 
     /**
+     * Get the current versioned ID string for a content item via its p.latest view.
+     * Used for If-Match / ETag validation on PUT and DELETE.
+     */
+    public Optional<String> getCurrentVersion(String delegationId, String key)
+    {
+        return resolve(delegationId, key, VIEW_LATEST);
+    }
+
+    /**
      * Resolve an external ID to content ID.
      */
     public Optional<String> resolveExternalId(String externalId)
