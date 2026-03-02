@@ -18,6 +18,7 @@ Usage:
 
 import argparse
 import json
+import os
 import sys
 import time
 
@@ -33,14 +34,34 @@ REFERENCE = "http://localhost:38084/onecms"
 USERNAME = "sysadmin"
 PASSWORD = "sysadmin"
 
-# External IDs that are served by ConfigurationService (classpath resources)
-# — skip these, they don't need migration.
-CONFIG_PREFIXES = [
-    "com.atex.onecms.beanmapper.Configuration",
-    "com.atex.onecms.dam.beanPublisher.Configuration",
-    "com.atex.onecms.dam.remotes.Configuration",
-]
+# External IDs served by ConfigurationService (classpath resources).
+# Loaded from scripts/config-mapping.txt — these don't need migration.
+CONFIG_EXTERNAL_IDS = set()
 
+
+def load_config_external_ids():
+    """Parse config-mapping.txt and extract all external IDs that desk-api
+    already serves from classpath resources via ConfigurationService."""
+    mapping_file = os.path.join(os.path.dirname(__file__), "config-mapping.txt")
+    ids = set()
+    try:
+        with open(mapping_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split("|")
+                if len(parts) >= 6:
+                    external_id = parts[5].strip()
+                    if external_id:
+                        ids.add(external_id)
+    except FileNotFoundError:
+        pass
+    return ids
+
+
+CONFIG_EXTERNAL_IDS = load_config_external_ids()
+remove
 # ---------------------------------------------------------------------------
 # Console colours
 # ---------------------------------------------------------------------------
@@ -267,6 +288,14 @@ def cmd_discover(args):
         ext_ids = [eid for eid in ext_ids if not eid.startswith("section")]
         print(f"{C.DIM}Skipped {before - len(ext_ids)} section entries{C.RESET}")
 
+    # Skip IDs already served by ConfigurationService (from config-mapping.txt)
+    if CONFIG_EXTERNAL_IDS:
+        before = len(ext_ids)
+        ext_ids = [eid for eid in ext_ids if eid not in CONFIG_EXTERNAL_IDS]
+        skipped_cfg = before - len(ext_ids)
+        if skipped_cfg:
+            print(f"{C.DIM}Skipped {skipped_cfg} config entries (served by ConfigurationService){C.RESET}")
+
     print(f"Found {len(ext_ids)} external IDs to check")
     print()
 
@@ -343,6 +372,14 @@ def cmd_migrate(args):
         skipped = before - len(ext_ids)
         if skipped:
             print(f"{C.DIM}Skipped {skipped} section entries{C.RESET}")
+
+    # Skip IDs already served by ConfigurationService (from config-mapping.txt)
+    if CONFIG_EXTERNAL_IDS:
+        before = len(ext_ids)
+        ext_ids = [eid for eid in ext_ids if eid not in CONFIG_EXTERNAL_IDS]
+        skipped_cfg = before - len(ext_ids)
+        if skipped_cfg:
+            print(f"{C.DIM}Skipped {skipped_cfg} config entries (served by ConfigurationService){C.RESET}")
 
     print(f"Processing {len(ext_ids)} external IDs...")
     print()
@@ -424,6 +461,10 @@ def cmd_verify(args):
 
     if args.skip_sections:
         ext_ids = [eid for eid in ext_ids if not eid.startswith("section")]
+
+    # Skip IDs already served by ConfigurationService (from config-mapping.txt)
+    if CONFIG_EXTERNAL_IDS:
+        ext_ids = [eid for eid in ext_ids if eid not in CONFIG_EXTERNAL_IDS]
 
     ok = 0
     fail = 0
