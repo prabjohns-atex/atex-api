@@ -7,16 +7,16 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "groupMember")
+@Table(name = "`groupMember`")
 @IdClass(AppGroupMemberId.class)
 public class AppGroupMember
 {
     @Id
-    @Column(name = "groupId")
+    @Column(name = "`groupId`")
     private Integer groupId;
 
     @Id
-    @Column(name = "principalId", length = 32)
+    @Column(name = "`principalId`", length = 32)
     private String principalId;
 
     public Integer getGroupId()

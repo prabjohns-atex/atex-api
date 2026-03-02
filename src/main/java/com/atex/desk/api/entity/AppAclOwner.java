@@ -7,16 +7,16 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "aclOwner")
+@Table(name = "`aclOwner`")
 @IdClass(AppAclOwnerId.class)
 public class AppAclOwner
 {
     @Id
-    @Column(name = "aclId")
+    @Column(name = "`aclId`")
     private Integer aclId;
 
     @Id
-    @Column(name = "principalId", length = 32)
+    @Column(name = "`principalId`", length = 32)
     private String principalId;
 
     public Integer getAclId()

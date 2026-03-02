@@ -8,7 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "aclData")
+@Table(name = "`aclData`")
 public class AppAcl
 {
     @Id
@@ -19,10 +19,10 @@ public class AppAcl
     @Column(name = "name", nullable = false, length = 32)
     private String name;
 
-    @Column(name = "creationTime", nullable = false)
+    @Column(name = "`creationTime`", nullable = false)
     private int creationTime;
 
-    @Column(name = "firstOwnerId", length = 32)
+    @Column(name = "`firstOwnerId`", length = 32)
     private String firstOwnerId;
 
     public Integer getId()

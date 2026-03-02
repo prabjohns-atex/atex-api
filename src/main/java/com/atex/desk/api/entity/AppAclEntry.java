@@ -12,11 +12,11 @@ import jakarta.persistence.Table;
 public class AppAclEntry
 {
     @Id
-    @Column(name = "aclId")
+    @Column(name = "`aclId`")
     private Integer aclId;
 
     @Id
-    @Column(name = "principalId", length = 32)
+    @Column(name = "`principalId`", length = 32)
     private String principalId;
 
     @Id

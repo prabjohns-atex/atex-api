@@ -8,7 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "groupData")
+@Table(name = "`groupData`")
 public class AppGroup
 {
     @Id
@@ -19,19 +19,19 @@ public class AppGroup
     @Column(name = "name", nullable = false, length = 64)
     private String name;
 
-    @Column(name = "creationTime", nullable = false)
+    @Column(name = "`creationTime`", nullable = false)
     private int creationTime;
 
-    @Column(name = "firstOwnerId", length = 32)
+    @Column(name = "`firstOwnerId`", length = 32)
     private String firstOwnerId;
 
-    @Column(name = "ldapGroupDn")
+    @Column(name = "`ldapGroupDn`")
     private String ldapGroupDn;
 
-    @Column(name = "remoteGroupDn")
+    @Column(name = "`remoteGroupDn`")
     private String remoteGroupDn;
 
-    @Column(name = "remoteServiceId")
+    @Column(name = "`remoteServiceId`")
     private String remoteServiceId;
 
     public Integer getGroupId()
