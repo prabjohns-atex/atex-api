@@ -1444,3 +1444,59 @@ IDamBean (interface, com.atex.onecms.app.dam)
 - **`@AceAspect` stub**: Created as a minimal `@Retention(RUNTIME)` annotation in `com.atex.onecms.ace.annotations` — required by `AceSlugInfo` and `AceMigrationInfo` for compatibility but not used at runtime.
 - **`QueryField` data-only port**: `DamFolderAspectBean` references `QueryField` from `com.atex.onecms.app.dam.util`. This class already existed in desk-api. The Solr query-building methods (which depend on Polopoly classes) are omitted; only the data fields for JSON serialization are retained.
 
+## Increment 20 — Solr Client Fix & Indexer Pause/Resume
+
+Fixes a runtime `NoClassDefFoundError` caused by SolrJ's `Http2SolrClient` requiring Jetty 11 (not on the classpath), and adds indexer pause/resume for Solr maintenance.
+
+### Solr Client Fix
+
+**Problem:** `SolrService` used `Http2SolrClient` (SolrJ 9.8.0) which requires `org.eclipse.jetty.client.util.InputStreamResponseListener` from Jetty 11. Spring Boot 4 ships Jetty 12 (different package structure), causing `NoClassDefFoundError` at runtime in the scheduled indexer and search endpoints.
+
+**Fix:** Switched from `Http2SolrClient` to `HttpSolrClient` which uses Apache HttpClient (already on the classpath via `httpclient:4.5.14`).
+
+### Health Indicators
+
+**`SolrHealthIndicator`** — Improved to use new `SolrService.ping()` method instead of `getLatestEventId()`. Catches `Throwable` (not just `Exception`) to handle `NoClassDefFoundError`. Better error reporting with null-safe URL/core details.
+
+**`IndexingHealthIndicator`** (new) — Actuator health indicator for the background indexing system. Reports:
+- `UP` if live indexer updated within 5 minutes
+- `DOWN` if stale or errored
+- `OUT_OF_SERVICE` if paused
+- `UNKNOWN` if indexer state not found
+
+Details include: status, cursor position, staleness seconds, lock owner, error count.
+
+### Indexer Pause/Resume
+
+Added `POST /admin/reindex/pause` and `POST /admin/reindex/resume` endpoints to `ReindexController` for Solr maintenance windows:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/admin/reindex/pause` | Pauses live indexer and active reindex jobs (sets status to `PAUSED`) |
+| POST | `/admin/reindex/resume` | Resumes paused live indexer and reindex jobs (sets status to `RUNNING`) |
+
+`SolrIndexProcessor.processLiveIndex()` now checks for `PAUSED` status and returns early without processing.
+
+### Configuration Changes (`application.properties`)
+
+| Property | Old | New |
+|----------|-----|-----|
+| `spring.datasource.url` | `jdbc:mysql://localhost:3306/adm` | `jdbc:mysql://localhost:33306/desk` |
+| `spring.datasource.username` | `adm` | `desk` |
+| `spring.datasource.password` | `adm` | `desk` |
+| `desk.solr-url` | `http://localhost:8983/solr` | `http://localhost:38984/solr` |
+| `spring.docker.compose.enabled` | (not set) | `false` |
+| `server.error.include-stacktrace` | (not set) | `always` |
+| `server.error.include-message` | (not set) | `always` |
+
+### Files
+
+| File | Change |
+|------|--------|
+| `solr/SolrService.java` | `Http2SolrClient` → `HttpSolrClient`; added `ping()` method |
+| `config/SolrHealthIndicator.java` | Use `ping()`, catch `Throwable`, null-safe details |
+| `config/IndexingHealthIndicator.java` | **New** — actuator health indicator for indexing subsystem |
+| `controller/ReindexController.java` | Added `POST /pause` and `POST /resume` endpoints |
+| `indexing/SolrIndexProcessor.java` | Respect `PAUSED` status in live indexer loop |
+| `application.properties` | Updated datasource, Solr URL, added error/docker settings |
+
