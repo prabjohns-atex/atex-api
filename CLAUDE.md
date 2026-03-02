@@ -1173,8 +1173,81 @@ Implements the three P1 (critical) fixes identified by the compatibility test su
 
 | Priority | Issue | Status |
 |----------|-------|--------|
-| **P2** | Issue 6: Principals response format mismatch | Not yet fixed |
-| **P2** | Issue 5: ContentData bean field defaults | Not yet fixed |
+| **P2** | Issue 6: Principals response format mismatch | Fixed in 18b |
+| **P2** | Issue 5: ContentData bean field defaults | Fixed in 18b |
+| **P3** | Issue 7: Changes feed empty response format | Not yet fixed |
+
+## Increment 18b — P2 Compatibility Fixes
+
+Implements the two P2 fixes identified by the compatibility test suite: contentData bean field enrichment and principals response format.
+
+### Fix 1: ContentData Bean Field Enrichment (Issue 5)
+
+**Problem:** When content arrives via REST API as `Map<String, Object>`, `OneContentPreStore` checks `instanceof OneContentBean` and returns early — the bean constructors that set defaults (objectType, inputTemplate, priority, contentType, etc.) are never called. The reference server auto-populates these fields.
+
+**Approach:** Gson round-trip in `OneContentPreStore` converts `Map<String, Object>` → typed bean class → merged result. This applies constructor/field-initializer defaults from the bean class, then overlays user-provided values on top.
+
+**New file: `BeanTypeRegistry.java`** (`com.atex.onecms.app.dam.standard.aspects`)
+
+Static registry mapping 19 `_type` strings to bean classes:
+
+| `_type` | Bean Class |
+|---------|------------|
+| `atex.onecms.article` | `OneArticleBean` |
+| `atex.onecms.image` | `OneImageBean` |
+| `atex.dam.standard.Audio` | `DamAudioAspectBean` |
+| `atex.dam.standard.Collection` | `DamCollectionAspectBean` |
+| `atex.dam.standard.Video` | `DamVideoAspectBean` |
+| `atex.dam.standard.Graphic` | `DamGraphicAspectBean` |
+| `atex.dam.standard.Page` | `DamPageAspectBean` |
+| `atex.dam.standard.Document` | `DamDocumentAspectBean` |
+| `atex.dam.standard.Embed` | `DamEmbedAspectBean` |
+| `atex.dam.standard.Folder` | `DamFolderAspectBean` |
+| `atex.dam.standard.Tweet` | `DamTweetAspectBean` |
+| `atex.dam.standard.Instagram` | `DamInstagramAspectBean` |
+| `atex.dam.standard.ShapeDB` | `DamShapeDBAspectBean` |
+| `atex.dam.standard.NewslistItem` | `DamNewsListItemAspectBean` |
+| `atex.dam.standard.BulkImages` | `DamBulkImagesBean` |
+| `atex.dam.standard.AutoPage` | `DamAutoPageAspectBean` |
+| `atex.dam.standard.LiveBlog.article` | `LiveBlogArticleBean` |
+| `atex.dam.standard.LiveBlog.event` | `LiveBlogEventBean` |
+
+Note: Legacy deprecated types (`DamArticleAspectBean`, `DamImageAspectBean`, `DamWireArticleAspectBean`, `DamWireImageAspectBean`) extend `DamContentBean` (not `OneContentBean`) and are excluded.
+
+**Modified: `OneContentPreStore.java`**
+
+Before the `instanceof OneContentBean` check, added Map→bean conversion:
+1. If data is a `Map`, extract `_type` field and look up in `BeanTypeRegistry`
+2. Create bean with defaults via `Gson.fromJson("{}", beanClass)` (triggers constructor)
+3. Serialize defaults to `JsonObject`, overlay user-provided fields on top
+4. Deserialize merged result back to typed bean
+5. Replace `input` with new `ContentWrite` containing the typed bean
+
+This ensures downstream hooks see a typed bean with all defaults populated.
+
+### Fix 2: Principals Response Format (Issue 6)
+
+**Problem:** desk-api returned `{userId, username, createdAt}` for both `/principals/users/me` and `/principals/users` list. Reference returns different formats for each.
+
+**New files:**
+
+| File | Description |
+|------|-------------|
+| `dto/UserMeDto.java` | Detailed `/me` response: `loginName`, `firstName`, `lastName`, `id` (numeric), `userId`, `cmUser`, `ldapUser`, `remoteUser`, `groups` (as `GroupRefDto` objects), `userData` (`{relations: {}}`), `homeDepartmentId` (null), `workingSites` (empty list) |
+| `dto/GroupRefDto.java` | Group reference within user response: `type` ("group"), `id` ("group:{groupId}"), `name`, `principalId` |
+
+**Modified files:**
+
+| File | Change |
+|------|--------|
+| `dto/PrincipalDto.java` | Reworked to match reference list format: `type` ("user"), `id` (numeric string), `name` (loginName), `principalId`, `cmUser`, `ldapUser`, `remoteUser`. Removed old fields: `userId`, `username`, `createdAt`, `groupList` |
+| `entity/AppUser.java` | Added `isCmUser()` convenience method (`!isLdap() && !isRemote()`) |
+| `controller/PrincipalsController.java` | `/users/me` and `/users/{userId}` return `UserMeDto` with group membership lookups. `/users` list returns new `PrincipalDto` format. Added `toUserMeDto()` helper with group resolution via `groupMemberRepository` + `groupRepository`. Numeric IDs generated via `Math.abs(loginName.hashCode())` as stable substitute for sequential DB IDs. |
+
+### Remaining Compatibility Issues (P3)
+
+| Priority | Issue | Status |
+|----------|-------|--------|
 | **P3** | Issue 7: Changes feed empty response format | Not yet fixed |
 
 ## Increment 19 — Full Content Data Bean Migration
