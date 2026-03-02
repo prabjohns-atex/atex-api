@@ -302,20 +302,28 @@ public class PrincipalsController
         dto.setLdapUser(user.isLdap());
         dto.setRemoteUser(user.isRemote());
 
-        // Look up group memberships
-        List<AppGroupMember> memberships = groupMemberRepository.findByPrincipalId(user.getLoginName());
-        List<GroupRefDto> groups = memberships.stream()
-            .map(m -> groupRepository.findById(m.getGroupId()).orElse(null))
-            .filter(g -> g != null)
-            .map(g -> {
-                GroupRefDto ref = new GroupRefDto();
-                String groupIdStr = "group:" + g.getGroupId();
-                ref.setId(groupIdStr);
-                ref.setName(g.getName());
-                ref.setPrincipalId(groupIdStr);
-                return ref;
-            })
-            .toList();
+        // Look up group memberships (gracefully handle missing table)
+        List<GroupRefDto> groups;
+        try
+        {
+            List<AppGroupMember> memberships = groupMemberRepository.findByPrincipalId(user.getLoginName());
+            groups = memberships.stream()
+                .map(m -> groupRepository.findById(m.getGroupId()).orElse(null))
+                .filter(g -> g != null)
+                .map(g -> {
+                    GroupRefDto ref = new GroupRefDto();
+                    String groupIdStr = "group:" + g.getGroupId();
+                    ref.setId(groupIdStr);
+                    ref.setName(g.getName());
+                    ref.setPrincipalId(groupIdStr);
+                    return ref;
+                })
+                .toList();
+        }
+        catch (Exception e)
+        {
+            groups = Collections.emptyList();
+        }
         dto.setGroups(groups);
 
         dto.setUserData(Map.of("relations", Collections.emptyMap()));
