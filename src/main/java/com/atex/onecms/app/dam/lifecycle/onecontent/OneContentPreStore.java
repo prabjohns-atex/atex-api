@@ -1,5 +1,6 @@
 package com.atex.onecms.app.dam.lifecycle.onecontent;
 
+import com.atex.onecms.app.dam.standard.aspects.BeanTypeRegistry;
 import com.atex.onecms.app.dam.standard.aspects.OneContentBean;
 import com.atex.onecms.content.metadata.MetadataInfo;
 import com.atex.plugins.structured.text.StructuredText;
@@ -13,9 +14,13 @@ import com.atex.onecms.content.Subject;
 import com.atex.onecms.content.callback.CallbackException;
 import com.atex.onecms.content.lifecycle.LifecycleContextPreStore;
 import com.atex.onecms.content.lifecycle.LifecyclePreStore;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.polopoly.metadata.Metadata;
 
 import java.util.Date;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -33,12 +38,23 @@ public class OneContentPreStore implements LifecyclePreStore<Object, Object> {
     private static final Logger LOG = Logger.getLogger(OneContentPreStore.class.getName());
     private static final String COPY_PREFIX = "Copy of ";
     private static final String METADATA_ASPECT_NAME = "atex.Metadata";
+    private static final Gson GSON = new Gson();
 
     @Override
     public ContentWrite<Object> preStore(ContentWrite<Object> input, Content<Object> existing,
                                           LifecycleContextPreStore<Object> context)
             throws CallbackException {
         Object data = input.getContentData();
+
+        // Convert Map to typed bean if possible, applying constructor defaults
+        if (data instanceof Map<?,?> map) {
+            Object converted = convertMapToBean(map);
+            if (converted != null) {
+                data = converted;
+                input = ContentWriteBuilder.from(input).mainAspectData(data).build();
+            }
+        }
+
         if (!(data instanceof OneContentBean bean)) {
             return input;
         }
@@ -91,6 +107,36 @@ public class OneContentPreStore implements LifecyclePreStore<Object, Object> {
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Error in OneContentPreStore", e);
             return input;
+        }
+    }
+
+    /**
+     * Converts a Map to a typed bean using the _type field, applying constructor/field defaults.
+     * User-provided fields overlay on top of bean defaults.
+     */
+    @SuppressWarnings("unchecked")
+    private Object convertMapToBean(Map<?, ?> map) {
+        Object typeVal = map.get("_type");
+        if (!(typeVal instanceof String type)) {
+            return null;
+        }
+        Class<? extends OneContentBean> beanClass = BeanTypeRegistry.resolve(type);
+        if (beanClass == null) {
+            return null;
+        }
+        try {
+            // 1. Create bean with defaults via constructor
+            JsonObject defaultsJson = GSON.toJsonTree(GSON.fromJson("{}", beanClass)).getAsJsonObject();
+            // 2. Overlay user-provided fields on top of defaults
+            JsonObject userJson = GSON.toJsonTree(map).getAsJsonObject();
+            for (Map.Entry<String, JsonElement> entry : userJson.entrySet()) {
+                defaultsJson.add(entry.getKey(), entry.getValue());
+            }
+            // 3. Deserialize merged result to typed bean
+            return GSON.fromJson(defaultsJson, beanClass);
+        } catch (Exception e) {
+            LOG.log(Level.FINE, "Could not convert map to bean for type: " + type, e);
+            return null;
         }
     }
 

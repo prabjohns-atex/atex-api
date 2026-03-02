@@ -2,32 +2,52 @@ package com.atex.desk.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.util.List;
-
+/**
+ * User principal info for the /principals/users list endpoint,
+ * matching reference OneCMS format.
+ */
 @Schema(description = "User principal info")
 public class PrincipalDto
 {
-    @Schema(description = "The user ID")
-    private String userId;
+    @Schema(description = "Principal type", example = "user")
+    private String type = "user";
 
-    @Schema(description = "The username")
-    private String username;
+    @Schema(description = "Numeric user ID")
+    private String id;
 
-    @Schema(description = "Account creation time (epoch milliseconds)")
-    private String createdAt;
+    @Schema(description = "User login name")
+    private String name;
 
-    @Schema(description = "Group names this user belongs to (only present when addGroupsToUsers=true)")
-    private List<String> groupList;
+    @Schema(description = "Principal ID (same as id)")
+    private String principalId;
 
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    @Schema(description = "True if this is a CMS user (not LDAP, not remote)")
+    private boolean cmUser;
 
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
+    @Schema(description = "True if this is an LDAP user")
+    private boolean ldapUser;
 
-    public String getCreatedAt() { return createdAt; }
-    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    @Schema(description = "True if this is a remote user")
+    private boolean remoteUser;
 
-    public List<String> getGroupList() { return groupList; }
-    public void setGroupList(List<String> groupList) { this.groupList = groupList; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getPrincipalId() { return principalId; }
+    public void setPrincipalId(String principalId) { this.principalId = principalId; }
+
+    public boolean isCmUser() { return cmUser; }
+    public void setCmUser(boolean cmUser) { this.cmUser = cmUser; }
+
+    public boolean isLdapUser() { return ldapUser; }
+    public void setLdapUser(boolean ldapUser) { this.ldapUser = ldapUser; }
+
+    public boolean isRemoteUser() { return remoteUser; }
+    public void setRemoteUser(boolean remoteUser) { this.remoteUser = remoteUser; }
 }

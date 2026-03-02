@@ -154,4 +154,9 @@ public class AppUser
     {
         return isRemoteUser != 0;
     }
+
+    public boolean isCmUser()
+    {
+        return !isLdap() && !isRemote();
+    }
 }

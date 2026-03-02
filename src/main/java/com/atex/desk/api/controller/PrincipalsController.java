@@ -3,7 +3,9 @@ package com.atex.desk.api.controller;
 import com.atex.desk.api.auth.AuthFilter;
 import com.atex.desk.api.dto.ErrorResponseDto;
 import com.atex.desk.api.dto.GroupDto;
+import com.atex.desk.api.dto.GroupRefDto;
 import com.atex.desk.api.dto.PrincipalDto;
+import com.atex.desk.api.dto.UserMeDto;
 import com.atex.desk.api.entity.AppGroup;
 import com.atex.desk.api.entity.AppGroupMember;
 import com.atex.desk.api.entity.AppGroupMemberId;
@@ -35,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -64,7 +67,7 @@ public class PrincipalsController
     @GetMapping("/users/me")
     @Operation(summary = "Get current authenticated user")
     @ApiResponse(responseCode = "200", description = "Current user info",
-                 content = @Content(schema = @Schema(implementation = PrincipalDto.class)))
+                 content = @Content(schema = @Schema(implementation = UserMeDto.class)))
     @ApiResponse(responseCode = "401", description = "Not authenticated",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request)
@@ -77,48 +80,34 @@ public class PrincipalsController
         }
 
         return userRepository.findByLoginName(loginName)
-            .<ResponseEntity<?>>map(user -> ResponseEntity.ok(toUserDto(user)))
+            .<ResponseEntity<?>>map(user -> ResponseEntity.ok(toUserMeDto(user)))
             .orElseGet(() -> notFound("User not found: " + loginName));
     }
 
     @GetMapping("/users")
     @Operation(summary = "List all users")
     public List<PrincipalDto> getUsers(
-        @Parameter(description = "Include group memberships for each user")
+        @Parameter(description = "Include group memberships for each user (ignored, kept for backward compat)")
         @RequestParam(value = "addGroupsToUsers", defaultValue = "false") boolean addGroupsToUsers)
     {
         List<AppUser> users = userRepository.findAll();
         return users.stream()
             .filter(AppUser::isActive)
-            .map(u -> {
-                PrincipalDto dto = toUserDto(u);
-                if (addGroupsToUsers)
-                {
-                    List<AppGroupMember> memberships = groupMemberRepository.findByPrincipalId(u.getLoginName());
-                    List<String> groupNames = memberships.stream()
-                        .map(m -> groupRepository.findById(m.getGroupId())
-                            .map(AppGroup::getName)
-                            .orElse(null))
-                        .filter(n -> n != null)
-                        .toList();
-                    dto.setGroupList(groupNames);
-                }
-                return dto;
-            })
+            .map(this::toUserDto)
             .toList();
     }
 
     @GetMapping("/users/{userId}")
     @Operation(summary = "Get user by login name")
     @ApiResponse(responseCode = "200", description = "User found",
-                 content = @Content(schema = @Schema(implementation = PrincipalDto.class)))
+                 content = @Content(schema = @Schema(implementation = UserMeDto.class)))
     @ApiResponse(responseCode = "404", description = "User not found",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
     public ResponseEntity<?> getUser(
         @Parameter(description = "User login name") @PathVariable String userId)
     {
         return userRepository.findByLoginName(userId)
-            .<ResponseEntity<?>>map(user -> ResponseEntity.ok(toUserDto(user)))
+            .<ResponseEntity<?>>map(user -> ResponseEntity.ok(toUserMeDto(user)))
             .orElseGet(() -> notFound("User not found: " + userId));
     }
 
@@ -290,13 +279,54 @@ public class PrincipalsController
     private PrincipalDto toUserDto(AppUser user)
     {
         PrincipalDto dto = new PrincipalDto();
-        dto.setUserId(user.getLoginName());
-        dto.setUsername(user.getLoginName());
-        if (user.getRegTime() > 0)
-        {
-            dto.setCreatedAt(String.valueOf((long) user.getRegTime() * 1000));
-        }
+        String numericId = String.valueOf(stableNumericId(user.getLoginName()));
+        dto.setId(numericId);
+        dto.setName(user.getLoginName());
+        dto.setPrincipalId(numericId);
+        dto.setCmUser(user.isCmUser());
+        dto.setLdapUser(user.isLdap());
+        dto.setRemoteUser(user.isRemote());
         return dto;
+    }
+
+    private UserMeDto toUserMeDto(AppUser user)
+    {
+        UserMeDto dto = new UserMeDto();
+        int numericId = stableNumericId(user.getLoginName());
+        dto.setLoginName(user.getLoginName());
+        dto.setFirstName(user.getLoginName());
+        dto.setLastName("");
+        dto.setId(numericId);
+        dto.setUserId(String.valueOf(numericId));
+        dto.setCmUser(user.isCmUser());
+        dto.setLdapUser(user.isLdap());
+        dto.setRemoteUser(user.isRemote());
+
+        // Look up group memberships
+        List<AppGroupMember> memberships = groupMemberRepository.findByPrincipalId(user.getLoginName());
+        List<GroupRefDto> groups = memberships.stream()
+            .map(m -> groupRepository.findById(m.getGroupId()).orElse(null))
+            .filter(g -> g != null)
+            .map(g -> {
+                GroupRefDto ref = new GroupRefDto();
+                String groupIdStr = "group:" + g.getGroupId();
+                ref.setId(groupIdStr);
+                ref.setName(g.getName());
+                ref.setPrincipalId(groupIdStr);
+                return ref;
+            })
+            .toList();
+        dto.setGroups(groups);
+
+        dto.setUserData(Map.of("relations", Collections.emptyMap()));
+        dto.setHomeDepartmentId(null);
+        dto.setWorkingSites(Collections.emptyList());
+        return dto;
+    }
+
+    private int stableNumericId(String loginName)
+    {
+        return Math.abs(loginName.hashCode());
     }
 
     private GroupDto toGroupDto(AppGroup group)
