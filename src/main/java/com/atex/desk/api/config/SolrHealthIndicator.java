@@ -38,23 +38,26 @@ public class SolrHealthIndicator implements HealthIndicator
                 .build();
         }
 
+        String url = deskProperties.getSolrUrl() != null ? deskProperties.getSolrUrl() : "unknown";
+        String core = deskProperties.getSolrCore() != null ? deskProperties.getSolrCore() : "unknown";
+
         try
         {
-            // Use getLatestEventId as a lightweight ping
-            int eventId = solrService.getLatestEventId();
+            String status = solrService.ping();
             return Health.up()
-                .withDetail("url", deskProperties.getSolrUrl())
-                .withDetail("core", deskProperties.getSolrCore())
-                .withDetail("latestEventId", eventId)
+                .withDetail("url", url)
+                .withDetail("core", core)
+                .withDetail("ping", status)
                 .build();
         }
-        catch (Exception e)
+        catch (Throwable e)
         {
-            LOG.log(Level.FINE, "Solr health check failed", e);
+            LOG.log(Level.WARNING, "Solr health check failed: " + e.getClass().getName() + ": " + e.getMessage(), e);
+            String error = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
             return Health.down()
-                .withDetail("url", deskProperties.getSolrUrl())
-                .withDetail("core", deskProperties.getSolrCore())
-                .withDetail("error", e.getMessage())
+                .withDetail("url", url)
+                .withDetail("core", core)
+                .withDetail("error", error)
                 .build();
         }
     }

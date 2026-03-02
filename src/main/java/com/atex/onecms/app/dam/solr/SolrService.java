@@ -12,7 +12,7 @@ import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.impl.Http2SolrClient;
+import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.util.ClientUtils;
 import org.apache.solr.common.SolrDocument;
@@ -33,7 +33,7 @@ import com.google.gson.JsonObject;
 import com.polopoly.search.solr.SolrServerUrl;
 
 /**
- * Solr search service. Wraps SolrJ Http2SolrClient for executing queries
+ * Solr search service. Wraps SolrJ HttpSolrClient for executing queries
  * against Solr cores.
  */
 public class SolrService extends SolrUtils {
@@ -464,9 +464,17 @@ public class SolrService extends SolrUtils {
         return doc;
     }
 
+    /**
+     * Lightweight ping to check Solr connectivity.
+     * Returns the ping status string (e.g. "OK").
+     */
+    public String ping() throws Exception {
+        return getSolrClient().ping(getCoreName()).getResponse().get("status").toString();
+    }
+
     protected SolrClient getSolrClient() {
         return SOLRCLIENTS_MAP.computeIfAbsent(baseUrl, u ->
-            new Http2SolrClient.Builder(solrServerUrl).build()
+            new HttpSolrClient.Builder(solrServerUrl).build()
         );
     }
 }

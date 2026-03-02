@@ -94,6 +94,7 @@ public class SolrIndexProcessor
         try {
             IndexerState state = indexerStateRepository.findByIndexerId(LIVE_INDEXER_ID).orElse(null);
             if (state == null) return;
+            if ("PAUSED".equals(state.getStatus())) return;
             if (!acquireLease(state)) return;
 
             try {

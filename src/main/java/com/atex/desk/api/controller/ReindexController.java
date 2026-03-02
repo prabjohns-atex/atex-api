@@ -179,6 +179,66 @@ public class ReindexController
         }
     }
 
+    @PostMapping("/pause")
+    @Operation(summary = "Pause all indexing",
+        description = "Pauses the live indexer and any active reindex jobs. Use for Solr maintenance.")
+    @ApiResponse(responseCode = "200", description = "Indexing paused")
+    public ResponseEntity<?> pauseAll() {
+        int paused = 0;
+
+        // Pause live indexer
+        Optional<IndexerState> live = indexerStateRepository.findByIndexerId("solr");
+        if (live.isPresent() && "RUNNING".equals(live.get().getStatus())) {
+            live.get().setStatus("PAUSED");
+            live.get().setUpdatedAt(Instant.now());
+            indexerStateRepository.save(live.get());
+            paused++;
+        }
+
+        // Pause active reindex jobs
+        List<IndexerState> activeJobs = indexerStateRepository.findByJobTypeInAndStatusIn(
+            List.of("REINDEX_FULL", "REINDEX_FILTERED", "REINDEX_MANUAL"),
+            List.of("REQUESTED", "RUNNING"));
+        for (IndexerState job : activeJobs) {
+            job.setStatus("PAUSED");
+            job.setUpdatedAt(Instant.now());
+            indexerStateRepository.save(job);
+            paused++;
+        }
+
+        return ResponseEntity.ok(Map.of("paused", paused, "message", "All indexing paused"));
+    }
+
+    @PostMapping("/resume")
+    @Operation(summary = "Resume all indexing",
+        description = "Resumes the live indexer and any paused reindex jobs.")
+    @ApiResponse(responseCode = "200", description = "Indexing resumed")
+    public ResponseEntity<?> resumeAll() {
+        int resumed = 0;
+
+        // Resume live indexer
+        Optional<IndexerState> live = indexerStateRepository.findByIndexerId("solr");
+        if (live.isPresent() && "PAUSED".equals(live.get().getStatus())) {
+            live.get().setStatus("RUNNING");
+            live.get().setUpdatedAt(Instant.now());
+            indexerStateRepository.save(live.get());
+            resumed++;
+        }
+
+        // Resume paused reindex jobs
+        List<IndexerState> pausedJobs = indexerStateRepository.findByJobTypeInAndStatusIn(
+            List.of("REINDEX_FULL", "REINDEX_FILTERED", "REINDEX_MANUAL"),
+            List.of("PAUSED"));
+        for (IndexerState job : pausedJobs) {
+            job.setStatus("RUNNING");
+            job.setUpdatedAt(Instant.now());
+            indexerStateRepository.save(job);
+            resumed++;
+        }
+
+        return ResponseEntity.ok(Map.of("resumed", resumed, "message", "All indexing resumed"));
+    }
+
     // ========================
     // DTO conversion
     // ========================
