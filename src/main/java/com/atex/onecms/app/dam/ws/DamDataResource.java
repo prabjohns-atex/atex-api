@@ -215,6 +215,7 @@ public class DamDataResource {
     private final DeskProperties deskProperties;
     private final AppUserRepository appUserRepository;
     private final PasswordService passwordService;
+    private final com.atex.onecms.ws.activity.ActivityServiceSecured activityServiceSecured;
 
     private SolrService solrService = null;
     private SolrService solrServiceLatest = null;
@@ -227,7 +228,8 @@ public class DamDataResource {
                            DamPublisherFactory damPublisherFactory,
                            DeskProperties deskProperties,
                            AppUserRepository appUserRepository,
-                           PasswordService passwordService) {
+                           PasswordService passwordService,
+                           com.atex.onecms.ws.activity.ActivityServiceSecured activityServiceSecured) {
         this.contentManager = contentManager;
         this.policyCMServer = policyCMServer;
         this.cmClient = cmClient;
@@ -235,6 +237,7 @@ public class DamDataResource {
         this.deskProperties = deskProperties;
         this.appUserRepository = appUserRepository;
         this.passwordService = passwordService;
+        this.activityServiceSecured = activityServiceSecured;
         initSolrConfig();
     }
 
@@ -306,8 +309,29 @@ public class DamDataResource {
                        @PathVariable("userId") String userId,
                        @PathVariable("applicationId") String applicationId) {
         DamUserContext ctx = DamUserContext.from(request);
-        // Activity unlock — stub for now
-        LOGGER.log(Level.INFO, "unlock activity: " + activityId + "/" + userId + "/" + applicationId);
+        com.atex.onecms.content.Subject subject = ctx.isLoggedIn()
+                ? ctx.getSubject()
+                : extractSubjectFromBody(json);
+        try {
+            activityServiceSecured.delete(subject, activityId, userId, applicationId);
+        } catch (com.atex.onecms.ws.activity.ActivityException e) {
+            LOGGER.log(Level.WARNING, "Failed to unlock activity: " + activityId, e);
+        }
+    }
+
+    private com.atex.onecms.content.Subject extractSubjectFromBody(String json) {
+        // sendBeacon unlock: auth token may be in the JSON body
+        try {
+            com.google.gson.JsonObject obj = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            if (obj.has("token")) {
+                String token = obj.get("token").getAsString();
+                // For now, treat the token value as a principal ID hint
+                return new com.atex.onecms.content.Subject(token, null);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.FINE, "Could not parse unlock body for token", e);
+        }
+        return com.atex.onecms.content.Subject.NOBODY_CALLER;
     }
 
     @PostMapping("unlockPublish/{contentId}")

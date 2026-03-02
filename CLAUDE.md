@@ -1908,3 +1908,118 @@ Added `indexBatch(collection, List<SolrInputDocument>)` and `deleteBatch(collect
 - **Failure recovery**: on Solr failure, cursors stay put — next tick retries. On instance crash, lease expires and another instance takes over.
 - **DELETE semantics**: first DELETE on active job pauses it. Second DELETE on inactive job removes the row.
 
+## Increment 16 — File Service Endpoints & Activity/Locking System
+
+Exposes the existing filesystem-backed `FileService` (from Increment 3b) via REST endpoints, and implements the activity/content-locking system used by the editorial UI.
+
+### Architecture
+
+```
+Desk UI / mytype-new
+  ├─ /file/*          → FileController
+  │    └─ FileService (LocalFileService, from Increment 3b)
+  │         └─ Filesystem storage under ${desk.file-service.base-dir}
+  │
+  └─ /activities/*    → ActivityController
+       └─ ActivityServiceSecured (@Component, auth wrapper)
+            └─ ActivityService (@Service)
+                 └─ ContentManager (stores activities as content objects)
+                      └─ External ID alias: "activity:{contentId}"
+```
+
+### File Service REST API
+
+`FileController` at `/file`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/file/info/{space}/{host}/{path}` | File metadata as JSON (FileInfoDTO) |
+| GET | `/file/metadata?uri={uri}` | File metadata by URI query param |
+| POST | `/file/{space}` | Upload file (host defaults to caller login) |
+| POST | `/file/{space}/{host}/{path}` | Upload file with explicit path |
+| GET | `/file/{space}/{host}/{path}` | Download binary with streaming |
+| DELETE | `/file/{space}/{host}/{path}` | Delete file |
+
+Upload returns `201 Created` with `Location` header and `X-Original-Path` header. Download returns streaming binary with `Content-Type`, `Content-Length`, `Last-Modified`, and cache headers.
+
+**`FileInfoDTO`** — Response DTO with uppercase `URI` field name (matches original Polopoly API that clients expect). Fields: `URI`, `length`, `creationTime`, `modifiedTime`, `accessTime`, `mimeType`, `originalPath`.
+
+### Activity/Locking System
+
+Content locking in the editorial UI uses activities to track which users have content open in which applications. When a user opens content for editing, the UI registers an activity; when they close it, the activity is removed. Other users see who has content locked.
+
+#### Data Model
+
+Activities are stored as content objects in the ContentManager (no dedicated DB table):
+
+```
+ActivityInfo (@AspectDefinition("atex.activity.Activities"))
+  └─ users: Map<String, UserActivities>     (keyed by user login name)
+       └─ applications: Map<String, ApplicationInfo>  (keyed by application ID)
+            ├─ timestamp: long              (server-generated)
+            ├─ activity: String             (e.g., "editing", "viewing")
+            └─ params: Map<String, String>  (arbitrary metadata)
+```
+
+External ID pattern: `activity:{contentId}` — each content object has at most one ActivityInfo.
+
+#### Classes
+
+| Class | Package | Description |
+|-------|---------|-------------|
+| `Activity` | `c.a.o.ws.activity` | Input bean: `activity` + `params` |
+| `ApplicationInfo` | `c.a.o.ws.activity` | Per-app entry: `timestamp`, `activity`, `params` |
+| `UserActivities` | `c.a.o.ws.activity` | Per-user container keyed by application ID |
+| `ActivityInfo` | `c.a.o.ws.activity` | Top-level `@AspectDefinition("atex.activity.Activities")` with `users` map. `isEmpty()` checks all nested maps |
+| `ActivityException` | `c.a.o.ws.activity` | Exception with `Status` field for retry logic |
+| `ActivityService` | `c.a.o.ws.activity` | `@Service`: CRUD via ContentManager with retry (10 tries, 10ms) for conflict resolution |
+| `ActivityServiceSecured` | `c.a.o.ws.activity` | `@Component`: auth wrapper — write requires `subject.principalId == userName`, delete allows anyone (unlock) |
+| `ActivityController` | `c.a.d.a.controller` | `@RestController` at `/activities` |
+
+#### Activity REST API
+
+`ActivityController` at `/activities`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/{activityId}` | Get activity info for a content ID |
+| PUT | `/{activityId}/{userId}/{applicationId}` | Add/update activity (server-generated timestamp) |
+| DELETE | `/{activityId}/{userId}/{applicationId}` | Remove activity (unlock) |
+
+Uses Gson for JSON serialization (matching DamDataResource pattern).
+
+#### DamDataResource Unlock Wiring
+
+The `unlock` endpoint in `DamDataResource` (called via `sendBeacon` on page unload) was wired to use `ActivityServiceSecured.delete()`. Added `extractSubjectFromBody()` helper for sendBeacon unlock where the auth token is in the JSON body instead of the header.
+
+### New Files (8)
+
+| File | Description |
+|------|-------------|
+| `content/files/FileInfoDTO.java` | File metadata DTO with uppercase URI field |
+| `controller/FileController.java` | `/file` REST controller (6 endpoints) |
+| `ws/activity/Activity.java` | Activity input bean |
+| `ws/activity/ApplicationInfo.java` | Per-app activity entry |
+| `ws/activity/UserActivities.java` | Per-user activity container |
+| `ws/activity/ActivityInfo.java` | Top-level activity content bean |
+| `ws/activity/ActivityService.java` | Activity CRUD service with retry logic |
+| `controller/ActivityController.java` | `/activities` REST controller (3 endpoints) |
+
+### Modified Files (5)
+
+| File | Change |
+|------|--------|
+| `ws/activity/ActivityException.java` | Replaced empty stub — added `Status` field and constructors |
+| `ws/activity/ActivityServiceSecured.java` | Replaced empty stub — full auth wrapper with `assertWritePermission()` and `assertLoggedIn()` |
+| `app/dam/ws/DamDataResource.java` | Added `ActivityServiceSecured` as 8th constructor param, wired `unlock` endpoint, added `extractSubjectFromBody()` |
+| `auth/AuthConfig.java` | Added `/file/*` and `/activities/*` to auth filter URL patterns |
+| `config/OpenApiConfig.java` | Added `"Files"` and `"Activities"` tags |
+
+### Design Notes
+
+- **No dedicated DB table**: Activities are stored as regular content objects via ContentManager, using external ID alias `activity:{contentId}`. This matches the original Polopoly implementation.
+- **Retry logic**: `ActivityService.retry()` handles `Status.CONFLICT` (from concurrent updates or alias creation race) with 10 attempts at 10ms intervals.
+- **Auth model**: Write (lock) requires matching user identity. Delete (unlock) allows any authenticated user — the UI needs to let admins force-unlock content.
+- **Gson serialization**: ActivityController uses Gson (not Jackson) for JSON, matching the DamDataResource pattern and avoiding Jackson 3 annotation requirements on the activity beans.
+- **AuthConfig patterns**: `/content/*`, `/dam/*`, `/principals/*`, `/admin/*`, `/search/*`, `/changes/*`, `/layout/*`, `/file/*`, `/activities/*`
+

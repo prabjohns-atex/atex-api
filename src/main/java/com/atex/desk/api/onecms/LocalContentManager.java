@@ -7,6 +7,7 @@ import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ContentVersionInfoDto;
 import com.atex.desk.api.dto.ContentWriteDto;
 import com.atex.desk.api.config.ConfigurationService;
+import com.atex.desk.api.service.ChangeListService;
 import com.atex.desk.api.service.ContentService;
 import com.atex.desk.api.service.IdGenerator;
 import com.atex.onecms.content.Content;
