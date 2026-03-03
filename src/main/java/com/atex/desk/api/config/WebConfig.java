@@ -31,7 +31,8 @@ public class WebConfig implements WebMvcConfigurer
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> encodedSlashCustomizer()
     {
         return factory -> factory.addConnectorCustomizers(connector ->
-            connector.setEncodedSolidusHandling(EncodedSolidusHandling.DECODE.getValue()));
+            connector.setEncodedSolidusHandling(EncodedSolidusHandling.DECODE.getValue())
+        );
     }
 
 

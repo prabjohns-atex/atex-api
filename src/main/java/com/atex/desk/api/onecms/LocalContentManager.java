@@ -573,16 +573,28 @@ public class LocalContentManager implements ContentManager {
 
     /**
      * Update content from DTO, running all pre-store hooks.
+     * Delegates to overload with null previousVersion.
+     */
+    @SuppressWarnings("unchecked")
+    public Optional<ContentResultDto> updateContentFromDto(String delegationId, String key,
+            ContentWriteDto writeDto, String userId) throws CallbackException {
+        return updateContentFromDto(delegationId, key, writeDto, userId, null);
+    }
+
+    /**
+     * Update content from DTO, running all pre-store hooks.
      * Used by ContentController as an alternative to contentService.updateContent()
      * which bypasses hooks.
      *
      * Merges existing aspects from the current version into the update — aspects
      * not included in the update DTO are carried forward from the previous version.
      * This matches the reference OneCMS behavior.
+     *
+     * @param previousVersion if non-null, passed to service for optimistic locking
      */
     @SuppressWarnings("unchecked")
     public Optional<ContentResultDto> updateContentFromDto(String delegationId, String key,
-            ContentWriteDto writeDto, String userId) throws CallbackException {
+            ContentWriteDto writeDto, String userId, String previousVersion) throws CallbackException {
         ContentId contentId = new ContentId(delegationId, key);
         ContentWrite<Object> write = dtoToContentWrite(writeDto);
         Subject subject = new Subject(userId, null);
@@ -610,10 +622,10 @@ public class LocalContentManager implements ContentManager {
         // Run pre-store hooks
         ContentWrite<Object> processed = runPreStoreHooks(write, existing, subject);
 
-        // Convert back to DTO and delegate to ContentService
+        // Convert back to DTO and delegate to ContentService (with optimistic locking)
         ContentWriteDto processedDto = contentWriteToDto(processed);
         Optional<ContentResultDto> result = contentService.updateContent(
-            delegationId, key, processedDto, userId);
+            delegationId, key, processedDto, userId, previousVersion);
 
         // Record change event
         result.ifPresent(r -> {

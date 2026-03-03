@@ -14,4 +14,16 @@ public interface AspectRepository extends JpaRepository<Aspect, Integer>
         WHERE al.contentId = :contentId
         """)
     List<Aspect> findByContentEntryId(Integer contentId);
+
+    /**
+     * Get aspects for a specific version (by versionId in the contents table).
+     * Used for MD5 comparison during updates to reuse unchanged aspects.
+     */
+    @Query("""
+        SELECT a FROM Aspect a
+        JOIN AspectLocation al ON a.aspectId = al.aspectId
+        JOIN Content c ON al.contentId = c.contentId
+        WHERE c.versionId = :versionId
+        """)
+    List<Aspect> findByVersionId(Integer versionId);
 }

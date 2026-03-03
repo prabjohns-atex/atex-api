@@ -12,6 +12,7 @@ import com.atex.onecms.content.ContentResult;
 import com.atex.onecms.content.ContentVersionId;
 import com.atex.onecms.content.IdUtil;
 import com.atex.onecms.content.Subject;
+import com.atex.desk.api.service.ConflictUpdateException;
 import com.atex.onecms.content.callback.CallbackException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -84,6 +85,12 @@ public class ContentController
         @Parameter(description = "Variant name for content composition (e.g. atex.onecms.preview)")
         @RequestParam(value = "variant", required = false) String variant)
     {
+        // Handle encoded external ID: "externalid/X" arrives via %2F decoding in {id}
+        if (id.startsWith("externalid/")) {
+            String extId = id.substring("externalid/".length());
+            return getContentByExternalId(extId);
+        }
+
         // If variant is requested and ContentManager is available, use variant-aware path
         if (variant != null && !variant.isEmpty() && contentManager != null) {
             return getContentWithVariant(id, variant);
@@ -397,8 +404,7 @@ public class ContentController
         String key = parts[1];
 
         // Fallback to alias resolution for unknown delegation IDs
-        Optional<String> currentVersion = contentService.getCurrentVersion(delegationId, key);
-        if (currentVersion.isEmpty())
+        if (contentService.resolveIdType(delegationId) == null)
         {
             Optional<String> canonical = contentService.resolveWithFallback(id);
             if (canonical.isPresent())
@@ -406,32 +412,20 @@ public class ContentController
                 String[] canonParts = contentService.parseContentId(canonical.get());
                 delegationId = canonParts[0];
                 key = canonParts[1];
-                currentVersion = contentService.getCurrentVersion(delegationId, key);
             }
         }
 
-        // Validate If-Match against current version
-        if (currentVersion.isEmpty())
-        {
-            return notFound("Content not found");
-        }
-
         String strippedIfMatch = stripETagQuotes(ifMatch);
-        if (!currentVersion.get().equals(strippedIfMatch))
-        {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST,
-                    "Tried to update content with an If-Match header not corresponding to this content."));
-        }
-
         String userId = resolveUserId(request);
         try {
             Optional<ContentResultDto> result;
             if (localContentManager != null) {
                 // Route through LocalContentManager to run pre-store hooks
-                result = localContentManager.updateContentFromDto(delegationId, key, write, userId);
+                result = localContentManager.updateContentFromDto(
+                    delegationId, key, write, userId, strippedIfMatch);
             } else {
-                result = contentService.updateContent(delegationId, key, write, userId);
+                result = contentService.updateContent(
+                    delegationId, key, write, userId, strippedIfMatch);
             }
             return result
                 .<ResponseEntity<?>>map(r -> ResponseEntity.ok()
@@ -439,6 +433,10 @@ public class ContentController
                     .location(URI.create("/content/contentid/" + r.getVersion()))
                     .body(r))
                 .orElseGet(() -> notFound("Content not found"));
+        } catch (ConflictUpdateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponseDto(HttpStatus.CONFLICT,
+                    "Tried to update content with an If-Match header not corresponding to this content."));
         } catch (CallbackException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -482,8 +480,7 @@ public class ContentController
         String key = parts[1];
 
         // Fallback to alias resolution for unknown delegation IDs
-        Optional<String> currentVersion = contentService.getCurrentVersion(delegationId, key);
-        if (currentVersion.isEmpty())
+        if (contentService.resolveIdType(delegationId) == null)
         {
             Optional<String> canonical = contentService.resolveWithFallback(id);
             if (canonical.isPresent())
@@ -491,17 +488,16 @@ public class ContentController
                 String[] canonParts = contentService.parseContentId(canonical.get());
                 delegationId = canonParts[0];
                 key = canonParts[1];
-                currentVersion = contentService.getCurrentVersion(delegationId, key);
             }
         }
 
-        // Validate If-Match against current version
+        // Validate If-Match against current version at service layer
+        String strippedIfMatch = stripETagQuotes(ifMatch);
+        Optional<String> currentVersion = contentService.getCurrentVersion(delegationId, key);
         if (currentVersion.isEmpty())
         {
             return notFound("Content not found");
         }
-
-        String strippedIfMatch = stripETagQuotes(ifMatch);
         if (!currentVersion.get().equals(strippedIfMatch))
         {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -516,6 +512,35 @@ public class ContentController
             return ResponseEntity.noContent().build();
         }
         return notFound("Content not found");
+    }
+
+    /**
+     * DELETE /content/contentid/{id}?purge=true&version={version}
+     * Permanently removes a specific version (hard delete).
+     */
+    @DeleteMapping("/contentid/{id}/version/{version}")
+    @Operation(summary = "Purge a content version",
+               description = "Permanently remove a specific version of content. If it's the last version, the content ID is also removed.")
+    @ApiResponse(responseCode = "204", description = "Version purged")
+    @ApiResponse(responseCode = "404", description = "Version not found",
+                 content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    public ResponseEntity<?> purgeVersion(
+        @Parameter(description = "Unversioned content ID") @PathVariable String id,
+        @Parameter(description = "Version string to purge") @PathVariable String version)
+    {
+        if (contentService.isVersionedId(id))
+        {
+            return ResponseEntity.badRequest()
+                .body(new ErrorResponseDto(HttpStatus.BAD_REQUEST, "Purge requires an unversioned content ID"));
+        }
+
+        String[] parts = contentService.parseContentId(id);
+        boolean purged = contentService.purgeVersion(parts[0], parts[1], version);
+        if (purged)
+        {
+            return ResponseEntity.noContent().build();
+        }
+        return notFound("Version not found");
     }
 
     // --- Helpers ---

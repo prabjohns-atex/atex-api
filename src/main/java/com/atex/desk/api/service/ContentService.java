@@ -41,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ContentService
@@ -63,6 +64,12 @@ public class ContentService
     private final ContentAliasRepository contentAliasRepository;
     private final ObjectMapper objectMapper;
     private final IdGenerator idGenerator;
+
+    // Caches for frequently-resolved lookups (Gap 9)
+    private final ConcurrentHashMap<String, Integer> idTypeNameToIdCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, String> idTypeIdToNameCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> viewNameToIdCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> aliasNameToIdCache = new ConcurrentHashMap<>();
 
     public ContentService(IdTypeRepository idTypeRepository,
                           ContentIdRepository contentIdRepository,
@@ -139,23 +146,35 @@ public class ContentService
 
     /**
      * Resolve an unversioned content ID to the version in the given view.
+     * p.latest is special: it returns the absolute latest version by versionid DESC,
+     * without requiring a view assignment (matching reference ADM Content Service behavior).
      */
     public Optional<String> resolve(String delegationId, String key, String viewName)
     {
         Integer idtype = resolveIdType(delegationId);
         if (idtype == null) return Optional.empty();
 
-        View view = viewRepository.findByName(viewName).orElse(null);
-        if (view == null) return Optional.empty();
+        // p.latest is a symbolic pointer — just fetch the absolute latest version
+        if (VIEW_LATEST.equals(viewName))
+        {
+            return contentVersionRepository
+                .findByIdtypeAndIdOrderByVersionIdDesc(idtype, key)
+                .stream()
+                .findFirst()
+                .map(cv -> formatVersionedId(delegationId, key, cv.getVersion()));
+        }
 
-        // Find versions for this content that have the requested view assigned
+        // For other views, require an actual view assignment
+        Integer viewId = resolveViewId(viewName);
+        if (viewId == null) return Optional.empty();
+
         List<ContentVersion> versions = contentVersionRepository
             .findByIdtypeAndIdOrderByVersionIdDesc(idtype, key);
 
         for (ContentVersion cv : versions)
         {
             Optional<ContentView> cvw = contentViewRepository
-                .findByVersionIdAndViewId(cv.getVersionId(), view.getViewId());
+                .findByVersionIdAndViewId(cv.getVersionId(), viewId);
             if (cvw.isPresent())
             {
                 return Optional.of(formatVersionedId(delegationId, key, cv.getVersion()));
@@ -226,6 +245,19 @@ public class ContentService
             viewNameMap.put(v.getViewId(), v.getName());
         }
 
+        // Batch-load all view assignments for all versions (Gap 8 — avoids N+1)
+        List<Integer> versionIds = versions.stream()
+            .map(ContentVersion::getVersionId)
+            .toList();
+        List<ContentView> allViews = contentViewRepository.findByVersionIdIn(versionIds);
+
+        // Group views by versionId
+        Map<Integer, List<ContentView>> viewsByVersion = new LinkedHashMap<>();
+        for (ContentView cvw : allViews)
+        {
+            viewsByVersion.computeIfAbsent(cvw.getVersionId(), k -> new ArrayList<>()).add(cvw);
+        }
+
         List<ContentVersionInfoDto> versionInfos = new ArrayList<>();
         for (ContentVersion cv : versions)
         {
@@ -234,7 +266,7 @@ public class ContentService
             info.setCreationTime(cv.getCreatedAt().toEpochMilli());
             info.setCreatorId(cv.getCreatedBy());
 
-            List<ContentView> cvws = contentViewRepository.findByVersionId(cv.getVersionId());
+            List<ContentView> cvws = viewsByVersion.getOrDefault(cv.getVersionId(), List.of());
             List<String> viewNames = cvws.stream()
                 .map(cvw -> viewNameMap.getOrDefault(cvw.getViewId(), "unknown"))
                 .toList();
@@ -248,11 +280,33 @@ public class ContentService
         return Optional.of(history);
     }
 
+    // --- Existence check (Gap 5) ---
+
+    /**
+     * Check if a content item exists without doing a full resolve.
+     */
+    public boolean has(String delegationId, String key)
+    {
+        Integer idtype = resolveIdType(delegationId);
+        if (idtype == null) return false;
+        return contentIdRepository.existsByIdtypeAndId(idtype, key);
+    }
+
     // --- Create ---
 
     @Transactional
     public ContentResultDto createContent(ContentWriteDto write, String userId)
     {
+        // Validate inputs (Gap 6)
+        if (userId == null || userId.isBlank())
+        {
+            throw new IllegalArgumentException("userId must not be blank");
+        }
+        if (write.getAspects() == null || !write.getAspects().containsKey("contentData"))
+        {
+            throw new IllegalArgumentException("Missing required 'contentData' aspect");
+        }
+
         String delegationId = DEFAULT_ID_TYPE;
         String key;
         Integer idtype = resolveIdType(delegationId);
@@ -312,8 +366,8 @@ public class ContentService
             }
         }
 
-        // Assign p.latest view
-        assignView(cv.getVersionId(), VIEW_LATEST, userId, now);
+        // Assign p.latest view (exclusive — remove from other versions)
+        assignViewExclusive(cv.getVersionId(), VIEW_LATEST, idtype, key, userId, now);
 
         return buildContentResult(delegationId, key, cv).orElseThrow();
     }
@@ -324,11 +378,44 @@ public class ContentService
     public Optional<ContentResultDto> updateContent(String delegationId, String key,
                                                      ContentWriteDto write, String userId)
     {
+        return updateContent(delegationId, key, write, userId, null);
+    }
+
+    /**
+     * Update content with optimistic locking.
+     * @param previousVersion if non-null, validates that this matches the current latest version
+     * @throws ConflictUpdateException if previousVersion doesn't match current latest
+     */
+    @Transactional
+    public Optional<ContentResultDto> updateContent(String delegationId, String key,
+                                                     ContentWriteDto write, String userId,
+                                                     String previousVersion)
+    {
         Integer idtype = resolveIdType(delegationId);
         if (idtype == null) return Optional.empty();
 
         // Verify content exists
-        if (!contentIdRepository.existsById(key)) return Optional.empty();
+        if (!contentIdRepository.existsByIdtypeAndId(idtype, key)) return Optional.empty();
+
+        // Optimistic locking check (Gap 2)
+        if (previousVersion != null)
+        {
+            Optional<String> currentVersion = getCurrentVersion(delegationId, key);
+            if (currentVersion.isPresent() && !currentVersion.get().equals(previousVersion))
+            {
+                throw new ConflictUpdateException(currentVersion.get(), previousVersion);
+            }
+        }
+
+        // Build previous aspect hash map for MD5 reuse (Gap 1)
+        Map<String, AspectHash> previousAspectHashes = Map.of();
+        ContentVersion prevVersion = contentVersionRepository
+            .findFirstByIdtypeAndIdOrderByVersionIdDesc(idtype, key)
+            .orElse(null);
+        if (prevVersion != null)
+        {
+            previousAspectHashes = getAspectHashesForVersion(prevVersion.getVersionId());
+        }
 
         Instant now = Instant.now();
         String contentType = determineContentType(write);
@@ -353,17 +440,18 @@ public class ContentService
         content.setModifiedBy(userId);
         contentRepository.save(content);
 
-        // Create aspects
+        // Create aspects (with MD5 reuse for unchanged aspects)
         if (write.getAspects() != null)
         {
             for (Map.Entry<String, AspectDto> entry : write.getAspects().entrySet())
             {
-                createAspectEntry(entry.getKey(), entry.getValue(), cv, content, key, userId, now);
+                createAspectEntry(entry.getKey(), entry.getValue(), cv, content,
+                    key, userId, now, previousAspectHashes);
             }
         }
 
-        // Move p.latest view to new version
-        reassignView(idtype, key, VIEW_LATEST, cv.getVersionId(), userId, now);
+        // Move p.latest view to new version (exclusive — bulk remove then insert)
+        assignViewExclusive(cv.getVersionId(), VIEW_LATEST, idtype, key, userId, now);
 
         return buildContentResult(delegationId, key, cv);
     }
@@ -376,22 +464,17 @@ public class ContentService
         Integer idtype = resolveIdType(delegationId);
         if (idtype == null) return false;
 
-        if (!contentIdRepository.existsById(key)) return false;
+        if (!contentIdRepository.existsByIdtypeAndId(idtype, key)) return false;
 
-        // Assign p.deleted view to latest version, remove p.latest
-        Optional<String> latestVersionId = resolve(delegationId, key, VIEW_LATEST);
-        if (latestVersionId.isPresent())
+        // Find the latest version and move it from p.latest to p.deleted
+        ContentVersion cv = contentVersionRepository
+            .findFirstByIdtypeAndIdOrderByVersionIdDesc(idtype, key)
+            .orElse(null);
+        if (cv != null)
         {
-            String[] parts = parseContentId(latestVersionId.get());
-            ContentVersion cv = contentVersionRepository
-                .findByIdtypeAndIdAndVersion(idtype, key, parts[2])
-                .orElse(null);
-            if (cv != null)
-            {
-                Instant now = Instant.now();
-                removeView(cv.getVersionId(), VIEW_LATEST);
-                assignView(cv.getVersionId(), VIEW_DELETED, userId, now);
-            }
+            Instant now = Instant.now();
+            removeView(cv.getVersionId(), VIEW_LATEST);
+            assignViewExclusive(cv.getVersionId(), VIEW_DELETED, idtype, key, userId, now);
         }
 
         return true;
@@ -418,19 +501,7 @@ public class ContentService
         if (cv == null) return false;
 
         Instant now = Instant.now();
-        // Remove any existing p.public assignment for this content
-        List<ContentVersion> versions = contentVersionRepository
-            .findByIdtypeAndIdOrderByVersionIdDesc(idtype, key);
-        View publicView = viewRepository.findByName(VIEW_PUBLIC).orElse(null);
-        if (publicView != null)
-        {
-            for (ContentVersion v : versions)
-            {
-                contentViewRepository.deleteByVersionIdAndViewId(v.getVersionId(), publicView.getViewId());
-            }
-        }
-
-        assignView(cv.getVersionId(), VIEW_PUBLIC, userId, now);
+        assignViewExclusive(cv.getVersionId(), VIEW_PUBLIC, idtype, key, userId, now);
         return true;
     }
 
@@ -443,8 +514,8 @@ public class ContentService
         Integer idtype = resolveIdType(delegationId);
         if (idtype == null) return false;
 
-        View publicView = viewRepository.findByName(VIEW_PUBLIC).orElse(null);
-        if (publicView == null) return false;
+        Integer publicViewId = resolveViewId(VIEW_PUBLIC);
+        if (publicViewId == null) return false;
 
         List<ContentVersion> versions = contentVersionRepository
             .findByIdtypeAndIdOrderByVersionIdDesc(idtype, key);
@@ -454,14 +525,79 @@ public class ContentService
         for (ContentVersion v : versions)
         {
             Optional<ContentView> cvw = contentViewRepository
-                .findByVersionIdAndViewId(v.getVersionId(), publicView.getViewId());
+                .findByVersionIdAndViewId(v.getVersionId(), publicViewId);
             if (cvw.isPresent())
             {
-                contentViewRepository.deleteByVersionIdAndViewId(v.getVersionId(), publicView.getViewId());
+                contentViewRepository.deleteByVersionIdAndViewId(v.getVersionId(), publicViewId);
                 removed = true;
             }
         }
         return removed;
+    }
+
+    // --- Purge (hard delete) ---
+
+    /**
+     * Permanently remove a specific version of content (hard delete).
+     * Removes views, content entry, aspects (if not shared), aspect locations, and version record.
+     * If this is the last version, also removes the content ID entry and all aliases.
+     */
+    @Transactional
+    public boolean purgeVersion(String delegationId, String key, String version)
+    {
+        Integer idtype = resolveIdType(delegationId);
+        if (idtype == null) return false;
+
+        ContentVersion cv = contentVersionRepository
+            .findByIdtypeAndIdAndVersion(idtype, key, version)
+            .orElse(null);
+        if (cv == null) return false;
+
+        // 1. Remove all view assignments for this version
+        List<ContentView> views = contentViewRepository.findByVersionId(cv.getVersionId());
+        for (ContentView v : views)
+        {
+            contentViewRepository.deleteByVersionIdAndViewId(v.getVersionId(), v.getViewId());
+        }
+
+        // 2. Get the content entry for this version
+        Content content = contentRepository.findByVersionId(cv.getVersionId()).orElse(null);
+        if (content != null)
+        {
+            // 3. Find all aspect locations for this content entry
+            List<AspectLocation> locations = aspectLocationRepository.findByContentId(content.getContentId());
+
+            // 4. For each aspect, check if it's shared with other content entries
+            for (AspectLocation loc : locations)
+            {
+                long refCount = aspectLocationRepository.countByAspectId(loc.getAspectId());
+                if (refCount <= 1)
+                {
+                    // Not shared — safe to delete the aspect row
+                    aspectRepository.deleteById(loc.getAspectId());
+                }
+            }
+
+            // 5. Delete all aspect locations for this content entry
+            aspectLocationRepository.deleteByContentId(content.getContentId());
+
+            // 6. Delete the content entry
+            contentRepository.deleteByVersionId(cv.getVersionId());
+        }
+
+        // 7. Delete the version record
+        contentVersionRepository.deleteById(cv.getVersionId());
+
+        // 8. If this was the last version, clean up the content ID and aliases
+        List<ContentVersion> remaining = contentVersionRepository
+            .findByIdtypeAndIdOrderByVersionIdDesc(idtype, key);
+        if (remaining.isEmpty())
+        {
+            deleteAllAliases(delegationId, key);
+            contentIdRepository.deleteById(key);
+        }
+
+        return true;
     }
 
     /**
@@ -541,6 +677,10 @@ public class ContentService
      * @param aliasNamespace the alias namespace (e.g. "externalId", "policyId")
      * @param aliasValue the alias value
      */
+    /**
+     * Create an alias, detecting conflicts with existing aliases pointing to different content.
+     * @throws AliasConflictException if alias already points to different content
+     */
     @Transactional
     public void createAlias(String delegationId, String key, String aliasNamespace, String aliasValue)
     {
@@ -550,20 +690,83 @@ public class ContentService
             throw new IllegalArgumentException("Unknown idtype: " + delegationId);
         }
 
-        Alias alias = aliasRepository.findByName(aliasNamespace).orElse(null);
-        if (alias == null)
+        Integer aliasId = resolveAliasId(aliasNamespace);
+        if (aliasId == null)
         {
             throw new IllegalArgumentException("Unknown alias namespace: " + aliasNamespace);
+        }
+
+        // Check for conflict — alias already pointing to different content
+        Optional<ContentAlias> existing = contentAliasRepository
+            .findByAliasNameAndValue(aliasNamespace, aliasValue);
+        if (existing.isPresent())
+        {
+            ContentAlias ea = existing.get();
+            if (ea.getIdtype().equals(idtype) && ea.getId().equals(key))
+            {
+                return; // Already assigned to the same content — no-op
+            }
+            String conflictId = formatContentId(resolveIdTypeName(ea.getIdtype()), ea.getId());
+            throw new AliasConflictException(aliasNamespace, aliasValue, conflictId);
         }
 
         ContentAlias ca = new ContentAlias();
         ca.setIdtype(idtype);
         ca.setId(key);
-        ca.setAliasId(alias.getAliasId());
+        ca.setAliasId(aliasId);
         ca.setValue(aliasValue);
         ca.setCreatedAt(Instant.now());
         ca.setCreatedBy("system");
         contentAliasRepository.save(ca);
+    }
+
+    /**
+     * Delete a specific alias for a content item.
+     */
+    @Transactional
+    public void deleteAlias(String delegationId, String key, String aliasNamespace)
+    {
+        Integer idtype = resolveIdType(delegationId);
+        if (idtype == null) return;
+
+        Integer aliasId = resolveAliasId(aliasNamespace);
+        if (aliasId == null) return;
+
+        contentAliasRepository.deleteByIdtypeAndIdAndAliasId(idtype, key, aliasId);
+    }
+
+    /**
+     * Delete all aliases for a content item.
+     */
+    @Transactional
+    public void deleteAllAliases(String delegationId, String key)
+    {
+        Integer idtype = resolveIdType(delegationId);
+        if (idtype == null) return;
+
+        contentAliasRepository.deleteByIdtypeAndId(idtype, key);
+    }
+
+    /**
+     * Get all aliases for a content item.
+     * @return Map of alias namespace name → alias value
+     */
+    public Map<String, String> getAliases(String delegationId, String key)
+    {
+        Integer idtype = resolveIdType(delegationId);
+        if (idtype == null) return Map.of();
+
+        List<ContentAlias> aliases = contentAliasRepository.findByIdtypeAndId(idtype, key);
+        Map<String, String> result = new LinkedHashMap<>();
+        for (ContentAlias ca : aliases)
+        {
+            String namespace = resolveAliasName(ca.getAliasId());
+            if (namespace != null)
+            {
+                result.put(namespace, ca.getValue());
+            }
+        }
+        return result;
     }
 
     /**
@@ -642,10 +845,15 @@ public class ContentService
             .findByIdtypeAndIdOrderByVersionIdDesc(cv.getIdtype(), cv.getId())
             .stream().reduce((a, b) -> b).orElse(cv); // last in desc = first created
 
-        // Build meta
+        // Build meta with aliases (Gap 7)
         MetaDto meta = new MetaDto();
         meta.setModificationTime(String.valueOf(content.getModifiedAt().toEpochMilli()));
         meta.setOriginalCreationTime(String.valueOf(firstVersion.getCreatedAt().toEpochMilli()));
+        Map<String, String> aliases = getAliases(delegationId, key);
+        if (!aliases.isEmpty())
+        {
+            meta.setAliases(aliases);
+        }
 
         ContentResultDto result = new ContentResultDto();
         result.setId(formatContentId(delegationId, key));
@@ -656,9 +864,42 @@ public class ContentService
         return Optional.of(result);
     }
 
+    /**
+     * Holds the aspect ID and MD5 hash for a previously stored aspect.
+     */
+    private record AspectHash(Integer aspectId, String md5) {}
+
+    /**
+     * Get aspect hashes for a version (used for MD5 reuse during updates).
+     */
+    private Map<String, AspectHash> getAspectHashesForVersion(Integer versionId)
+    {
+        Content content = contentRepository.findByVersionId(versionId).orElse(null);
+        if (content == null) return Map.of();
+
+        List<Aspect> aspects = aspectRepository.findByContentEntryId(content.getContentId());
+        Map<String, AspectHash> hashes = new LinkedHashMap<>();
+        for (Aspect a : aspects)
+        {
+            hashes.put(a.getName(), new AspectHash(a.getAspectId(), a.getMd5()));
+        }
+        return hashes;
+    }
+
     private void createAspectEntry(String aspectName, AspectDto aspectDto,
                                     ContentVersion cv, Content content,
                                     String contentKey, String userId, Instant now)
+    {
+        createAspectEntry(aspectName, aspectDto, cv, content, contentKey, userId, now, Map.of());
+    }
+
+    /**
+     * Create an aspect entry, reusing the previous version's aspect if the MD5 matches.
+     */
+    private void createAspectEntry(String aspectName, AspectDto aspectDto,
+                                    ContentVersion cv, Content content,
+                                    String contentKey, String userId, Instant now,
+                                    Map<String, AspectHash> previousHashes)
     {
         String jsonData;
         try
@@ -670,9 +911,22 @@ public class ContentService
             throw new IllegalArgumentException("Invalid aspect data for: " + aspectName, e);
         }
 
-        String md5Hash = md5(jsonData);
-        String aspectContentId = idGenerator.nextId();
+        String md5Hash = md5(sortJsonKeys(jsonData));
 
+        // Check if we can reuse the previous version's aspect (Gap 1)
+        AspectHash previous = previousHashes.get(aspectName);
+        if (previous != null && previous.md5().equals(md5Hash))
+        {
+            // Same data — just link the existing aspect to this content entry
+            AspectLocation loc = new AspectLocation();
+            loc.setContentId(content.getContentId());
+            loc.setAspectId(previous.aspectId());
+            aspectLocationRepository.save(loc);
+            return;
+        }
+
+        // Different data — create a new aspect row
+        String aspectContentId = idGenerator.nextId();
         Aspect aspect = new Aspect();
         aspect.setVersionId(cv.getVersionId());
         aspect.setContentId(aspectContentId);
@@ -690,14 +944,27 @@ public class ContentService
         aspectLocationRepository.save(loc);
     }
 
-    private void assignView(Integer versionId, String viewName, String userId, Instant now)
+    /**
+     * Assign a view to a version, removing it from all other versions of the same content first.
+     * This ensures view exclusivity — a view can only be assigned to one version at a time.
+     */
+    private void assignViewExclusive(Integer versionId, String viewName,
+                                      Integer idtype, String contentKey,
+                                      String userId, Instant now)
     {
-        View view = viewRepository.findByName(viewName).orElse(null);
-        if (view == null) return;
+        Integer viewId = resolveViewId(viewName);
+        if (viewId == null) return;
 
+        // Bulk remove from all other versions of this content
+        contentViewRepository.removeViewFromOtherVersions(viewId, idtype, contentKey, versionId);
+
+        // Also remove from this version if already present (idempotent)
+        contentViewRepository.deleteByVersionIdAndViewId(versionId, viewId);
+
+        // Assign to the target version
         ContentView cvw = new ContentView();
         cvw.setVersionId(versionId);
-        cvw.setViewId(view.getViewId());
+        cvw.setViewId(viewId);
         cvw.setCreatedAt(now);
         cvw.setCreatedBy(userId);
         contentViewRepository.save(cvw);
@@ -705,33 +972,10 @@ public class ContentService
 
     private void removeView(Integer versionId, String viewName)
     {
-        View view = viewRepository.findByName(viewName).orElse(null);
-        if (view == null) return;
+        Integer viewId = resolveViewId(viewName);
+        if (viewId == null) return;
 
-        contentViewRepository.deleteByVersionIdAndViewId(versionId, view.getViewId());
-    }
-
-    private void reassignView(Integer idtype, String contentKey, String viewName,
-                               Integer newVersionId, String userId, Instant now)
-    {
-        View view = viewRepository.findByName(viewName).orElse(null);
-        if (view == null) return;
-
-        // Remove existing view assignment for any version of this content
-        List<ContentVersion> versions = contentVersionRepository
-            .findByIdtypeAndIdOrderByVersionIdDesc(idtype, contentKey);
-        for (ContentVersion v : versions)
-        {
-            contentViewRepository.deleteByVersionIdAndViewId(v.getVersionId(), view.getViewId());
-        }
-
-        // Assign to new version
-        ContentView cvw = new ContentView();
-        cvw.setVersionId(newVersionId);
-        cvw.setViewId(view.getViewId());
-        cvw.setCreatedAt(now);
-        cvw.setCreatedBy(userId);
-        contentViewRepository.save(cvw);
+        contentViewRepository.deleteByVersionIdAndViewId(versionId, viewId);
     }
 
     private String determineContentType(ContentWriteDto write)
@@ -747,18 +991,87 @@ public class ContentService
         return "com.atex.standard.content.ContentBean";
     }
 
-    private Integer resolveIdType(String delegationId)
+    public Integer resolveIdType(String delegationId)
     {
-        return idTypeRepository.findByName(delegationId)
+        Integer cached = idTypeNameToIdCache.get(delegationId);
+        if (cached != null) return cached;
+
+        Integer resolved = idTypeRepository.findByName(delegationId)
             .map(IdType::getId)
             .orElse(null);
+
+        if (resolved != null)
+        {
+            idTypeNameToIdCache.put(delegationId, resolved);
+            idTypeIdToNameCache.put(resolved, delegationId);
+        }
+        return resolved;
     }
 
     private String resolveIdTypeName(Integer idtype)
     {
-        return idTypeRepository.findById(idtype)
+        String cached = idTypeIdToNameCache.get(idtype);
+        if (cached != null) return cached;
+
+        String resolved = idTypeRepository.findById(idtype)
             .map(IdType::getName)
             .orElse(DEFAULT_ID_TYPE);
+
+        idTypeIdToNameCache.put(idtype, resolved);
+        idTypeNameToIdCache.put(resolved, idtype);
+        return resolved;
+    }
+
+    private Integer resolveViewId(String viewName)
+    {
+        Integer cached = viewNameToIdCache.get(viewName);
+        if (cached != null) return cached;
+
+        Integer resolved = viewRepository.findByName(viewName)
+            .map(View::getViewId)
+            .orElse(null);
+
+        if (resolved != null)
+        {
+            viewNameToIdCache.put(viewName, resolved);
+        }
+        return resolved;
+    }
+
+    private final ConcurrentHashMap<Integer, String> aliasIdToNameCache = new ConcurrentHashMap<>();
+
+    private Integer resolveAliasId(String aliasName)
+    {
+        Integer cached = aliasNameToIdCache.get(aliasName);
+        if (cached != null) return cached;
+
+        Integer resolved = aliasRepository.findByName(aliasName)
+            .map(Alias::getAliasId)
+            .orElse(null);
+
+        if (resolved != null)
+        {
+            aliasNameToIdCache.put(aliasName, resolved);
+            aliasIdToNameCache.put(resolved, aliasName);
+        }
+        return resolved;
+    }
+
+    private String resolveAliasName(Integer aliasId)
+    {
+        String cached = aliasIdToNameCache.get(aliasId);
+        if (cached != null) return cached;
+
+        String resolved = aliasRepository.findById(aliasId)
+            .map(Alias::getName)
+            .orElse(null);
+
+        if (resolved != null)
+        {
+            aliasIdToNameCache.put(aliasId, resolved);
+            aliasNameToIdCache.put(resolved, aliasId);
+        }
+        return resolved;
     }
 
     @SuppressWarnings("unchecked")
@@ -772,6 +1085,57 @@ public class ContentService
         {
             return Map.of("_raw", json);
         }
+    }
+
+    /**
+     * Sort JSON keys recursively for consistent MD5 hashing.
+     * Uses Jackson TreeNode to parse, sort, and re-serialize.
+     */
+    private String sortJsonKeys(String json)
+    {
+        try
+        {
+            tools.jackson.databind.JsonNode node = objectMapper.readTree(json);
+            if (node != null && node.isObject())
+            {
+                return objectMapper.writeValueAsString(sortNode(node));
+            }
+        }
+        catch (Exception e)
+        {
+            // If parsing fails, return original — md5 will still work, just won't match reuse
+        }
+        return json;
+    }
+
+    private tools.jackson.databind.JsonNode sortNode(tools.jackson.databind.JsonNode node)
+    {
+        if (node.isObject())
+        {
+            tools.jackson.databind.node.ObjectNode objectNode = (tools.jackson.databind.node.ObjectNode) node;
+            tools.jackson.databind.node.ObjectNode sorted = objectMapper.createObjectNode();
+            List<String> fieldNames = new ArrayList<>();
+            for (var entry : objectNode.properties())
+            {
+                fieldNames.add(entry.getKey());
+            }
+            java.util.Collections.sort(fieldNames);
+            for (String field : fieldNames)
+            {
+                sorted.set(field, sortNode(node.get(field)));
+            }
+            return sorted;
+        }
+        else if (node.isArray())
+        {
+            tools.jackson.databind.node.ArrayNode sortedArray = objectMapper.createArrayNode();
+            for (tools.jackson.databind.JsonNode child : node)
+            {
+                sortedArray.add(sortNode(child));
+            }
+            return sortedArray;
+        }
+        return node;
     }
 
     private static String md5(String input)

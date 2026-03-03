@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ContentIdRepository extends JpaRepository<ContentId, String>
 {
+    boolean existsByIdtypeAndId(Integer idtype, String id);
 }
