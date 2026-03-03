@@ -247,6 +247,51 @@ def find_json_file(source_dir: Path, source_path: str, external_id: str) -> Path
     return None
 
 
+def fix_json_escape_sequences(content: str) -> str:
+    """
+    Fix invalid JSON escape sequences that are common in Camel route configs.
+
+    JSON only allows these escape sequences: quote, backslash, slash, b, f, n, r, t, uXXXX.
+    Regex patterns like \\.jpg or \\S+ have invalid escapes that Gson rejects.
+
+    This function escapes backslashes that are followed by characters that
+    are NOT valid JSON escape characters, making the content valid JSON.
+    """
+    result = []
+    in_string = False
+    i = 0
+    while i < len(content):
+        char = content[i]
+
+        if char == '"' and (i == 0 or content[i-1] != '\\'):
+            in_string = not in_string
+            result.append(char)
+            i += 1
+        elif char == '\\' and in_string and i + 1 < len(content):
+            next_char = content[i + 1]
+            # Valid JSON escape characters
+            if next_char in '"\\bfnrtu/':
+                # Emit both chars and skip past the pair
+                result.append(char)
+                result.append(next_char)
+                i += 2
+            elif next_char in '\r\n':
+                # JSON5 line continuation (backslash before newline) — leave as-is
+                result.append(char)
+                i += 1
+            else:
+                # Invalid escape - add extra backslash to escape this one
+                # Input: \.  Output: \\.
+                result.append('\\')
+                result.append('\\')
+                i += 1
+        else:
+            result.append(char)
+            i += 1
+
+    return ''.join(result)
+
+
 def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str]:
     """
     Process a single mapping entry.
@@ -292,11 +337,21 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str]:
         content = extract_xml_cdata(source_file, external_id)
 
     elif ext_type == "json-ref":
-        if not source_file.exists():
+        # Support "xmlfile.xml + path/to/file.json" syntax: split on " + "
+        # and use the second part as a direct JSON file path relative to source_dir
+        if " + " in source_path:
+            xml_part, json_part = source_path.split(" + ", 1)
+            json_direct = source_dir / json_part.strip()
+            if json_direct.exists():
+                content = json_direct.read_text(encoding="utf-8")
+            else:
+                return "error", f"Source JSON not found: {json_direct}"
+        elif not source_file.exists():
             return "error", f"Source XML not found: {source_file}"
-        json_path = find_json_ref(source_file, external_id)
-        if json_path:
-            content = json_path.read_text(encoding="utf-8")
+        else:
+            json_path = find_json_ref(source_file, external_id)
+            if json_path:
+                content = json_path.read_text(encoding="utf-8")
 
     elif ext_type == "json":
         json_path = find_json_file(source_dir, source_path, external_id)
@@ -308,6 +363,9 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str]:
 
     if content is None:
         return "error", f"Failed to extract content for {external_id}"
+
+    # Fix invalid JSON escape sequences (e.g., \.jpg in Camel route configs)
+    content = fix_json_escape_sequences(content)
 
     # Normalize line endings
     content = content.replace("\r\n", "\n")

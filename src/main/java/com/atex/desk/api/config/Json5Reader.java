@@ -11,6 +11,9 @@ import java.util.regex.Pattern;
 
 /**
  * Reads JSON5-style content (comments, trailing commas) and produces standard JSON.
+ *
+ * Note: Invalid escape sequences in source files should be fixed by config-sync.py
+ * when copying files, not at runtime.
  */
 public final class Json5Reader
 {
@@ -22,19 +25,31 @@ public final class Json5Reader
     private static final Pattern BLOCK_COMMENT = Pattern.compile("/\\*[\\s\\S]*?\\*/");
     // Matches trailing commas before } or ]
     private static final Pattern TRAILING_COMMA = Pattern.compile(",\\s*([}\\]])");
+    // Matches JSON5 line continuations: backslash followed by newline (inside strings)
+    private static final Pattern LINE_CONTINUATION = Pattern.compile("\\\\\\r?\\n\\s*");
 
     private Json5Reader() {}
+
+    /**
+     * Strip JSON5 extensions (comments, trailing commas, line continuations)
+     * to produce Gson-compatible JSON.
+     */
+    private static String stripJson5(String json5)
+    {
+        String cleaned = BLOCK_COMMENT.matcher(json5).replaceAll("");
+        cleaned = LINE_COMMENT.matcher(cleaned).replaceAll("$1");
+        cleaned = TRAILING_COMMA.matcher(cleaned).replaceAll("$1");
+        // Collapse JSON5 line continuations: backslash + newline → nothing
+        cleaned = LINE_CONTINUATION.matcher(cleaned).replaceAll("");
+        return cleaned;
+    }
 
     /**
      * Parse JSON5-style text and return a standard JSON string.
      */
     public static String toJson(String json5)
     {
-        // Strip comments
-        String cleaned = BLOCK_COMMENT.matcher(json5).replaceAll("");
-        cleaned = LINE_COMMENT.matcher(cleaned).replaceAll("$1");
-        // Remove trailing commas
-        cleaned = TRAILING_COMMA.matcher(cleaned).replaceAll("$1");
+        String cleaned = stripJson5(json5);
 
         // Parse with Gson lenient mode to handle remaining JSON5 quirks
         JsonReader reader = new JsonReader(new StringReader(cleaned));
@@ -48,9 +63,7 @@ public final class Json5Reader
      */
     public static JsonElement parse(String json5)
     {
-        String cleaned = BLOCK_COMMENT.matcher(json5).replaceAll("");
-        cleaned = LINE_COMMENT.matcher(cleaned).replaceAll("$1");
-        cleaned = TRAILING_COMMA.matcher(cleaned).replaceAll("$1");
+        String cleaned = stripJson5(json5);
 
         JsonReader reader = new JsonReader(new StringReader(cleaned));
         reader.setLenient(true);

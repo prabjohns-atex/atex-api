@@ -3,7 +3,7 @@
 	  "name":"Demo Content - JAR Importer",
 	  "errorHandler":"file:{{polopoly.work-dir}}/jar-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
 	  "threadsPoolSize":"10",
-	  "from":"file:{{polopoly.work-dir}}/unzip?readLock=changed&include=.*\.jar|.*\.JAR|.*\.zip|.*\.ZIP",
+	  "from":"file:{{polopoly.work-dir}}/unzip?readLock=changed&include=.*\\.jar|.*\\.JAR|.*\\.zip|.*\\.ZIP",
 	  "parameters":["{{polopoly.work-dir}}/json"],
 	  "processor":"processor.configuration.unzip.conf",
       "run":"true",

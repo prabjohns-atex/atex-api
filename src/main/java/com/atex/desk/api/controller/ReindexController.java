@@ -128,6 +128,16 @@ public class ReindexController
             .body(toDto(state));
     }
 
+    @GetMapping("/live")
+    @Operation(summary = "Get live indexer status", description = "Returns the live (solr) indexer state for monitoring dashboards.")
+    @ApiResponse(responseCode = "200", description = "Live indexer status")
+    @ApiResponse(responseCode = "404", description = "Live indexer not found")
+    public ResponseEntity<?> getLiveIndexerStatus() {
+        return indexerStateRepository.findByIndexerId("solr")
+            .map(s -> ResponseEntity.ok(toDto(s)))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping
     @Operation(summary = "List all reindex jobs", description = "Returns all reindex jobs ordered by creation time descending.")
     @ApiResponse(responseCode = "200", description = "Reindex jobs listed")

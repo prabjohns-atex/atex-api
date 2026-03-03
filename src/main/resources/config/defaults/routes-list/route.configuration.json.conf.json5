@@ -3,7 +3,7 @@
 	  "name":"Demo Content - Json Importer",
 	  "errorHandler":"file:{{polopoly.work-dir}}/json-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
 	  "threadsPoolSize":"10",
-	  "from":"file:{{polopoly.work-dir}}/json?delete=true&sortBy=file:name&recursive=true&readLock=changed&include=.*\.json|.*\.JSON",
+	  "from":"file:{{polopoly.work-dir}}/json?delete=true&sortBy=file:name&recursive=true&readLock=changed&include=.*\\.json|.*\\.JSON",
 	  "processor":"processor.configuration.json.conf",
       "run":"true",
       "securityParent":"externalid/dam.assets.common.d",	  	  

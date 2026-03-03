@@ -1837,3 +1837,99 @@ All resolution methods check cache first, fall back to DB, cache result. `resolv
 | `repository/ContentViewRepository.java` | Added `removeViewFromOtherVersions()`, `findByVersionIdIn()` |
 | `service/ContentService.java` | All 11 gaps implemented: caching, validation, has(), view exclusivity, optimistic locking, aspect MD5 reuse, alias CRUD, aliases in response, batch history views, purge |
 
+## Increment 24 — Admin UI
+
+Extends the read-only `dashboard.html` into a full tabbed admin UI with authentication, interactive controls, and CRUD operations against existing REST endpoints. No build step — vanilla HTML/CSS/JS.
+
+### Architecture
+
+```
+/dashboard.html (static file, no auth required to load)
+  ├─ Login overlay → POST /security/token → sessionStorage('desk-token')
+  ├─ Tab: Overview    → GET /api/status, /actuator/health, /actuator/metrics/*, /api/endpoints
+  ├─ Tab: Indexing    → GET /admin/reindex/live (NEW), GET/POST/DELETE /admin/reindex, POST /admin/reindex/pause|resume
+  ├─ Tab: Users       → GET/POST/PUT/DELETE /principals/users|groups|groups/{id}/members
+  ├─ Tab: Config      → GET/PUT/DELETE /admin/config/*, GET /admin/config/export|patch
+  └─ Tab: API Explorer → GET /api/endpoints
+```
+
+### New Endpoint
+
+`ReindexController` — added `GET /admin/reindex/live`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/admin/reindex/live` | Returns the `solr` live indexer state for monitoring dashboards. 404 if not found. |
+
+The existing `GET /admin/reindex` returns `findAllReindexJobs()` which excludes the LIVE indexer. This dedicated endpoint exposes it.
+
+### UI Tabs
+
+| Tab | Features |
+|-----|----------|
+| **Overview** | System info, health indicators, config summary, request metrics, JVM stats. Auto-refresh 30s. |
+| **Indexing** | Live indexer status card (status badge, cursor, last updated, errors), pause/resume all buttons, new reindex job form (full/filtered/manual with conditional fields), reindex jobs table with progress bars, ETA, cancel/delete actions. Auto-refresh 5s. |
+| **Users & Groups** | Users table with type badges (CM/LDAP/Remote), groups list with view/delete, create group form, member management panel (add/remove members in modal). |
+| **Configuration** | Config table with source tier badges (product/project/live), view JSON per tier, edit with textarea + save, revert live overrides, export as JSON download, show unified diff. |
+| **API Explorer** | Endpoints table with method badges (moved from old dashboard). |
+
+### Auth Flow
+
+1. On load: check `sessionStorage` for `desk-token`
+2. No token → show login overlay (`POST /security/token`)
+3. Store token + username in `sessionStorage`
+4. `authFetch()` wrapper adds `X-Auth-Token` header to all requests
+5. 401/403 responses trigger automatic logout
+6. Header shows logged-in username + logout button
+
+### UI Components
+
+- **Toast notifications** — success/error/info messages, auto-dismiss 4s
+- **Modal panel** — for detail views (group members, config JSON, diff)
+- **Progress bars** — for reindex job completion percentage
+- **Status badges** — RUNNING/PAUSED/COMPLETED/FAILED/REQUESTED with color coding
+- **Tier badges** — product/project/live for config source tiers
+- **Confirm dialogs** — for destructive actions (delete group, revert config)
+
+### Modified Files (2)
+
+| File | Change |
+|------|--------|
+| `controller/ReindexController.java` | Added `GET /admin/reindex/live` endpoint |
+| `static/dashboard.html` | Complete rewrite: login, 5 tabs, auth fetch, all admin CRUD |
+
+## Increment 25 — Config Sync & JSON5 Parsing Fixes
+
+Fixes three bugs in `config-sync.py` and one in `Json5Reader.java` that caused config files to be corrupted or fail to parse at runtime.
+
+### config-sync.py Fix 1: json-ref Path Splitting
+
+**Problem:** 48 `json-ref` entries in `config-mapping.txt` use `xmlfile.xml + path/to/file.json` syntax (e.g., `dam-json-template-list.xml + files/damArticleTemplate.json`). The script treated the entire string as a single file path → "Source XML not found".
+
+**Fix:** Split `source_path` on ` + ` and read the JSON file directly from `source_dir / json_part`, bypassing XML parsing entirely.
+
+### config-sync.py Fix 2: Escape Sequence Pair Advancement
+
+**Problem:** `fix_json_escape_sequences()` processed valid escape pairs like `\\` but only advanced `i` by 1. The second `\` was re-examined as a new escape start, causing `\\.` (valid regex in JSON strings) to become `\\\\.` (double-escaped). Triggered `MalformedJsonException` for mail-service validation config.
+
+**Fix:** For valid escape pairs (`"\\bfnrtu/`), advance `i += 2` and emit both characters to skip past the pair entirely.
+
+### config-sync.py Fix 3: JSON5 Line Continuation Passthrough
+
+**Problem:** `fix_json_escape_sequences()` doubled `\` before newlines (JSON5 line continuations: `\` + newline inside strings). The `atex.configuration.desk.print.json5` file ended up with `\\` at the end of every line.
+
+**Fix:** Added `\r\n` check — when `\` is followed by `\r` or `\n`, pass through unchanged (it's a JSON5 line continuation, not an invalid escape).
+
+### Json5Reader.java Fix: Line Continuation Stripping
+
+**Problem:** Even with config-sync preserving `\` + newline faithfully, Gson doesn't understand JSON5 line continuations. Runtime `MalformedJsonException` at `desk.print` template field.
+
+**Fix:** Added `LINE_CONTINUATION` regex pattern (`\\\\\\r?\\n\\s*`) to `Json5Reader`. Refactored both `toJson()` and `parse()` to use a shared `stripJson5()` method that strips block comments, line comments, trailing commas, and line continuations before passing to Gson.
+
+### Modified Files (2)
+
+| File | Change |
+|------|--------|
+| `scripts/config-sync.py` | 3 fixes: json-ref ` + ` path splitting, escape pair `i += 2` advancement, `\r\n` passthrough |
+| `config/Json5Reader.java` | Added `LINE_CONTINUATION` pattern, refactored to `stripJson5()` helper used by both `toJson()` and `parse()` |
+

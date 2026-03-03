@@ -3,7 +3,7 @@
 	  "name":"Video Importer",
 	  "errorHandler":"file:{{polopoly.work-dir}}/video-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
 	  "threadsPoolSize":"10",
-	  "from":"file:{{polopoly.work-dir}}/video-in?delete=true&recursive=true&readLock=changed&include=.*\.*",
+	  "from":"file:{{polopoly.work-dir}}/video-in?delete=true&recursive=true&readLock=changed&include=.*\\.*",
 	  "parameters":["3"],
       "processor":"processor.configuration.video.conf", 
       "run":"true", 

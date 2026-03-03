@@ -3,210 +3,931 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Desk API - Dashboard</title>
+    <title>Desk API Admin</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; }
-        .header { background: #1a1a2e; color: #fff; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
-        .header h1 { font-size: 1.4rem; font-weight: 600; }
-        .header-links a { color: #a0c4ff; text-decoration: none; margin-left: 1.5rem; font-size: 0.9rem; }
+
+        /* Header */
+        .header { background: #1a1a2e; color: #fff; padding: 0.8rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { font-size: 1.3rem; font-weight: 600; }
+        .header-right { display: flex; align-items: center; gap: 1.2rem; }
+        .header-links a { color: #a0c4ff; text-decoration: none; font-size: 0.85rem; }
         .header-links a:hover { color: #fff; }
-        .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
+        .user-badge { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #ccc; }
+        .user-badge strong { color: #fff; }
+        .btn-logout { background: none; border: 1px solid #555; color: #ccc; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .btn-logout:hover { border-color: #aaa; color: #fff; }
+
+        /* Tab bar */
+        .tab-bar { background: #fff; border-bottom: 2px solid #e0e0e0; padding: 0 2rem; display: flex; gap: 0; }
+        .tab-btn { padding: 0.7rem 1.2rem; border: none; background: none; cursor: pointer; font-size: 0.9rem; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+        .tab-btn:hover { color: #333; background: #f8f8f8; }
+        .tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+
+        /* Container & grid */
+        .container { max-width: 1360px; margin: 0 auto; padding: 1.5rem; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.2rem; margin-bottom: 1.2rem; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Cards */
         .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.2rem; }
-        .card h2 { font-size: 1rem; color: #555; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-        .stat { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
+        .card h2 { font-size: 0.95rem; color: #555; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .card-wide { grid-column: 1 / -1; }
+        .stat { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.88rem; }
         .stat:last-child { border-bottom: none; }
         .stat-label { color: #777; }
         .stat-value { font-weight: 500; word-break: break-all; max-width: 60%; text-align: right; }
+
+        /* Badges */
         .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-        .badge-up { background: #d4edda; color: #155724; }
-        .badge-down { background: #f8d7da; color: #721c24; }
+        .badge-up, .badge-running { background: #d4edda; color: #155724; }
+        .badge-down, .badge-failed { background: #f8d7da; color: #721c24; }
         .badge-unknown { background: #e2e3e5; color: #383d41; }
+        .badge-paused { background: #fff3cd; color: #856404; }
+        .badge-completed { background: #cce5ff; color: #004085; }
+        .badge-requested { background: #e2e3e5; color: #383d41; }
         .badge-get { background: #61affe; color: #fff; }
         .badge-post { background: #49cc90; color: #fff; }
         .badge-put { background: #fca130; color: #fff; }
         .badge-delete { background: #f93e3e; color: #fff; }
         .badge-patch { background: #50e3c2; color: #fff; }
+        .badge-cm { background: #d4edda; color: #155724; }
+        .badge-ldap { background: #cce5ff; color: #004085; }
+        .badge-remote { background: #fff3cd; color: #856404; }
+        .badge-product { background: #e2e3e5; color: #555; }
+        .badge-project { background: #cce5ff; color: #004085; }
+        .badge-live { background: #d4edda; color: #155724; }
+
+        /* Tables */
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th { text-align: left; padding: 0.6rem 0.5rem; border-bottom: 2px solid #e0e0e0; color: #555; font-weight: 600; }
         td { padding: 0.5rem; border-bottom: 1px solid #f0f0f0; }
-        td.path { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.82rem; }
+        td.mono { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.82rem; }
         tr:hover { background: #f8f9fa; }
+
+        /* Buttons */
+        .btn { padding: 6px 14px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.83rem; font-weight: 500; transition: all 0.15s; }
+        .btn-primary { background: #1a73e8; color: #fff; }
+        .btn-primary:hover { background: #1557b0; }
+        .btn-danger { background: #dc3545; color: #fff; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-outline { background: #fff; color: #555; border: 1px solid #ccc; }
+        .btn-outline:hover { background: #f0f0f0; border-color: #999; }
+        .btn-warn { background: #ffc107; color: #333; }
+        .btn-warn:hover { background: #e0a800; }
+        .btn-success { background: #28a745; color: #fff; }
+        .btn-success:hover { background: #218838; }
+        .btn-sm { padding: 3px 10px; font-size: 0.78rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+        /* Forms */
+        .form-row { display: flex; gap: 0.8rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.8rem; }
+        .form-field { display: flex; flex-direction: column; gap: 0.25rem; }
+        .form-field label { font-size: 0.78rem; color: #777; font-weight: 600; text-transform: uppercase; }
+        .form-field input, .form-field select, .form-field textarea { padding: 6px 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 0.85rem; font-family: inherit; }
+        .form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
+        .form-field textarea { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.82rem; resize: vertical; }
+
+        /* Progress bar */
+        .progress-bar { background: #e9ecef; border-radius: 4px; height: 18px; overflow: hidden; position: relative; }
+        .progress-fill { background: #1a73e8; height: 100%; border-radius: 4px; transition: width 0.3s; min-width: 0; }
+        .progress-text { position: absolute; top: 0; left: 0; right: 0; text-align: center; font-size: 0.72rem; line-height: 18px; color: #333; font-weight: 600; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 10000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { padding: 0.7rem 1.2rem; border-radius: 6px; color: #fff; font-size: 0.85rem; box-shadow: 0 3px 10px rgba(0,0,0,0.2); animation: slideIn 0.3s; max-width: 400px; }
+        .toast-success { background: #28a745; }
+        .toast-error { background: #dc3545; }
+        .toast-info { background: #17a2b8; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Login overlay */
+        .login-overlay { position: fixed; inset: 0; background: rgba(26,26,46,0.95); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .login-box { background: #fff; border-radius: 12px; padding: 2.5rem; width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .login-box h2 { font-size: 1.3rem; margin-bottom: 0.3rem; color: #1a1a2e; }
+        .login-box p { font-size: 0.85rem; color: #777; margin-bottom: 1.5rem; }
+        .login-box .form-field { margin-bottom: 1rem; }
+        .login-box .form-field input { width: 100%; padding: 10px 12px; }
+        .login-box .btn { width: 100%; padding: 10px; font-size: 0.95rem; }
+        .login-error { color: #dc3545; font-size: 0.83rem; margin-bottom: 0.8rem; display: none; }
+
+        /* Detail panel / modal */
+        .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 5000; display: none; }
+        .panel-overlay.active { display: flex; align-items: center; justify-content: center; }
+        .panel { background: #fff; border-radius: 10px; padding: 1.5rem; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        .panel h3 { margin-bottom: 1rem; font-size: 1.1rem; }
+        .panel-close { float: right; background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #999; }
+        .panel-close:hover { color: #333; }
+        pre.json { background: #f6f8fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 1rem; font-size: 0.82rem; overflow-x: auto; white-space: pre-wrap; word-break: break-word; max-height: 50vh; }
+
         .loading { color: #999; font-style: italic; }
         .refresh-note { text-align: center; color: #999; font-size: 0.8rem; margin-top: 1rem; }
+        .empty-state { text-align: center; padding: 2rem; color: #999; }
+        .section-title { font-size: 0.95rem; font-weight: 600; color: #555; margin: 1.5rem 0 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .inline-flex { display: flex; align-items: center; gap: 0.5rem; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Desk API Dashboard</h1>
+
+<!-- Toast container -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- Login overlay -->
+<div class="login-overlay" id="login-overlay">
+    <div class="login-box">
+        <h2>Desk API Admin</h2>
+        <p>Sign in to manage your instance</p>
+        <div class="login-error" id="login-error"></div>
+        <div class="form-field">
+            <label>Username</label>
+            <input type="text" id="login-user" value="sysadmin" autocomplete="username">
+        </div>
+        <div class="form-field">
+            <label>Password</label>
+            <input type="password" id="login-pass" value="sysadmin" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary" onclick="doLogin()" id="login-btn">Sign In</button>
+    </div>
+</div>
+
+<!-- Detail panel overlay -->
+<div class="panel-overlay" id="panel-overlay" onclick="closePanel(event)">
+    <div class="panel" id="panel">
+        <button class="panel-close" onclick="closePanelForce()">&times;</button>
+        <div id="panel-content"></div>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+    <h1>Desk API Admin</h1>
+    <div class="header-right">
+        <div class="user-badge" id="user-badge" style="display:none">
+            <span>Logged in as <strong id="user-name"></strong></span>
+            <button class="btn-logout" onclick="doLogout()">Logout</button>
+        </div>
         <div class="header-links">
-            <a href="/swagger-ui.html">Swagger UI</a>
-            <a href="/v3/api-docs">OpenAPI Spec</a>
+            <a href="/swagger-ui.html">Swagger</a>
+            <a href="/v3/api-docs">OpenAPI</a>
             <a href="/actuator/health">Health</a>
-            <a href="/actuator/metrics">Metrics</a>
         </div>
     </div>
-    <div class="container">
+</div>
+
+<!-- Tab bar -->
+<div class="tab-bar" id="tab-bar">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="indexing">Indexing</button>
+    <button class="tab-btn" data-tab="users">Users &amp; Groups</button>
+    <button class="tab-btn" data-tab="config">Configuration</button>
+    <button class="tab-btn" data-tab="explorer">API Explorer</button>
+</div>
+
+<!-- Tab content -->
+<div class="container">
+
+    <!-- Overview Tab -->
+    <div class="tab-content active" id="tab-overview">
         <div class="grid">
-            <div class="card" id="system-card">
-                <h2>System Info</h2>
-                <div class="loading">Loading...</div>
-            </div>
-            <div class="card" id="health-card">
-                <h2>Health</h2>
-                <div class="loading">Loading...</div>
-            </div>
-            <div class="card" id="config-card">
-                <h2>Configuration</h2>
-                <div class="loading">Loading...</div>
-            </div>
-            <div class="card" id="metrics-card">
-                <h2>Request Metrics</h2>
-                <div class="loading">Loading...</div>
-            </div>
-            <div class="card" id="jvm-card">
-                <h2>JVM</h2>
-                <div class="loading">Loading...</div>
-            </div>
-        </div>
-        <div class="card">
-            <h2>API Endpoints</h2>
-            <div id="endpoints-table">
-                <div class="loading">Loading...</div>
-            </div>
+            <div class="card" id="system-card"><h2>System Info</h2><div class="loading">Loading...</div></div>
+            <div class="card" id="health-card"><h2>Health</h2><div class="loading">Loading...</div></div>
+            <div class="card" id="config-summary-card"><h2>Configuration</h2><div class="loading">Loading...</div></div>
+            <div class="card" id="metrics-card"><h2>Request Metrics</h2><div class="loading">Loading...</div></div>
+            <div class="card" id="jvm-card"><h2>JVM</h2><div class="loading">Loading...</div></div>
         </div>
         <div class="refresh-note">Auto-refreshes every 30 seconds</div>
     </div>
-    <script>
-        function stat(label, value) {
-            return '<div class="stat"><span class="stat-label">' + escHtml(label) + '</span><span class="stat-value">' + value + '</span></div>';
+
+    <!-- Indexing Tab -->
+    <div class="tab-content" id="tab-indexing">
+        <div class="grid">
+            <div class="card">
+                <h2>Live Indexer</h2>
+                <div id="live-indexer"><div class="loading">Loading...</div></div>
+                <div style="margin-top:0.8rem" class="btn-group">
+                    <button class="btn btn-warn btn-sm" onclick="pauseAll()">Pause All</button>
+                    <button class="btn btn-success btn-sm" onclick="resumeAll()">Resume All</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>New Reindex Job</h2>
+                <div class="form-field" style="margin-bottom:0.6rem">
+                    <label>Type</label>
+                    <select id="reindex-type" onchange="toggleReindexFields()">
+                        <option value="full">Full Reindex</option>
+                        <option value="filtered">Filtered</option>
+                        <option value="manual">Manual (content IDs)</option>
+                    </select>
+                </div>
+                <div id="reindex-filtered-fields" style="display:none">
+                    <div class="form-field" style="margin-bottom:0.5rem">
+                        <label>Content Types (comma-separated)</label>
+                        <input type="text" id="reindex-content-types" placeholder="e.g. atex.onecms.article,atex.onecms.image">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field"><label>Date From</label><input type="date" id="reindex-date-from"></div>
+                        <div class="form-field"><label>Date To</label><input type="date" id="reindex-date-to"></div>
+                    </div>
+                </div>
+                <div id="reindex-manual-fields" style="display:none">
+                    <div class="form-field" style="margin-bottom:0.5rem">
+                        <label>Content IDs (one per line)</label>
+                        <textarea id="reindex-content-ids" rows="4" placeholder="onecms:abc123&#10;onecms:def456"></textarea>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="createReindexJob()" style="margin-top:0.5rem">Start Reindex</button>
+            </div>
+        </div>
+        <div class="card" style="margin-top:1.2rem">
+            <h2>Reindex Jobs</h2>
+            <div id="reindex-jobs"><div class="loading">Loading...</div></div>
+        </div>
+        <div class="refresh-note">Auto-refreshes every 5 seconds when jobs are active</div>
+    </div>
+
+    <!-- Users & Groups Tab -->
+    <div class="tab-content" id="tab-users">
+        <div class="card" style="margin-bottom:1.2rem">
+            <h2>Users</h2>
+            <div id="users-table"><div class="loading">Loading...</div></div>
+        </div>
+        <div class="grid">
+            <div class="card">
+                <h2>Groups</h2>
+                <div id="groups-list"><div class="loading">Loading...</div></div>
+            </div>
+            <div class="card">
+                <h2>Create Group</h2>
+                <div class="form-field" style="margin-bottom:0.6rem">
+                    <label>Group Name</label>
+                    <input type="text" id="new-group-name" placeholder="e.g. editors">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="createGroup()">Create Group</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Tab -->
+    <div class="tab-content" id="tab-config">
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+                <h2 style="margin-bottom:0">Configuration</h2>
+                <div class="btn-group">
+                    <button class="btn btn-outline btn-sm" onclick="exportConfig()">Export Live Overrides</button>
+                    <button class="btn btn-outline btn-sm" onclick="showDiff()">Show Diff</button>
+                </div>
+            </div>
+            <div id="config-table"><div class="loading">Loading...</div></div>
+        </div>
+    </div>
+
+    <!-- API Explorer Tab -->
+    <div class="tab-content" id="tab-explorer">
+        <div class="card">
+            <h2>API Endpoints</h2>
+            <div id="endpoints-table"><div class="loading">Loading...</div></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ============================================================
+// Auth & fetch
+// ============================================================
+let authToken = sessionStorage.getItem('desk-token');
+let currentUser = sessionStorage.getItem('desk-user');
+
+function authFetch(url, opts = {}) {
+    if (!opts.headers) opts.headers = {};
+    if (authToken) opts.headers['X-Auth-Token'] = authToken;
+    return fetch(url, opts);
+}
+
+async function authJson(url, opts = {}) {
+    try {
+        const r = await authFetch(url, opts);
+        if (r.status === 401 || r.status === 403) { doLogout(); return null; }
+        if (!r.ok) return null;
+        const text = await r.text();
+        if (!text) return null;
+        return JSON.parse(text);
+    } catch { return null; }
+}
+
+function checkAuth() {
+    if (authToken && currentUser) {
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('user-badge').style.display = 'flex';
+        document.getElementById('user-name').textContent = currentUser;
+        return true;
+    }
+    document.getElementById('login-overlay').style.display = 'flex';
+    document.getElementById('user-badge').style.display = 'none';
+    return false;
+}
+
+async function doLogin() {
+    const user = document.getElementById('login-user').value.trim();
+    const pass = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+
+    if (!user || !pass) { errEl.textContent = 'Enter username and password'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.textContent = 'Signing in...';
+    try {
+        const r = await fetch('/security/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user, password: pass })
+        });
+        if (!r.ok) {
+            const body = await r.text();
+            errEl.textContent = 'Login failed: ' + (r.status === 401 ? 'Invalid credentials' : r.statusText);
+            errEl.style.display = 'block';
+            return;
         }
+        const data = await r.json();
+        authToken = data.token;
+        currentUser = data.userId || user;
+        sessionStorage.setItem('desk-token', authToken);
+        sessionStorage.setItem('desk-user', currentUser);
+        checkAuth();
+        refreshAll();
+    } catch (e) {
+        errEl.textContent = 'Connection failed';
+        errEl.style.display = 'block';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Sign In';
+    }
+}
 
-        function badge(cls, text) {
-            return '<span class="badge badge-' + cls + '">' + escHtml(text) + '</span>';
-        }
+function doLogout() {
+    authToken = null; currentUser = null;
+    sessionStorage.removeItem('desk-token');
+    sessionStorage.removeItem('desk-user');
+    checkAuth();
+}
 
-        function escHtml(s) {
-            if (s == null) return '';
-            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        }
+// Enter key in login form
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
 
-        function healthBadge(status) {
-            if (status === 'UP') return badge('up', 'UP');
-            if (status === 'DOWN') return badge('down', 'DOWN');
-            return badge('unknown', status || 'UNKNOWN');
-        }
+// ============================================================
+// Helpers
+// ============================================================
+function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function stat(label, value) { return '<div class="stat"><span class="stat-label">' + esc(label) + '</span><span class="stat-value">' + value + '</span></div>'; }
+function badge(cls, text) { return '<span class="badge badge-' + cls + '">' + esc(text) + '</span>'; }
+function healthBadge(s) { return s === 'UP' ? badge('up','UP') : s === 'DOWN' ? badge('down','DOWN') : badge('unknown', s||'UNKNOWN'); }
+function methodBadge(m) { return badge(m.toLowerCase(), m); }
+function statusBadge(s) {
+    const map = { RUNNING:'running', PAUSED:'paused', COMPLETED:'completed', FAILED:'failed', REQUESTED:'requested', DOWN:'down', UP:'up' };
+    return badge(map[s] || 'unknown', s);
+}
+function tierBadge(t) { return badge(t === 'live' ? 'live' : t === 'project' ? 'project' : 'product', t); }
 
-        function methodBadge(m) {
-            return badge(m.toLowerCase(), m);
-        }
+function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = 'toast toast-' + type;
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+}
 
-        async function fetchJson(url) {
-            try {
-                const r = await fetch(url);
-                if (!r.ok) return null;
-                return await r.json();
-            } catch { return null; }
-        }
+function timeAgo(iso) {
+    if (!iso) return 'N/A';
+    const d = new Date(iso);
+    const s = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+}
 
-        async function loadStatus() {
-            const data = await fetchJson('/api/status');
-            if (!data) { document.getElementById('system-card').innerHTML = '<h2>System Info</h2><div class="loading">Unavailable</div>'; return; }
+function formatDuration(secs) {
+    if (!secs && secs !== 0) return 'N/A';
+    if (secs < 60) return secs + 's';
+    if (secs < 3600) return Math.floor(secs/60) + 'm ' + (secs % 60) + 's';
+    return Math.floor(secs/3600) + 'h ' + Math.floor((secs%3600)/60) + 'm';
+}
 
-            let html = '<h2>System Info</h2>';
-            html += stat('Java', data.system.javaVersion);
-            html += stat('Vendor', data.system.javaVendor);
-            html += stat('Spring Boot', data.system.springBootVersion);
-            html += stat('Uptime', data.system.uptime);
-            html += stat('Start Time', new Date(data.system.startTime).toLocaleString());
-            html += stat('Endpoints', data.endpointCount);
-            document.getElementById('system-card').innerHTML = html;
+function progressBar(pct) {
+    const p = pct != null ? Math.min(100, Math.max(0, pct)) : 0;
+    return '<div class="progress-bar"><div class="progress-fill" style="width:' + p + '%"></div><div class="progress-text">' + (pct != null ? pct.toFixed(1) + '%' : '0%') + '</div></div>';
+}
 
-            let cfgHtml = '<h2>Configuration</h2>';
-            cfgHtml += stat('Total Configs', data.config.totalConfigs);
-            cfgHtml += stat('Flavor', data.config.flavor || '(none)');
-            cfgHtml += stat('Auth', data.config.authEnabled ? badge('up', 'Enabled') : badge('unknown', 'Disabled'));
-            cfgHtml += stat('Instance ID', data.config.instanceId);
-            cfgHtml += stat('Plugins', data.config.pluginsEnabled ? badge('up', 'Enabled') : badge('unknown', 'Disabled'));
-            cfgHtml += stat('Solr URL', escHtml(data.config.solrUrl) || '(not set)');
-            cfgHtml += stat('Solr Core', escHtml(data.config.solrCore));
-            document.getElementById('config-card').innerHTML = cfgHtml;
-        }
+// ============================================================
+// Panel (modal)
+// ============================================================
+function showPanel(html) {
+    document.getElementById('panel-content').innerHTML = html;
+    document.getElementById('panel-overlay').classList.add('active');
+}
+function closePanel(e) { if (e.target === e.currentTarget) closePanelForce(); }
+function closePanelForce() { document.getElementById('panel-overlay').classList.remove('active'); }
 
-        async function loadHealth() {
-            const data = await fetchJson('/actuator/health');
-            let html = '<h2>Health</h2>';
-            if (!data) { html += '<div class="loading">Unavailable</div>'; document.getElementById('health-card').innerHTML = html; return; }
+// ============================================================
+// Tab switching
+// ============================================================
+let activeTab = 'overview';
+let indexingInterval = null;
 
-            html += stat('Overall', healthBadge(data.status));
-            if (data.components) {
-                for (const [name, comp] of Object.entries(data.components)) {
-                    let detail = '';
-                    if (comp.details) {
-                        const d = comp.details;
-                        if (d.error) detail = ' - ' + escHtml(d.error);
-                        else if (d.url) detail = ' - ' + escHtml(d.url);
-                        else if (d.database) detail = ' - ' + escHtml(d.database);
-                    }
-                    html += stat(name, healthBadge(comp.status) + '<span style="font-size:0.8rem;color:#777">' + detail + '</span>');
-                }
+document.getElementById('tab-bar').addEventListener('click', e => {
+    if (!e.target.classList.contains('tab-btn')) return;
+    const tab = e.target.dataset.tab;
+    if (tab === activeTab) return;
+
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    e.target.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+    activeTab = tab;
+
+    // Load tab data
+    if (tab === 'indexing') loadIndexing();
+    else if (tab === 'users') loadUsers();
+    else if (tab === 'config') loadConfig();
+    else if (tab === 'explorer') loadEndpoints();
+
+    // Manage indexing auto-refresh
+    startIndexingRefresh();
+});
+
+function startIndexingRefresh() {
+    if (indexingInterval) { clearInterval(indexingInterval); indexingInterval = null; }
+    if (activeTab === 'indexing') {
+        indexingInterval = setInterval(loadIndexing, 5000);
+    }
+}
+
+// ============================================================
+// Overview Tab
+// ============================================================
+async function loadStatus() {
+    const data = await authJson('/api/status');
+    if (!data) { document.getElementById('system-card').innerHTML = '<h2>System Info</h2><div class="loading">Unavailable</div>'; return; }
+
+    let html = '<h2>System Info</h2>';
+    html += stat('Java', data.system.javaVersion);
+    html += stat('Vendor', data.system.javaVendor);
+    html += stat('Spring Boot', data.system.springBootVersion);
+    html += stat('Uptime', data.system.uptime);
+    html += stat('Start Time', new Date(data.system.startTime).toLocaleString());
+    html += stat('Endpoints', data.endpointCount);
+    document.getElementById('system-card').innerHTML = html;
+
+    let cfgHtml = '<h2>Configuration</h2>';
+    cfgHtml += stat('Total Configs', data.config.totalConfigs);
+    cfgHtml += stat('Flavor', data.config.flavor || '(none)');
+    cfgHtml += stat('Auth', data.config.authEnabled ? badge('up', 'Enabled') : badge('unknown', 'Disabled'));
+    cfgHtml += stat('Instance ID', data.config.instanceId);
+    cfgHtml += stat('Plugins', data.config.pluginsEnabled ? badge('up', 'Enabled') : badge('unknown', 'Disabled'));
+    cfgHtml += stat('Solr URL', esc(data.config.solrUrl) || '(not set)');
+    cfgHtml += stat('Solr Core', esc(data.config.solrCore));
+    document.getElementById('config-summary-card').innerHTML = cfgHtml;
+}
+
+async function loadHealth() {
+    const data = await authJson('/actuator/health');
+    let html = '<h2>Health</h2>';
+    if (!data) { html += '<div class="loading">Unavailable</div>'; document.getElementById('health-card').innerHTML = html; return; }
+    html += stat('Overall', healthBadge(data.status));
+    if (data.components) {
+        for (const [name, comp] of Object.entries(data.components)) {
+            let detail = '';
+            if (comp.details) {
+                const d = comp.details;
+                if (d.error) detail = ' - ' + esc(d.error);
+                else if (d.url) detail = ' - ' + esc(d.url);
+                else if (d.database) detail = ' - ' + esc(d.database);
             }
-            document.getElementById('health-card').innerHTML = html;
+            html += stat(name, healthBadge(comp.status) + '<span style="font-size:0.8rem;color:#777">' + detail + '</span>');
         }
+    }
+    document.getElementById('health-card').innerHTML = html;
+}
 
-        async function loadMetrics() {
-            const data = await fetchJson('/actuator/metrics/http.server.requests');
-            let html = '<h2>Request Metrics</h2>';
-            if (!data) { html += stat('Status', badge('unknown', 'No data yet')); document.getElementById('metrics-card').innerHTML = html; return; }
+async function loadMetrics() {
+    const data = await authJson('/actuator/metrics/http.server.requests');
+    let html = '<h2>Request Metrics</h2>';
+    if (!data) { html += stat('Status', badge('unknown', 'No data yet')); document.getElementById('metrics-card').innerHTML = html; return; }
+    for (const m of data.measurements || []) {
+        if (m.statistic === 'COUNT') html += stat('Total Requests', Math.round(m.value));
+        if (m.statistic === 'TOTAL_TIME') html += stat('Total Time', m.value.toFixed(2) + 's');
+        if (m.statistic === 'MAX') html += stat('Max Latency', (m.value * 1000).toFixed(0) + 'ms');
+    }
+    document.getElementById('metrics-card').innerHTML = html;
+}
 
-            for (const m of data.measurements || []) {
-                if (m.statistic === 'COUNT') html += stat('Total Requests', Math.round(m.value));
-                if (m.statistic === 'TOTAL_TIME') html += stat('Total Time', m.value.toFixed(2) + 's');
-                if (m.statistic === 'MAX') html += stat('Max Latency', (m.value * 1000).toFixed(0) + 'ms');
-            }
-            document.getElementById('metrics-card').innerHTML = html;
+async function loadJvm() {
+    const [mem, threads] = await Promise.all([
+        authJson('/actuator/metrics/jvm.memory.used'),
+        authJson('/actuator/metrics/jvm.threads.live')
+    ]);
+    let html = '<h2>JVM</h2>';
+    if (mem && mem.measurements) {
+        for (const m of mem.measurements) {
+            if (m.statistic === 'VALUE') html += stat('Heap Used', (m.value / 1048576).toFixed(0) + ' MB');
         }
-
-        async function loadJvm() {
-            const mem = await fetchJson('/actuator/metrics/jvm.memory.used');
-            const threads = await fetchJson('/actuator/metrics/jvm.threads.live');
-            let html = '<h2>JVM</h2>';
-
-            if (mem && mem.measurements) {
-                for (const m of mem.measurements) {
-                    if (m.statistic === 'VALUE') html += stat('Heap Used', (m.value / 1048576).toFixed(0) + ' MB');
-                }
-            }
-            if (threads && threads.measurements) {
-                for (const m of threads.measurements) {
-                    if (m.statistic === 'VALUE') html += stat('Live Threads', Math.round(m.value));
-                }
-            }
-
-            if (html === '<h2>JVM</h2>') html += stat('Status', badge('unknown', 'No data yet'));
-            document.getElementById('jvm-card').innerHTML = html;
+    }
+    if (threads && threads.measurements) {
+        for (const m of threads.measurements) {
+            if (m.statistic === 'VALUE') html += stat('Live Threads', Math.round(m.value));
         }
+    }
+    if (html === '<h2>JVM</h2>') html += stat('Status', badge('unknown', 'No data yet'));
+    document.getElementById('jvm-card').innerHTML = html;
+}
 
-        async function loadEndpoints() {
-            const data = await fetchJson('/api/endpoints');
-            if (!data) { document.getElementById('endpoints-table').innerHTML = '<div class="loading">Unavailable</div>'; return; }
+async function loadOverview() {
+    await Promise.all([loadStatus(), loadHealth(), loadMetrics(), loadJvm()]);
+}
 
-            let html = '<table><thead><tr><th style="width:100px">Method</th><th>Path</th><th>Controller</th><th>Handler</th></tr></thead><tbody>';
-            for (const ep of data) {
-                const methods = (ep.methods || []).map(methodBadge).join(' ');
-                html += '<tr><td>' + methods + '</td><td class="path">' + escHtml(ep.pattern) + '</td><td>' + escHtml(ep.controller) + '</td><td>' + escHtml(ep.handler) + '</td></tr>';
-            }
-            html += '</tbody></table>';
-            document.getElementById('endpoints-table').innerHTML = html;
+// ============================================================
+// Indexing Tab
+// ============================================================
+async function loadIndexing() {
+    const [live, jobs] = await Promise.all([
+        authJson('/admin/reindex/live'),
+        authJson('/admin/reindex')
+    ]);
+
+    // Live indexer card
+    const el = document.getElementById('live-indexer');
+    if (!live) {
+        el.innerHTML = '<div class="empty-state">Live indexer not found</div>';
+    } else {
+        let html = '';
+        html += stat('Status', statusBadge(live.status));
+        html += stat('Cursor', live.progress ? live.progress.processed : 0);
+        html += stat('Last Updated', timeAgo(live.updatedAt));
+        html += stat('Errors', live.errors && live.errors.count > 0 ?
+            '<span style="color:#dc3545;font-weight:600">' + live.errors.count + '</span>' : '0');
+        if (live.errors && live.errors.lastError) {
+            html += stat('Last Error', '<span style="color:#dc3545;font-size:0.8rem">' + esc(live.errors.lastError).substring(0, 100) + '</span>');
         }
+        el.innerHTML = html;
+    }
 
-        async function refresh() {
-            await Promise.all([loadStatus(), loadHealth(), loadMetrics(), loadJvm(), loadEndpoints()]);
+    // Reindex jobs table
+    const jobsEl = document.getElementById('reindex-jobs');
+    if (!jobs || jobs.length === 0) {
+        jobsEl.innerHTML = '<div class="empty-state">No reindex jobs</div>';
+        return;
+    }
+
+    let html = '<table><thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Progress</th><th>ETA</th><th>Errors</th><th>Actions</th></tr></thead><tbody>';
+    for (const job of jobs) {
+        const pct = job.progress && job.progress.percent != null ? job.progress.percent : null;
+        const etaStr = job.eta && job.eta.estimatedRemainingSeconds != null ? formatDuration(job.eta.estimatedRemainingSeconds) : '-';
+        html += '<tr>';
+        html += '<td class="mono">' + esc(job.id) + '</td>';
+        html += '<td>' + esc(job.type) + '</td>';
+        html += '<td>' + statusBadge(job.status) + '</td>';
+        html += '<td style="min-width:140px">' + progressBar(pct) + '</td>';
+        html += '<td>' + etaStr + '</td>';
+        html += '<td>' + (job.errors && job.errors.count > 0 ? '<span style="color:#dc3545">' + job.errors.count + '</span>' : '0') + '</td>';
+        html += '<td>';
+        if (job.status === 'RUNNING' || job.status === 'REQUESTED') {
+            html += '<button class="btn btn-outline btn-sm" onclick="cancelReindexJob(\'' + esc(job.id) + '\')">Pause</button>';
+        } else if (job.status === 'PAUSED' || job.status === 'COMPLETED' || job.status === 'FAILED') {
+            html += '<button class="btn btn-danger btn-sm" onclick="deleteReindexJob(\'' + esc(job.id) + '\')">Delete</button>';
         }
+        html += '</td></tr>';
+    }
+    html += '</tbody></table>';
+    jobsEl.innerHTML = html;
+}
 
-        refresh();
-        setInterval(refresh, 30000);
-    </script>
+function toggleReindexFields() {
+    const type = document.getElementById('reindex-type').value;
+    document.getElementById('reindex-filtered-fields').style.display = type === 'filtered' ? 'block' : 'none';
+    document.getElementById('reindex-manual-fields').style.display = type === 'manual' ? 'block' : 'none';
+}
+
+async function createReindexJob() {
+    const type = document.getElementById('reindex-type').value;
+    const body = { type };
+
+    if (type === 'filtered') {
+        const ct = document.getElementById('reindex-content-types').value.trim();
+        if (ct) body.contentTypes = ct.split(',').map(s => s.trim()).filter(Boolean);
+        const df = document.getElementById('reindex-date-from').value;
+        const dt = document.getElementById('reindex-date-to').value;
+        if (df) body.dateFrom = new Date(df).toISOString();
+        if (dt) body.dateTo = new Date(dt).toISOString();
+    } else if (type === 'manual') {
+        const ids = document.getElementById('reindex-content-ids').value.trim();
+        if (!ids) { toast('Enter at least one content ID', 'error'); return; }
+        body.contentIds = ids.split('\n').map(s => s.trim()).filter(Boolean);
+    }
+
+    const r = await authFetch('/admin/reindex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    if (r.ok) {
+        toast('Reindex job created', 'success');
+        loadIndexing();
+    } else {
+        const err = await r.json().catch(() => null);
+        toast('Failed: ' + (err && err.error || r.statusText), 'error');
+    }
+}
+
+async function pauseAll() {
+    const r = await authFetch('/admin/reindex/pause', { method: 'POST' });
+    if (r.ok) { toast('All indexing paused', 'success'); loadIndexing(); }
+    else toast('Failed to pause', 'error');
+}
+
+async function resumeAll() {
+    const r = await authFetch('/admin/reindex/resume', { method: 'POST' });
+    if (r.ok) { toast('All indexing resumed', 'success'); loadIndexing(); }
+    else toast('Failed to resume', 'error');
+}
+
+async function cancelReindexJob(id) {
+    const r = await authFetch('/admin/reindex/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (r.ok) { toast('Job paused', 'success'); loadIndexing(); }
+    else toast('Failed', 'error');
+}
+
+async function deleteReindexJob(id) {
+    const r = await authFetch('/admin/reindex/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (r.ok || r.status === 204) { toast('Job deleted', 'success'); loadIndexing(); }
+    else toast('Failed', 'error');
+}
+
+// ============================================================
+// Users & Groups Tab
+// ============================================================
+async function loadUsers() {
+    const [users, groups] = await Promise.all([
+        authJson('/principals/users'),
+        authJson('/principals/groups')
+    ]);
+
+    // Users table
+    const el = document.getElementById('users-table');
+    if (!users || users.length === 0) {
+        el.innerHTML = '<div class="empty-state">No users found</div>';
+    } else {
+        let html = '<table><thead><tr><th>Login Name</th><th>Type</th><th>Principal ID</th></tr></thead><tbody>';
+        for (const u of users) {
+            const typeBadges = [];
+            if (u.cmUser) typeBadges.push(badge('cm', 'CM'));
+            if (u.ldapUser) typeBadges.push(badge('ldap', 'LDAP'));
+            if (u.remoteUser) typeBadges.push(badge('remote', 'Remote'));
+            if (typeBadges.length === 0) typeBadges.push(badge('unknown', 'Unknown'));
+            html += '<tr>';
+            html += '<td><strong>' + esc(u.name || u.loginName || u.userId) + '</strong></td>';
+            html += '<td>' + typeBadges.join(' ') + '</td>';
+            html += '<td class="mono">' + esc(u.principalId || u.id || '') + '</td>';
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    }
+
+    // Groups list
+    const gEl = document.getElementById('groups-list');
+    if (!groups || groups.length === 0) {
+        gEl.innerHTML = '<div class="empty-state">No groups</div>';
+    } else {
+        let html = '';
+        for (const g of groups) {
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid #f0f0f0">';
+            html += '<div class="inline-flex"><strong>' + esc(g.name) + '</strong>';
+            if (g.memberCount != null) html += ' <span style="color:#999;font-size:0.8rem">(' + g.memberCount + ' members)</span>';
+            html += '</div>';
+            html += '<div class="btn-group">';
+            html += '<button class="btn btn-outline btn-sm" onclick="viewGroup(\'' + esc(g.groupId || g.id) + '\')">View</button>';
+            html += '<button class="btn btn-danger btn-sm" onclick="deleteGroup(\'' + esc(g.groupId || g.id) + '\')">Delete</button>';
+            html += '</div></div>';
+        }
+        gEl.innerHTML = html;
+    }
+}
+
+async function createGroup() {
+    const name = document.getElementById('new-group-name').value.trim();
+    if (!name) { toast('Enter a group name', 'error'); return; }
+
+    const r = await authFetch('/principals/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+    });
+    if (r.ok || r.status === 201) {
+        toast('Group created', 'success');
+        document.getElementById('new-group-name').value = '';
+        loadUsers();
+    } else {
+        const err = await r.json().catch(() => null);
+        toast('Failed: ' + (err && (err.message || err.error) || r.statusText), 'error');
+    }
+}
+
+async function viewGroup(id) {
+    const data = await authJson('/principals/groups/' + encodeURIComponent(id) + '?members=true');
+    if (!data) { toast('Group not found', 'error'); return; }
+
+    let html = '<h3>Group: ' + esc(data.name) + '</h3>';
+    html += stat('ID', data.groupId || data.id);
+    html += stat('Name', data.name);
+
+    html += '<div class="section-title">Members</div>';
+    if (data.members && data.members.length > 0) {
+        html += '<table><thead><tr><th>Principal ID</th><th>Action</th></tr></thead><tbody>';
+        for (const m of data.members) {
+            const mid = typeof m === 'string' ? m : m.principalId || m;
+            html += '<tr><td class="mono">' + esc(mid) + '</td>';
+            html += '<td><button class="btn btn-danger btn-sm" onclick="removeMember(\'' + esc(id) + '\',\'' + esc(mid) + '\')">Remove</button></td></tr>';
+        }
+        html += '</tbody></table>';
+    } else {
+        html += '<div class="empty-state">No members</div>';
+    }
+
+    html += '<div class="section-title" style="margin-top:1rem">Add Member</div>';
+    html += '<div class="form-row"><div class="form-field"><label>Principal ID</label><input type="text" id="add-member-id" placeholder="e.g. sysadmin"></div>';
+    html += '<button class="btn btn-primary btn-sm" onclick="addMember(\'' + esc(id) + '\')" style="align-self:flex-end">Add</button></div>';
+
+    showPanel(html);
+}
+
+async function addMember(groupId) {
+    const pid = document.getElementById('add-member-id').value.trim();
+    if (!pid) { toast('Enter a principal ID', 'error'); return; }
+    const r = await authFetch('/principals/groups/' + encodeURIComponent(groupId) + '/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ principalId: pid })
+    });
+    if (r.ok) { toast('Member added', 'success'); viewGroup(groupId); loadUsers(); }
+    else toast('Failed to add member', 'error');
+}
+
+async function removeMember(groupId, pid) {
+    const r = await authFetch('/principals/groups/' + encodeURIComponent(groupId) + '/members/' + encodeURIComponent(pid), { method: 'DELETE' });
+    if (r.ok || r.status === 204) { toast('Member removed', 'success'); viewGroup(groupId); }
+    else toast('Failed to remove member', 'error');
+}
+
+async function deleteGroup(id) {
+    if (!confirm('Delete this group? This cannot be undone.')) return;
+    const r = await authFetch('/principals/groups/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (r.ok || r.status === 204) { toast('Group deleted', 'success'); loadUsers(); }
+    else toast('Failed to delete group', 'error');
+}
+
+// ============================================================
+// Configuration Tab
+// ============================================================
+async function loadConfig() {
+    const data = await authJson('/admin/config');
+    const el = document.getElementById('config-table');
+    if (!data || Object.keys(data).length === 0) {
+        el.innerHTML = '<div class="empty-state">No configuration found</div>';
+        return;
+    }
+
+    let html = '<table><thead><tr><th>External ID</th><th>Source Tier</th><th>Actions</th></tr></thead><tbody>';
+    for (const [id, entry] of Object.entries(data)) {
+        const tier = typeof entry === 'object' && entry !== null ? (entry.source || 'unknown') : String(entry);
+        html += '<tr>';
+        html += '<td class="mono">' + esc(id) + '</td>';
+        html += '<td>' + tierBadge(tier) + '</td>';
+        html += '<td class="btn-group">';
+        html += '<button class="btn btn-outline btn-sm" onclick="viewConfig(\'' + esc(id) + '\')">View</button>';
+        html += '<button class="btn btn-primary btn-sm" onclick="editConfig(\'' + esc(id) + '\')">Edit</button>';
+        if (tier === 'live') {
+            html += '<button class="btn btn-danger btn-sm" onclick="deleteConfig(\'' + esc(id) + '\')">Revert</button>';
+        }
+        html += '</td></tr>';
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+async function viewConfig(id) {
+    const data = await authJson('/admin/config/' + encodeURIComponent(id) + '/sources');
+    if (!data) { toast('Config not found', 'error'); return; }
+
+    let html = '<h3>Configuration: ' + esc(id) + '</h3>';
+    for (const [tier, value] of Object.entries(data)) {
+        html += '<div class="section-title">' + esc(tier) + '</div>';
+        html += '<pre class="json">' + esc(JSON.stringify(value, null, 2)) + '</pre>';
+    }
+    showPanel(html);
+}
+
+async function editConfig(id) {
+    const data = await authJson('/admin/config/' + encodeURIComponent(id));
+    if (!data) { toast('Config not found', 'error'); return; }
+
+    let html = '<h3>Edit: ' + esc(id) + '</h3>';
+    html += '<div class="form-field" style="margin-bottom:1rem"><label>Configuration JSON</label>';
+    html += '<textarea id="config-edit-area" rows="20" style="width:100%">' + esc(JSON.stringify(data, null, 2)) + '</textarea></div>';
+    html += '<div class="btn-group"><button class="btn btn-primary" onclick="saveConfig(\'' + esc(id) + '\')">Save</button>';
+    html += '<button class="btn btn-outline" onclick="closePanelForce()">Cancel</button></div>';
+    showPanel(html);
+}
+
+async function saveConfig(id) {
+    const text = document.getElementById('config-edit-area').value;
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (e) { toast('Invalid JSON: ' + e.message, 'error'); return; }
+
+    const r = await authFetch('/admin/config/' + encodeURIComponent(id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed)
+    });
+    if (r.ok) {
+        toast('Configuration saved', 'success');
+        closePanelForce();
+        loadConfig();
+    } else {
+        const err = await r.json().catch(() => null);
+        toast('Failed: ' + (err && err.message || r.statusText), 'error');
+    }
+}
+
+async function deleteConfig(id) {
+    if (!confirm('Revert live override for ' + id + '? This will restore resource defaults.')) return;
+    const r = await authFetch('/admin/config/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (r.ok) { toast('Configuration reverted', 'success'); loadConfig(); }
+    else toast('Failed to revert', 'error');
+}
+
+async function exportConfig() {
+    const data = await authJson('/admin/config/export');
+    if (!data) { toast('No live overrides', 'info'); return; }
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'desk-config-export.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Config exported', 'success');
+}
+
+async function showDiff() {
+    const r = await authFetch('/admin/config/patch');
+    if (!r.ok) { toast('Failed to load diff', 'error'); return; }
+    const text = await r.text();
+    if (!text || text.trim() === '') {
+        showPanel('<h3>Configuration Diff</h3><div class="empty-state">No differences (no live overrides)</div>');
+        return;
+    }
+    showPanel('<h3>Configuration Diff</h3><pre class="json">' + esc(text) + '</pre>');
+}
+
+// ============================================================
+// API Explorer Tab
+// ============================================================
+async function loadEndpoints() {
+    const data = await authJson('/api/endpoints');
+    const el = document.getElementById('endpoints-table');
+    if (!data) { el.innerHTML = '<div class="loading">Unavailable</div>'; return; }
+
+    let html = '<table><thead><tr><th style="width:100px">Method</th><th>Path</th><th>Controller</th><th>Handler</th></tr></thead><tbody>';
+    for (const ep of data) {
+        const methods = (ep.methods || []).map(methodBadge).join(' ');
+        html += '<tr><td>' + methods + '</td><td class="mono">' + esc(ep.pattern) + '</td><td>' + esc(ep.controller) + '</td><td>' + esc(ep.handler) + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+// ============================================================
+// Init
+// ============================================================
+async function refreshAll() {
+    if (!checkAuth()) return;
+    loadOverview();
+    if (activeTab === 'indexing') loadIndexing();
+    else if (activeTab === 'users') loadUsers();
+    else if (activeTab === 'config') loadConfig();
+    else if (activeTab === 'explorer') loadEndpoints();
+}
+
+// Start
+checkAuth();
+if (authToken) refreshAll();
+
+// Overview auto-refresh every 30s
+setInterval(() => { if (activeTab === 'overview' && authToken) loadOverview(); }, 30000);
+</script>
 </body>
 </html>
