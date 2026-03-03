@@ -1706,3 +1706,134 @@ For migrations needing conditional logic (check if tables/columns exist, handle 
 V3__SomeConditionalMigration.java  (extends BaseJavaMigration)
 ```
 
+## Increment 23 — ContentService Functional Gap Fixes
+
+Closes 11 functional gaps found by comparing `adm-content-service/.../ContentServiceImpl.java` against `desk-api/.../ContentService.java`. Also removes debug logging from the `externalid%2F` fix.
+
+### Cleanup: Debug Logging Removed
+
+Removed all `System.out.println(">>>")` statements added during the `externalid%2F` debugging session from `WebConfig.java` (1 statement) and `ContentController.java` (5 statements).
+
+### Gap 1 (P1): Aspect MD5 Reuse on Update
+
+**Problem:** `updateContent()` always created new aspect rows, even if data was unchanged from the previous version. Wasted storage and broke the reference's aspect-sharing model.
+
+**Fix:** On update, loads previous version's aspects and computes MD5 of sorted JSON for each new aspect. If hash matches, reuses the existing `aspectId` (only creates `AspectLocation` link). Added `sortJsonKeys()` / `sortNode()` for deterministic key ordering using Jackson 3's `ObjectNode.properties()` API.
+
+**Files:** `ContentService.java` (new `getAspectHashesForVersion()`, `AspectHash` record, modified `createAspectEntry()` with reuse overload), `AspectRepository.java` (new `findByVersionId()` query)
+
+### Gap 2 (P1): Optimistic Locking at Service Layer
+
+**Problem:** If-Match was checked at the controller level (non-atomic) — a race existed between the check and the actual update INSERT.
+
+**Fix:** Added `updateContent(delegationId, key, write, userId, previousVersion)` overload that atomically checks `previousVersion` matches latest within the `@Transactional` boundary. Controller passes stripped If-Match directly to service layer.
+
+**New file:** `ConflictUpdateException.java` — RuntimeException with `latestVersion` and `requestedVersion` fields
+
+**Files:** `ContentService.java`, `ContentController.java` (catches `ConflictUpdateException` → 409 CONFLICT), `LocalContentManager.java` (new `updateContentFromDto()` overload passing `previousVersion`)
+
+### Gap 3 (P1): View Exclusivity on Assignment
+
+**Problem:** `assignView()` didn't remove the view from other versions. `reassignView()` used N individual deletes.
+
+**Fix:** Replaced both with single `assignViewExclusive()` that does one bulk DELETE via `removeViewFromOtherVersions()` JPQL query, then inserts. All callers updated: create, update, delete, publish.
+
+**Files:** `ContentViewRepository.java` (new `@Modifying @Query removeViewFromOtherVersions()`), `ContentService.java`
+
+### Gap 4 (P2): Alias CRUD Completion
+
+**Problem:** Only `createAlias()` and resolve methods existed. No delete, no getAll, no conflict detection.
+
+**Fix:**
+- `createAlias()` — now checks for existing alias pointing to different content → `AliasConflictException`; same-content assignment is a no-op
+- `deleteAlias(delegationId, key, aliasNamespace)` — removes specific alias
+- `deleteAllAliases(delegationId, key)` — removes all aliases for content
+- `getAliases(delegationId, key)` → `Map<String, String>` (namespace → value)
+
+**New file:** `AliasConflictException.java` — RuntimeException with `aliasName`, `aliasValue`, `conflictingContentId`
+
+**Files:** `ContentService.java`, `ContentAliasRepository.java` (new `deleteByIdtypeAndIdAndAliasId()`, `deleteByIdtypeAndId()`)
+
+### Gap 5 (P2): Content Existence Check
+
+**Problem:** No standalone `has()` method — callers had to do a full resolve.
+
+**Fix:** Added `boolean has(String delegationId, String key)` using `ContentIdRepository.existsByIdtypeAndId()`.
+
+**Files:** `ContentService.java`, `ContentIdRepository.java`
+
+### Gap 6 (P2): Content Validation on Create
+
+**Problem:** `createContent()` did no input validation.
+
+**Fix:** Rejects blank `userId` and missing `contentData` aspect with `IllegalArgumentException`.
+
+**Files:** `ContentService.java`
+
+### Gap 7 (P2): Aliases in Content Response
+
+**Problem:** `buildContentResult()` didn't include aliases in the MetaDto.
+
+**Fix:** `buildContentResult()` now calls `getAliases()` and sets on MetaDto when non-empty.
+
+**Files:** `MetaDto.java` (new `Map<String, String> aliases` field), `ContentService.java`
+
+### Gap 8 (P3): Batch View Loading for History
+
+**Problem:** `getHistory()` loaded views one version at a time (N+1 queries).
+
+**Fix:** Batch-loads all view assignments in one query using `findByVersionIdIn()`, groups by versionId in memory.
+
+**Files:** `ContentViewRepository.java` (new `findByVersionIdIn()`), `ContentService.java`
+
+### Gap 9 (P3): IdType/View/Alias Resolution Caching
+
+**Problem:** Every `resolveIdType()`, `resolveIdTypeName()` call queried the DB.
+
+**Fix:** Added `ConcurrentHashMap` caches for:
+- idType name↔id (bidirectional)
+- view name→id
+- alias name↔id (bidirectional)
+
+All resolution methods check cache first, fall back to DB, cache result. `resolveIdType()` made `public` for controller use.
+
+**Files:** `ContentService.java`
+
+### Gap 10 (P3): Hard Delete (Purge)
+
+**Problem:** Only soft delete existed. No way to permanently remove a version.
+
+**Fix:** Added `purgeVersion(delegationId, key, version)`:
+1. Remove all view assignments for the version
+2. Find content entry, get aspect locations
+3. For each aspect, check `countByAspectId()` — only delete if not shared
+4. Delete aspect locations, content entry, version record
+5. If last version, also delete content ID and all aliases
+
+**Endpoint:** `DELETE /content/contentid/{id}/version/{version}` → 204 or 404
+
+**Files:** `ContentService.java`, `ContentController.java`, `AspectLocationRepository.java` (new `deleteByContentId()`, `countByAspectId()`), `ContentRepository.java` (new `deleteByVersionId()`)
+
+### New Files (2)
+
+| File | Description |
+|------|-------------|
+| `service/ConflictUpdateException.java` | Optimistic locking conflict with version info |
+| `service/AliasConflictException.java` | Alias already assigned to different content |
+
+### Modified Files (11)
+
+| File | Change |
+|------|--------|
+| `config/WebConfig.java` | Removed debug println |
+| `controller/ContentController.java` | Removed debug printlns; pass If-Match to service layer; catch `ConflictUpdateException` → 409; added purge endpoint |
+| `dto/MetaDto.java` | Added `aliases` map field |
+| `onecms/LocalContentManager.java` | Added `updateContentFromDto()` overload with `previousVersion` param |
+| `repository/AspectLocationRepository.java` | Added `deleteByContentId()`, `countByAspectId()` |
+| `repository/AspectRepository.java` | Added `findByVersionId()` query |
+| `repository/ContentAliasRepository.java` | Added `deleteByIdtypeAndIdAndAliasId()`, `deleteByIdtypeAndId()` |
+| `repository/ContentIdRepository.java` | Added `existsByIdtypeAndId()` |
+| `repository/ContentRepository.java` | Added `deleteByVersionId()` |
+| `repository/ContentViewRepository.java` | Added `removeViewFromOtherVersions()`, `findByVersionIdIn()` |
+| `service/ContentService.java` | All 11 gaps implemented: caching, validation, has(), view exclusivity, optimistic locking, aspect MD5 reuse, alias CRUD, aliases in response, batch history views, purge |
+
