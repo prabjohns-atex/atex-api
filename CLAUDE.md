@@ -1933,3 +1933,104 @@ Fixes three bugs in `config-sync.py` and one in `Json5Reader.java` that caused c
 | `scripts/config-sync.py` | 3 fixes: json-ref ` + ` path splitting, escape pair `i += 2` advancement, `\r\n` passthrough |
 | `config/Json5Reader.java` | Added `LINE_CONTINUATION` pattern, refactored to `stripJson5()` helper used by both `toJson()` and `parse()` |
 
+## Increment 26 — ConfigurationDataBean Wrapping & Display Names
+
+Fixes structural mismatch between desk-api and the reference system when serving configuration content via the content API. The reference system wraps config JSON in a `ConfigurationDataBean` structure; desk-api was returning raw JSON.
+
+### Problem
+
+When clients fetch config via `GET /content/externalid/{id}`, the reference system returns:
+```json
+{"contentData": {"data": {
+  "_type": "com.atex.onecms.content.ConfigurationDataBean",
+  "json": "{...stringified JSON...}",
+  "name": "Table List",
+  "dataType": "json",
+  "dataValue": "{...raw source...}"
+}}}
+```
+
+desk-api returned the raw JSON object directly as `contentData.data`, breaking Java consumers that call `ConfigurationCacheLoader.getConfiguration()` → `ConfigurationDataBean.getJson()`.
+
+### Fix: ConfigurationDataBean Wrapping
+
+**`ConfigurationDataBean.java`** — expanded from 1-field stub to match original Polopoly bean (from `polopoly/core/data-api-internal`): `name`, `json`, `dataType`, `dataValue`.
+
+**`ConfigurationService.java`** — `toContentResult()` and `toContentResultDto()` now wrap raw JSON in `ConfigurationDataBean` format:
+- Sets `_type` and `*_type` field annotations matching reference serialization
+- `json` and `dataValue` = stringified JSON from the resource file
+- `name` = display name from `config-names.properties` (falls back to external ID)
+- `dataType` = "json"
+- `getConfiguration()` still returns raw `Map<String, Object>` for admin/internal use
+
+### Fix: Display Name Extraction
+
+**`config-sync.py`** — new `extract_content_name()` function extracts `<component group="polopoly.Content" name="name">` from source XML files. `sync_entry()` now returns a 3-tuple `(status, message, content_name)`. After processing all entries, `main()` writes `config-names.properties`.
+
+**`config-names.properties`** (new, auto-generated) — maps 145 external IDs to display names (e.g., `atex.configuration.desk.table-list=Table List`). Loaded by `ConfigurationService.loadConfigNames()` at startup from `classpath:config/config-names.properties`.
+
+### Consumer Paths
+
+| Path | Before | After |
+|------|--------|-------|
+| `LocalContentManager.get()` → `toContentResult()` | Raw `Map` as mainAspectData | `ConfigurationDataBean` with `json` field |
+| `ContentController` → `toContentResultDto()` | Raw map in `contentData.data` | `ConfigurationDataBean` map with `_type`, `json`, `name`, etc. |
+| `ConfigurationController.getConfig()` → `getConfiguration()` | Raw map (unchanged) | Raw map (unchanged — admin endpoint) |
+| `ConfigurationCacheLoader` → `ConfigurationDataBean.getJson()` | Would fail (no `json` field) | Works — bean has `json` field with stringified JSON |
+
+### Modified Files (3)
+
+| File | Change |
+|------|--------|
+| `content/ConfigurationDataBean.java` | Expanded: added `name`, `dataType`, `dataValue` fields |
+| `config/ConfigurationService.java` | `toContentResult/Dto()` wrap in `ConfigurationDataBean`; loads `config-names.properties` |
+| `scripts/config-sync.py` | `extract_content_name()`, 3-tuple returns from `sync_entry()`, writes `config-names.properties` |
+
+### New Files (1)
+
+| File | Description |
+|------|-------------|
+| `config/config-names.properties` | Auto-generated: 145 external ID → display name mappings |
+
+## Increment 27 — XML Component Config Extraction & dataClass-aware Config Resolution
+
+Adds `xml-component` extraction type to `config-sync.py` for Polopoly configs stored as XML components (not JSON CDATA), and fixes `LocalContentManager.get()` to honor `dataClass` so services like `LayoutService` can load config as typed beans.
+
+### Problem
+
+`atex.plugins.layout.LayoutServerConfiguration` stores config as Polopoly component XML (`<component group="layoutServer" name="value">http://...</component>`). The Policy's `legacyToNew` method converts these to JSON bean fields at read time. In desk-api, the config file was manually maintained. Additionally, `LocalContentManager.get()` always returned `ConfigurationDataBean` for config content, ignoring the `dataClass` parameter — so `LayoutService` (which requests `LayoutServerConfigurationBean.class`) got a `ConfigurationDataBean` instead.
+
+### config-sync.py: `xml-component` Extraction Type
+
+New extraction type that reads `<component group="X" name="value">Y</component>` elements from Polopoly batch XML and builds a JSON object `{X: Y}`. Skips `group="polopoly.Content"` (metadata components).
+
+**New function:** `extract_xml_components(xml_path, external_id)` — parses XML, finds matching `<content>` block by external ID, collects component values, returns pretty-printed JSON.
+
+**New source base:** `gong-copyfit` → `gong/content/copyfit-content/src/main/content`
+
+**config-mapping.txt change:** Layout entry changed from `manual|none|...` to `xml-component|gong-copyfit|copyfit/config/layout-server-configuration.xml|...`
+
+Generated output:
+```json
+{"layoutServer": "http://127.0.0.1:8888", "printServer": "http://127.0.0.1:8887"}
+```
+
+The `LayoutServerConfigurationBean` provides defaults for other fields (`timeout=360`, `poolSize=32`, etc.) via field initializers.
+
+### ConfigurationService: `toContentResultAs()`
+
+New method that deserializes cached config JSON into a specific bean class via Gson round-trip, instead of wrapping in `ConfigurationDataBean`.
+
+### LocalContentManager: `dataClass` Check
+
+Added 4 lines to `get()` before the config interception: when `dataClass` is a specific type (not `Object.class`, not `ConfigurationDataBean.class`), delegates to `toContentResultAs()`. This allows `LayoutService.loadConfiguration()` to get a `LayoutServerConfigurationBean` directly.
+
+### Modified Files (4)
+
+| File | Change |
+|------|--------|
+| `scripts/config-sync.py` | Added `xml-component` type, `gong-copyfit` source base, `extract_xml_components()` function |
+| `scripts/config-mapping.txt` | Changed layout entry from `manual` to `xml-component` |
+| `onecms/LocalContentManager.java` | Added `dataClass` check for config content (~4 lines) |
+| `config/ConfigurationService.java` | Added `toContentResultAs()` method (~12 lines) |
+

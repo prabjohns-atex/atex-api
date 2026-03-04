@@ -6,10 +6,11 @@ Reads config-mapping.txt and extracts/copies config files from the original
 Polopoly/Gong/ADM source codebases into desk-api's resource config directories.
 
 Extraction types:
-  xml-cdata  - Extract JSON from <component name="value" group="data"> CDATA in XML
-  json-ref   - XML references a separate JSON/JSON5 file; find and copy it
-  json       - Direct JSON/JSON5 file copy
-  manual     - Skip (manually maintained)
+  xml-cdata      - Extract JSON from <component name="value" group="data"> CDATA in XML
+  xml-component  - Build JSON from <component group="X" name="value">Y</component> elements
+  json-ref       - XML references a separate JSON/JSON5 file; find and copy it
+  json           - Direct JSON/JSON5 file copy
+  manual         - Skip (manually maintained)
 
 Usage:
   python config-sync.py                    # Dry run (show what would change)
@@ -19,6 +20,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -37,6 +39,7 @@ SOURCE_BASES = {
     "gong-common": PROJECT_ROOT.parent / "gong" / "content" / "common" / "src" / "main" / "content",
     "adm-starterkit": PROJECT_ROOT.parent / "adm-starterkit" / "content" / "custom-content" / "src" / "main" / "content",
     "adm-starterkit-pseries": PROJECT_ROOT.parent / "adm-starterkit" / "content" / "custom-pseries-content" / "src" / "main" / "content",
+    "gong-copyfit": PROJECT_ROOT.parent / "gong" / "content" / "copyfit-content" / "src" / "main" / "content",
 }
 
 # XML namespace used by Polopoly batch files
@@ -65,6 +68,46 @@ def parse_mapping(mapping_file: Path) -> list[dict]:
                 "line_num": line_num,
             })
     return entries
+
+
+def extract_content_name(xml_path: Path, external_id: str) -> str | None:
+    """
+    Extract the display name from an XML file's <component group="polopoly.Content" name="name"> element.
+    Returns None if no name is found.
+    """
+    try:
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+    except ET.ParseError:
+        return None
+
+    content_blocks = root.findall(".//p:content", NS)
+    if not content_blocks:
+        content_blocks = root.findall(".//content")
+    if not content_blocks:
+        content_blocks = [root]
+
+    for content in content_blocks:
+        # Check if this content block matches our external ID
+        ext_id_elem = content.find(".//p:metadata/p:contentid/p:externalid", NS)
+        if ext_id_elem is None:
+            ext_id_elem = content.find(".//metadata/contentid/externalid")
+        if ext_id_elem is not None and ext_id_elem.text:
+            if ext_id_elem.text.strip() != external_id:
+                continue
+
+        # Look for the name component
+        for comp in content.findall(".//p:component", NS) + content.findall(".//component"):
+            if comp.get("group") == "polopoly.Content" and comp.get("name") == "name" and comp.text:
+                return comp.text.strip()
+
+    # Fallback: single content block, try any polopoly.Content/name component
+    if len(content_blocks) == 1:
+        for comp in content_blocks[0].findall(".//p:component", NS) + content_blocks[0].findall(".//component"):
+            if comp.get("group") == "polopoly.Content" and comp.get("name") == "name" and comp.text:
+                return comp.text.strip()
+
+    return None
 
 
 def extract_xml_cdata(xml_path: Path, external_id: str) -> str | None:
@@ -129,6 +172,53 @@ def extract_xml_cdata(xml_path: Path, external_id: str) -> str | None:
                 return text
 
     print(f"  WARNING: No JSON data found for external ID '{external_id}' in {xml_path}", file=sys.stderr)
+    return None
+
+
+def extract_xml_components(xml_path: Path, external_id: str) -> str | None:
+    """
+    Build a JSON object from <component group="X" name="value">Y</component> elements.
+
+    Used for Polopoly configs where each component group is a field name and the text
+    content of the <component name="value"> child is the field value.
+    Skips group="polopoly.Content" (metadata) and contentref elements.
+    """
+    try:
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+    except ET.ParseError as e:
+        print(f"  ERROR: Failed to parse XML {xml_path}: {e}", file=sys.stderr)
+        return None
+
+    content_blocks = root.findall(".//p:content", NS)
+    if not content_blocks:
+        content_blocks = root.findall(".//content")
+    if not content_blocks:
+        content_blocks = [root]
+
+    for content in content_blocks:
+        # Match by external ID
+        ext_id_elem = content.find(".//p:metadata/p:contentid/p:externalid", NS)
+        if ext_id_elem is None:
+            ext_id_elem = content.find(".//metadata/contentid/externalid")
+        if ext_id_elem is not None and ext_id_elem.text:
+            if ext_id_elem.text.strip() != external_id:
+                continue
+
+        # Collect component values: group → text content
+        fields = {}
+        for comp in content.findall(".//p:component", NS) + content.findall(".//component"):
+            group = comp.get("group", "")
+            name = comp.get("name", "")
+            if group == "polopoly.Content":
+                continue  # Skip metadata components
+            if name == "value" and comp.text:
+                fields[group] = comp.text.strip()
+
+        if fields:
+            return json.dumps(fields, indent=2)
+
+    print(f"  WARNING: No component data found for '{external_id}' in {xml_path}", file=sys.stderr)
     return None
 
 
@@ -292,16 +382,17 @@ def fix_json_escape_sequences(content: str) -> str:
     return ''.join(result)
 
 
-def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str]:
+def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str, str | None]:
     """
     Process a single mapping entry.
 
-    Returns (status, message) where status is one of:
+    Returns (status, message, content_name) where status is one of:
       'ok'       - File exists and matches
       'updated'  - File was written (or would be in dry-run)
       'created'  - New file was created (or would be in dry-run)
       'skipped'  - Manual entry or missing source
       'error'    - Failed to process
+    content_name is the display name from the XML (or None if not available).
     """
     ext_type = entry["type"]
     source_base_name = entry["source_base"]
@@ -316,42 +407,55 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str]:
 
     if ext_type == "manual":
         if dest_file.exists():
-            return "ok", f"[manual] {external_id}"
-        return "skipped", f"[manual] {external_id} (no source)"
+            return "ok", f"[manual] {external_id}", None
+        return "skipped", f"[manual] {external_id} (no source)", None
 
     # Resolve source base directory
     source_dir = SOURCE_BASES.get(source_base_name)
     if source_dir is None:
-        return "error", f"Unknown source_base: {source_base_name}"
+        return "error", f"Unknown source_base: {source_base_name}", None
     if not source_dir.exists():
-        return "error", f"Source directory not found: {source_dir}"
+        return "error", f"Source directory not found: {source_dir}", None
 
     source_file = source_dir / source_path
+    content_name = None
 
     # Extract content based on type
     content = None
 
     if ext_type == "xml-cdata":
         if not source_file.exists():
-            return "error", f"Source XML not found: {source_file}"
+            return "error", f"Source XML not found: {source_file}", None
         content = extract_xml_cdata(source_file, external_id)
+        content_name = extract_content_name(source_file, external_id)
+
+    elif ext_type == "xml-component":
+        if not source_file.exists():
+            return "error", f"Source XML not found: {source_file}", None
+        content = extract_xml_components(source_file, external_id)
+        content_name = extract_content_name(source_file, external_id)
 
     elif ext_type == "json-ref":
         # Support "xmlfile.xml + path/to/file.json" syntax: split on " + "
         # and use the second part as a direct JSON file path relative to source_dir
         if " + " in source_path:
             xml_part, json_part = source_path.split(" + ", 1)
+            xml_file = source_dir / xml_part.strip()
             json_direct = source_dir / json_part.strip()
             if json_direct.exists():
                 content = json_direct.read_text(encoding="utf-8")
             else:
-                return "error", f"Source JSON not found: {json_direct}"
+                return "error", f"Source JSON not found: {json_direct}", None
+            # Extract name from the XML part
+            if xml_file.exists():
+                content_name = extract_content_name(xml_file, external_id)
         elif not source_file.exists():
-            return "error", f"Source XML not found: {source_file}"
+            return "error", f"Source XML not found: {source_file}", None
         else:
             json_path = find_json_ref(source_file, external_id)
             if json_path:
                 content = json_path.read_text(encoding="utf-8")
+            content_name = extract_content_name(source_file, external_id)
 
     elif ext_type == "json":
         json_path = find_json_file(source_dir, source_path, external_id)
@@ -359,10 +463,10 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str]:
             content = json_path.read_text(encoding="utf-8")
 
     else:
-        return "error", f"Unknown type: {ext_type}"
+        return "error", f"Unknown type: {ext_type}", None
 
     if content is None:
-        return "error", f"Failed to extract content for {external_id}"
+        return "error", f"Failed to extract content for {external_id}", None
 
     # Fix invalid JSON escape sequences (e.g., \.jpg in Camel route configs)
     content = fix_json_escape_sequences(content)
@@ -376,7 +480,7 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str]:
     if dest_file.exists():
         existing = dest_file.read_text(encoding="utf-8").replace("\r\n", "\n")
         if existing == content:
-            return "ok", f"{external_id}"
+            return "ok", f"{external_id}", content_name
         status = "updated"
     else:
         status = "created"
@@ -385,7 +489,7 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str]:
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_file.write_text(content, encoding="utf-8")
 
-    return status, f"{external_id} -> {dest_tier}/{dest_subdir}/{external_id}.json5"
+    return status, f"{external_id} -> {dest_tier}/{dest_subdir}/{external_id}.json5", content_name
 
 
 def main():
@@ -410,13 +514,17 @@ def main():
             print(f"  {name}: {path} [{status}]")
 
     counts = {"ok": 0, "updated": 0, "created": 0, "skipped": 0, "error": 0}
+    names: dict[str, str] = {}
 
     for entry in entries:
         if args.filter and args.filter not in entry["external_id"]:
             continue
 
-        status, message = sync_entry(entry, apply=args.apply, verbose=args.verbose)
+        status, message, content_name = sync_entry(entry, apply=args.apply, verbose=args.verbose)
         counts[status] += 1
+
+        if content_name:
+            names[entry["external_id"]] = content_name
 
         if args.verbose or status not in ("ok", "skipped"):
             prefix = {
@@ -428,11 +536,33 @@ def main():
             }[status]
             print(f"{prefix} {message}")
 
+    # Write config-names.properties for ConfigurationService
+    names_file = DEST_BASE / "config-names.properties"
+    if args.apply and names:
+        sorted_names = sorted(names.items())
+        lines = ["# Auto-generated by config-sync.py — display names extracted from XML sources\n"]
+        for ext_id, name in sorted_names:
+            # Escape backslashes and colons for Java .properties format
+            escaped_id = ext_id.replace("\\", "\\\\").replace(":", "\\:")
+            escaped_name = name.replace("\\", "\\\\")
+            lines.append(f"{escaped_id}={escaped_name}\n")
+        names_content = "".join(lines)
+        if names_file.exists():
+            existing_names = names_file.read_text(encoding="utf-8").replace("\r\n", "\n")
+            if existing_names != names_content:
+                names_file.write_text(names_content, encoding="utf-8")
+                print(f"  UPD  config-names.properties ({len(names)} entries)")
+        else:
+            names_file.write_text(names_content, encoding="utf-8")
+            print(f"  NEW  config-names.properties ({len(names)} entries)")
+
     # Summary
     print()
     mode = "APPLIED" if args.apply else "DRY RUN"
     print(f"[{mode}] {counts['ok']} unchanged, {counts['created']} new, "
           f"{counts['updated']} updated, {counts['skipped']} skipped, {counts['error']} errors")
+    if names:
+        print(f"  {len(names)} config display names extracted")
 
     if args.check and (counts["updated"] > 0 or counts["created"] > 0):
         print("FAIL: Files are out of sync")

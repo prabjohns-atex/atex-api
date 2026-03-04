@@ -3,6 +3,7 @@ package com.atex.desk.api.config;
 import com.atex.desk.api.dto.AspectDto;
 import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.MetaDto;
+import com.atex.onecms.content.ConfigurationDataBean;
 import com.atex.onecms.content.ContentId;
 import com.atex.onecms.content.ContentResult;
 import com.atex.onecms.content.ContentResultBuilder;
@@ -87,6 +88,12 @@ public class ConfigurationService
      */
     private final ConcurrentHashMap<String, Map<String, Object>> projectOverrides = new ConcurrentHashMap<>();
 
+    /**
+     * Display names extracted from XML sources by config-sync.py.
+     * Loaded from classpath:config/config-names.properties.
+     */
+    private final ConcurrentHashMap<String, String> configNames = new ConcurrentHashMap<>();
+
     public ConfigurationService(ConfigProperties properties, @Nullable PluginManager pluginManager)
     {
         this.properties = properties;
@@ -136,10 +143,13 @@ public class ConfigurationService
             }
         }
 
+        // 5. Load display names from config-names.properties
+        loadConfigNames(cl);
+
         LOG.info("Configuration loaded: " + defaultsCount + " product defaults, "
             + flavorCount + " flavor overrides (" + flavor + "), "
             + projectCount + " project overrides, " + pluginCount + " plugin overrides ("
-            + cache.size() + " total configs)");
+            + cache.size() + " total configs, " + configNames.size() + " display names)");
     }
 
     /**
@@ -216,7 +226,33 @@ public class ConfigurationService
     }
 
     /**
+     * Wrap config data in a {@link ContentResult} deserialized as a specific bean class.
+     * Used when callers request a typed dataClass (e.g. LayoutServerConfigurationBean)
+     * instead of the default ConfigurationDataBean wrapper.
+     */
+    @SuppressWarnings("unchecked")
+    public <T> ContentResult<T> toContentResultAs(String externalId, Class<T> dataClass)
+    {
+        Map<String, Object> data = cache.get(externalId);
+        if (data == null)
+        {
+            return ContentResult.of(null, Status.NOT_FOUND);
+        }
+
+        T bean = GSON.fromJson(GSON.toJson(data), dataClass);
+        ContentVersionId vid = syntheticVersionId(externalId);
+        return new ContentResultBuilder<T>()
+            .id(vid)
+            .status(Status.OK)
+            .mainAspectData(bean)
+            .type(dataClass.getName())
+            .build();
+    }
+
+    /**
      * Wrap config data in a {@link ContentResult} matching the contract all consumers expect.
+     * The main aspect is a {@link ConfigurationDataBean} with the JSON data as a string,
+     * matching the reference Polopoly p.ConfigurationData format.
      */
     @SuppressWarnings("unchecked")
     public <T> ContentResult<T> toContentResult(String externalId)
@@ -227,22 +263,27 @@ public class ConfigurationService
             return ContentResult.of(null, Status.NOT_FOUND);
         }
 
+        ConfigurationDataBean bean = toConfigurationDataBean(externalId, data);
         ContentVersionId vid = syntheticVersionId(externalId);
         return (ContentResult<T>) new ContentResultBuilder<>()
             .id(vid)
             .status(Status.OK)
-            .mainAspectData(data)
-            .type("com.atex.standard.content.ContentBean")
+            .mainAspectData(bean)
+            .type("com.atex.onecms.content.ConfigurationDataBean")
             .build();
     }
 
     /**
      * Wrap config data in a {@link ContentResultDto} for the REST layer.
+     * Matches the reference format: contentData wraps a ConfigurationDataBean
+     * with the actual JSON in the "json" field as a string.
      */
     public ContentResultDto toContentResultDto(String externalId)
     {
         Map<String, Object> data = cache.get(externalId);
         if (data == null) return null;
+
+        ConfigurationDataBean bean = toConfigurationDataBean(externalId, data);
 
         ContentResultDto dto = new ContentResultDto();
         dto.setId(CONFIG_DELEGATION_ID + ":" + externalId);
@@ -251,7 +292,17 @@ public class ConfigurationService
         Map<String, AspectDto> aspects = new LinkedHashMap<>();
         AspectDto contentData = new AspectDto();
         contentData.setName("contentData");
-        contentData.setData(data);
+        Map<String, Object> beanMap = new LinkedHashMap<>();
+        beanMap.put("_type", "com.atex.onecms.content.ConfigurationDataBean");
+        beanMap.put("json_type", "java.lang.String");
+        beanMap.put("json", bean.getJson());
+        beanMap.put("dataValue_type", "java.lang.String");
+        beanMap.put("dataValue", bean.getDataValue());
+        beanMap.put("name_type", "java.lang.String");
+        beanMap.put("name", bean.getName());
+        beanMap.put("dataType_type", "java.lang.String");
+        beanMap.put("dataType", bean.getDataType());
+        contentData.setData(beanMap);
         aspects.put("contentData", contentData);
         dto.setAspects(aspects);
 
@@ -261,6 +312,21 @@ public class ConfigurationService
         dto.setMeta(meta);
 
         return dto;
+    }
+
+    /**
+     * Build a ConfigurationDataBean wrapping the raw JSON data,
+     * matching the reference Polopoly p.ConfigurationData content type.
+     */
+    private ConfigurationDataBean toConfigurationDataBean(String externalId, Map<String, Object> data)
+    {
+        String jsonString = GSON.toJson(data);
+        ConfigurationDataBean bean = new ConfigurationDataBean();
+        bean.setName(configNames.getOrDefault(externalId, externalId));
+        bean.setJson(jsonString);
+        bean.setDataType("json");
+        bean.setDataValue(jsonString);
+        return bean;
     }
 
     /**
@@ -421,6 +487,34 @@ public class ConfigurationService
                 LOG.log(Level.WARNING, "Failed to parse config JSON for: " + externalId, e2);
                 return null;
             }
+        }
+    }
+
+    /**
+     * Load display names from config-names.properties (generated by config-sync.py).
+     */
+    private void loadConfigNames(ClassLoader classLoader)
+    {
+        try
+        {
+            ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(classLoader);
+            Resource[] resources = resolver.getResources("classpath*:config/config-names.properties");
+            for (Resource resource : resources)
+            {
+                try (InputStream is = resource.getInputStream())
+                {
+                    java.util.Properties props = new java.util.Properties();
+                    props.load(is);
+                    for (String key : props.stringPropertyNames())
+                    {
+                        configNames.put(key, props.getProperty(key));
+                    }
+                }
+            }
+        }
+        catch (IOException e)
+        {
+            LOG.log(Level.FINE, "No config-names.properties found (optional)", e);
         }
     }
 }

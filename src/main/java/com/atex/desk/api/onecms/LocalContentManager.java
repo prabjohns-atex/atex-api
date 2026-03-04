@@ -6,7 +6,7 @@ import com.atex.desk.api.dto.ContentHistoryDto;
 import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ContentVersionInfoDto;
 import com.atex.desk.api.dto.ContentWriteDto;
-import com.atex.desk.api.config.ConfigurationService;
+import com.atex.onecms.content.ConfigurationDataBean;
 import com.atex.desk.api.service.ChangeListService;
 import com.atex.desk.api.service.ContentService;
 import com.atex.desk.api.service.IdGenerator;
@@ -206,6 +206,10 @@ public class LocalContentManager implements ContentManager {
         try {
             // Intercept synthetic config IDs
             if (configurationService != null && configurationService.isSyntheticId(contentId)) {
+                if (dataClass != null && dataClass != Object.class
+                        && !ConfigurationDataBean.class.isAssignableFrom(dataClass)) {
+                    return configurationService.toContentResultAs(contentId.getKey(), dataClass);
+                }
                 return configurationService.toContentResult(contentId.getKey());
             }
 

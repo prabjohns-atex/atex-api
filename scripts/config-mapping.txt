@@ -348,4 +348,4 @@ json-ref|adm-starterkit-pseries|onecms-templates/article/desk/atex.onecms.Templa
 xml-cdata|adm-starterkit-pseries|widgets-configuration/configuration.widget.activePreview.xml|flavor/pseries|widgets-configuration|configuration.widget.activePreview
 #
 # --- defaults/layout ---
-manual|none||defaults|layout|atex.plugins.layout.LayoutServerConfiguration
+xml-component|gong-copyfit|copyfit/config/layout-server-configuration.xml|defaults|layout|atex.plugins.layout.LayoutServerConfiguration
