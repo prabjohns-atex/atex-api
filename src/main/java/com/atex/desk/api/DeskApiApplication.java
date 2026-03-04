@@ -11,12 +11,12 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @SpringBootApplication(scanBasePackages = {"com.atex.desk.api", "com.atex.onecms"})
 @EnableConfigurationProperties({PartitionProperties.class, ConfigProperties.class,
                                 LdapProperties.class, CognitoProperties.class})
-public class DemoApplication
+public class DeskApiApplication
 {
 
     public static void main(String[] args)
     {
-        SpringApplication.run(DemoApplication.class, args);
+        SpringApplication.run(DeskApiApplication.class, args);
     }
 
 }
