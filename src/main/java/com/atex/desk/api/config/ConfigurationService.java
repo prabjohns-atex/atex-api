@@ -326,6 +326,7 @@ public class ConfigurationService
             contentData.setData(beanMap);
         }
 
+        aspects.put("contentData", contentData);
         dto.setAspects(aspects);
 
         MetaDto meta = new MetaDto();
