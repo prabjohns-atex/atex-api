@@ -38,7 +38,7 @@ import java.util.Map;
 public class SecurityController
 {
     private static final String AUTH_HEADER = "X-Auth-Token";
-    private static final Duration DEFAULT_EXPIRATION = Duration.ofMinutes(5);
+    private static final Duration DEFAULT_EXPIRATION = Duration.ofHours(24);
 
     private final TokenService tokenService;
     private final AppUserRepository userRepository;

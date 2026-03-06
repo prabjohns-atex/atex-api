@@ -11,8 +11,6 @@ import com.atex.onecms.app.dam.solr.SolrPrintPageService;
 
 public class QueryField {
 
-    private final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
-
     private String key;
     private String name;
     private String type;
