@@ -1,0 +1,127 @@
+// Copyfit style mappings — HTML↔print style mapping rules.
+// Source: gong/content/copyfit-content/.../style-mappings.json
+{
+  "_meta": { "group": "Desk Configuration" },
+  "mappings": [
+    {
+      "name": "Mapping2",
+      "styles": [
+        { "name": "Normal", "element": "p" },
+        { "name": "Heading 1", "element": "h1" },
+        { "name": "Heading 2", "element": "h2" },
+        { "name": "Heading 3", "element": "h3" },
+        { "name": "Heading 4", "element": "h4" },
+        { "name": "Heading 5", "element": "h5" },
+        { "name": "Heading 6", "element": "h6" },
+        { "name": "Preformatted Text", "element": "pre" },
+        { "name": "Address", "element": "address" },
+        { "name": "OemEmbed", "element": "div", "attributes": { "data-oembed-url": "" } },
+        { "name": "Hyperlink", "element": "a" },
+        { "name": "Smartembed", "element": "a", "attributes": { "class": "p-smartembed" } },
+        { "name": "Emphasis", "element": "em" },
+        { "name": "Quotation", "element": "q" },
+        { "name": "BulletedList", "element": "ul" },
+        { "name": "NumberedList", "element": "ol" }
+      ],
+      "printMappings": [
+        {
+          "publication": "",
+          "section": "",
+          "element": "Default",
+          "printStyles": []
+        },
+        {
+          "publication": "",
+          "section": "",
+          "element": "Headline",
+          "printStyles": [
+            { "name": "Emphasis", "element": "em" },
+            { "name": "Quotation", "element": "q" },
+            { "name": "Smartembed", "strip": true },
+            { "name": "OemEmbed", "strip": true },
+            { "name": "Hyperlink", "linkStyle": "strip" },
+            { "name": "BulletedList", "listStyle": "" },
+            { "name": "NumberedList", "listStyle": "" }
+          ]
+        },
+        {
+          "publication": "",
+          "section": "",
+          "element": "Lead",
+          "printStyles": [
+            { "name": "Emphasis", "element": "em" },
+            { "name": "Quotation", "element": "q" },
+            { "name": "Smartembed", "strip": true },
+            { "name": "OemEmbed", "strip": true },
+            { "name": "Hyperlink", "linkStyle": "strip" },
+            { "name": "BulletedList", "listStyle": "" },
+            { "name": "NumberedList", "listStyle": "" },
+            { "name": "BulletedList Sample", "listStyle": "TX8.2 List Bullets %level%" },
+            { "name": "NumberedList Sample", "listStyle": "TX8.2 List Numbers %level%" }
+          ]
+        },
+        {
+          "publication": "",
+          "section": "",
+          "element": "Text",
+          "printStyles": [
+            { "name": "Emphasis", "element": "em" },
+            { "name": "Quotation", "element": "q" },
+            { "name": "Smartembed", "strip": true },
+            { "name": "OemEmbed", "strip": true },
+            { "name": "Hyperlink", "linkStyle": "strip" },
+            { "name": "BulletedList", "listStyle": "" },
+            { "name": "NumberedList", "listStyle": "" }
+          ]
+        }
+      ],
+      "printLists": [
+        {
+          "name": "NumberedList",
+          "levels": [{
+            "attributes": [
+              { "name": "LeftIndent", "value": "18" },
+              { "name": "FirstLineIndent", "value": "0" },
+              { "name": "BulletsAndNumberingListType", "value": "NumberedList" },
+              { "name": "NumberingExpression", "value": "^#.^/" },
+              { "name": "NumberingAlignment", "value": "RightAlign" }
+            ]
+          }]
+        },
+        {
+          "name": "BulletedList",
+          "levels": [
+            {
+              "attributes": [
+                { "name": "LeftIndent", "value": "18" },
+                { "name": "FirstLineIndent", "value": "-8" },
+                { "name": "BulletsAndNumberingListType", "value": "BulletList" },
+                { "name": "BulletsTextAfter", "value": "^/" }
+              ],
+              "properties": [
+                {
+                  "name": "BulletChar",
+                  "attributes": [
+                    { "name": "BulletCharacterType", "value": "UnicodeOnly" },
+                    { "name": "BulletCharacterValue", "value": "8226" }
+                  ]
+                }
+              ]
+            },
+            {
+              "properties": [
+                {
+                  "name": "BulletChar",
+                  "attributes": [
+                    { "name": "BulletCharacterType", "value": "UnicodeOnly" },
+                    { "name": "BulletCharacterValue", "value": "9642" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
