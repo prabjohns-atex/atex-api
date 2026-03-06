@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "DamWireGraphic Template View", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "com.atex.onecms.app.dam.wire.DamWireGraphicBean.dam.preview",
   "type": "com.atex.onecms.app.dam.wire.DamWireGraphicBean",
   "label": "Dam Wire Graphic",

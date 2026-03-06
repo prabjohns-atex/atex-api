@@ -1,0 +1,43 @@
+{
+  "_meta": {"name": "Production Page Desk Create Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Page.production.dam.build.book",
+
+  "type": "atex.dam.standard.Page",
+  "label": "Build Book",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Page",
+      "data": {
+        "inputTemplate": "p.OnePage"
+      }
+    },
+    "atex.Files": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["shapesView"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "shapesView",
+      "widget": "shapesView",
+      "domainObjects": {
+        "data": ["contentData", "name"],
+        "width": ["contentData", "width"],
+        "height": ["contentData", "height"]
+      },
+      "config": {
+        "module": "buildBook",
+        "shapeMode": 8
+      }
+    }
+  ]
+}

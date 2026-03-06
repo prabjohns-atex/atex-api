@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Remotes Configuration", "group": "Publishing"},
   // define all the available backends
   "configurations": [
     // a polopoly backend

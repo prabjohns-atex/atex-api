@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Copy Rules", "group": "Permissions"},
   "disable-copy-rules":[
     {
       "id":"default-disable-copy-rules",

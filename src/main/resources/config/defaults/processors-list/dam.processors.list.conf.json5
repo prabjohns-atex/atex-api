@@ -1,5 +1,6 @@
 {
-	  "processors": [
+  "_meta": {"name": "dam.processors.list.conf", "group": "Ingestion"},
+  "processors": [
 	    "processor.configuration.unzip.conf",
 	    "processor.configuration.json.conf",
 	    "processor.configuration.image.conf",

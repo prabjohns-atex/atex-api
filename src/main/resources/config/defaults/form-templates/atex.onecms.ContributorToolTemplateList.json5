@@ -1,0 +1,16 @@
+{
+  "_meta": {"name": "Contributor Tool Template List", "group": "Templates", "format": "atex.onecms.TemplateList.it"},
+  "_contentList": [
+    "atex.onecms.Template-atex.onecms.article.print",
+    "atex.onecms.Template-atex.onecms.article.web",
+    "atex.onecms.Template-atex.onecms.article.preview",
+    "atex.onecms.Template-atex.onecms.image",
+    "atex.onecms.Template-atex.onecms.collection.act",
+    "atex.onecms.Template-atex.onecms.collection.dam.readonly",
+    "atex.onecms.Template-atex.dam.standard.Audio.dam.edit",
+    "atex.onecms.Template-atex.dam.standard.Embed.dam.edit",
+    "atex.onecms.Template-atex.dam.standard.Document.dam.edit",
+    "atex.onecms.Template-atex.dam.standard.LiveBlog.article",
+    "atex.onecms.Template-atex.dam.standard.LiveBlog.event"
+  ]
+}

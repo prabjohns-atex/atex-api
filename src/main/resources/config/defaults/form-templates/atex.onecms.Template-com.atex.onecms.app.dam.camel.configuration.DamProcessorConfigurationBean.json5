@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Dam Processor Configuration Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "com.atex.onecms.app.dam.camel.configuration.DamProcessorConfigurationBean",
   "type": "com.atex.onecms.app.dam.camel.configuration.DamProcessorConfigurationBean",
   "label": "Dam Processors List Configuration",

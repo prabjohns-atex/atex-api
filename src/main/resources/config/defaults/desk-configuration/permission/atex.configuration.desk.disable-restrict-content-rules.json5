@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Enable Restrict Content Rules", "group": "Permissions"},
   "disable-restrict-content-rules":[
     {
       "id":"default-disable-restrict-content-rules",

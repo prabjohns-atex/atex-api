@@ -1,5 +1,6 @@
 {
-	  "id":"processor.configuration.xsl.conf",
+  "_meta": {"name": "processor.configuration.xsl.conf", "group": "Ingestion"},
+  "id":"processor.configuration.xsl.conf",
 	  "name":"XSL Transform Processor",
 	  "classPath":"com.atex.onecms.app.dam.camel.processor.folder.XSLProcessor",
 	  "method":"process",

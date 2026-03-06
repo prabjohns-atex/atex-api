@@ -1,5 +1,6 @@
 {
-	  "field": "colorcoding",
+  "_meta": {"name": "dam.colorcoding.conf", "group": "UI"},
+  "field": "colorcoding",
 	  "colors": [ 
 	  	{
 	  		"id"   :"0",

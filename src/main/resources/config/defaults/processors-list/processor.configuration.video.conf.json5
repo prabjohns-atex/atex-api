@@ -1,5 +1,6 @@
 {
-	  "id":"processor.configuration.video.conf",
+  "_meta": {"name": "processor.configuration.video.conf", "group": "Ingestion"},
+  "id":"processor.configuration.video.conf",
       "name":"Video Importer Processor",
       "classPath":"com.atex.onecms.app.dam.camel.processor.VideoProcessor",
       "method":"importVideo",

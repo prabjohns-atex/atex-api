@@ -1,5 +1,6 @@
 {
-	  "field": "multi-icon-coding",
+  "_meta": {"name": "dam.multiiconcoding.conf", "group": "UI"},
+  "field": "multi-icon-coding",
 	  "icons": [ 
 	  	{
 	  		"id"   :"0",

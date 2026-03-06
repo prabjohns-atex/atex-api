@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable UnLock Rules", "group": "Permissions"},
   "disable-unlock-rules":[
     {
       "id":"default-disable-unlock-rules",

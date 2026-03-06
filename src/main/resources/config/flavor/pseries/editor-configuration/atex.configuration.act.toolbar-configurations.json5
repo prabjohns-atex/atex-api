@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Toolbars List - PSeries Override 2.11.0", "group": "Editor"},
   "toolbar-configurations": [
     {
       "id": "default-toolbar-configurations",

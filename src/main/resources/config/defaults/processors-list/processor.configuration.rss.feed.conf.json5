@@ -1,5 +1,6 @@
 {
-	  "id":"processor.configuration.rss.feed.conf",
+  "_meta": {"name": "processor.configuration.rss.feed.conf", "group": "Ingestion"},
+  "id":"processor.configuration.rss.feed.conf",
       "name":"Rss Feed Processor",
       "classPath":"com.atex.onecms.app.dam.camel.processor.folder.RssFeedProcessor",
       "method":"process",

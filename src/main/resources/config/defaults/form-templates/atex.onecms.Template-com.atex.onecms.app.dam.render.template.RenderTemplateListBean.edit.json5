@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "p.DamRenderTemplateList Template Edit", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "atex.onecms.Template-com.atex.onecms.app.dam.render.template.RenderTemplateListBean.edit",
   "type": "com.atex.onecms.app.dam.render.template.RenderTemplateListBean",
   "label": "Render Templates List",

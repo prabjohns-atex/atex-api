@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Duplicate Rules", "group": "Permissions"},
   "disable-duplicate-rules":[
     {
       "id":"default-disable-duplicate-rules",

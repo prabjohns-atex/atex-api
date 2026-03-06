@@ -1,5 +1,6 @@
 {
-	  "id":"route.configuration.json.conf",
+  "_meta": {"name": "route.configuration.json.conf", "group": "Ingestion"},
+  "id":"route.configuration.json.conf",
 	  "name":"Demo Content - Json Importer",
 	  "errorHandler":"file:{{polopoly.work-dir}}/json-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
 	  "threadsPoolSize":"10",

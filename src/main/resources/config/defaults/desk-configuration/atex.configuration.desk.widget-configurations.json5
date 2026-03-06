@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Widget Configurations", "group": "UI"},
   "widget-configurations": [{
     "id": "default-widget-configurations",
 	  "description": "Desk Widget Configurations - Default Configuration",

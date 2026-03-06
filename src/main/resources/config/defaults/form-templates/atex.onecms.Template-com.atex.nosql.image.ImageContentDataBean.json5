@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Act Image Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "com.atex.nosql.image.ImageContentDataBean",
 
   "type": "com.atex.nosql.image.ImageContentDataBean",

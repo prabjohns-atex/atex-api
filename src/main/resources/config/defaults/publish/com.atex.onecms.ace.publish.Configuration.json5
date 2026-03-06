@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Ace Publish Configuration", "group": "Publishing"},
   "dimensionsMap": {
   // This maps the Dimensions in Desk to those in ACE
   // Only the dimensions defined in here will be exported

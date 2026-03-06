@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Folders Panel", "group": "Permissions"},
   "disable-folders-panel-rules":[
     {
       "id":"default-disable-folders-panel-rules",

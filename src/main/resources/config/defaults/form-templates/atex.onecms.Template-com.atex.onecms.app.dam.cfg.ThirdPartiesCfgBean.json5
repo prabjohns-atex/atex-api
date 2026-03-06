@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "ThirdPartiesCfg Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "com.atex.onecms.app.dam.cfg.ThirdPartiesCfgBean",
   "type": "com.atex.onecms.app.dam.cdg.ThirdPartiesCfgBean",
   "label": "Third Parties Cfg",

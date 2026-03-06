@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Clear engagements Rules", "group": "Permissions"},
   "disable-clear-engagements-rules":[
     {
       "id":"default-disable-clear-engagements-rules",

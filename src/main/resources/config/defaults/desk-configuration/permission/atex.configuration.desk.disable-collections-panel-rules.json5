@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Collections Panel", "group": "Permissions"},
   "disable-collections-panel-rules":[
     {
       "id":"default-disable-collections-panel-rules",

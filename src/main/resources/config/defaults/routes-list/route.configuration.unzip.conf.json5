@@ -1,5 +1,6 @@
 {
-	  "id":"route.configuration.unzip.conf",
+  "_meta": {"name": "route.configuration.unzip.conf", "group": "Ingestion"},
+  "id":"route.configuration.unzip.conf",
 	  "name":"Demo Content - JAR Importer",
 	  "errorHandler":"file:{{polopoly.work-dir}}/jar-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
 	  "threadsPoolSize":"10",

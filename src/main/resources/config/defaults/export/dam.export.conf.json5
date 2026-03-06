@@ -1,5 +1,6 @@
 {
-			"export": [
+  "_meta": {"name": "dam.export.conf", "group": "Publishing"},
+  "export": [
 			{
 			"id"   :"0",
 			"icon":"fa fa-share-square-o",

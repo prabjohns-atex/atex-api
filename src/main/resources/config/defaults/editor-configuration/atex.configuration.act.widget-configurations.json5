@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Widget Configurations", "group": "Editor"},
   "widget-configurations": [
     {
       "id": "default-widget-configurations",

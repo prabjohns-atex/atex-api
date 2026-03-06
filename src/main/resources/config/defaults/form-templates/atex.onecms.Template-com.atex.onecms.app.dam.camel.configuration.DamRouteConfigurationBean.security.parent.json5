@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Dam Route Configuration Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean.security.parent",
   "type": "com.atex.onecms.app.dam.camel.configuration.DamRouteConfigurationBean",
   "label": "Dam Route Configuration",

@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Ayrshare Configuration", "group": "Integrations"},
   // This is the Ayrshare API key
   "apiKey": "",
 

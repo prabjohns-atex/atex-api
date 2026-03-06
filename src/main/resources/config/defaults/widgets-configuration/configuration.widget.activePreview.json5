@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Live Page Preview Configuration", "group": "Editor"},
   "editUsing": {
     //"article": "atex.onecms.article.print",
     //"image": "atex.onecms.image"

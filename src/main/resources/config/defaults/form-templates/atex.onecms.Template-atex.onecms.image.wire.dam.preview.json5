@@ -1,0 +1,181 @@
+{
+  "_meta": {"name": "Wire Image Desk Preview Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.onecms.image.dam.preview",
+
+  "type": "atex.onecms.image",
+  "label": "Wire Image Preview",
+  "namePath": ["contentData", "title"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.image",
+      "data": {
+        "inputTemplate": "p.DamWireImage"
+      }
+    },
+    "atex.Files": {},
+    "atex.ImageEditInfo": {},
+    "atex.Image": {},
+    "atex.Metadata": {},
+    "atex.ImageMetadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["image", "title", "caption", "imageContentText", "description", "byline", "specialInstructions", "markForArchive", "urgency"]
+      },
+
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "Exif/Xmp/Iptc",
+        "fields": ["exifMetadata"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "image",
+      "widget": "pImagePreview",
+
+      "config": {
+        "editable": false
+      },
+
+      "domainObjects": {
+        "data": ["contentData"]
+      }
+    },
+    {
+      "name": "title",
+      "label": "Title",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "title"]
+      }
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "caption"]
+      }
+    },
+    {
+      "name": "imageContentText",
+      "label": "Image Text",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "No text detected in image"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "imageContentText"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "damFieldView",
+
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "byline",
+      "label": "By-line",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false,
+        "full": false,
+        "tags": {
+          "IPTC": ["By-line"],
+          "IPTC_types":["java.lang.String"]
+        }
+      }
+    },
+    {
+      "name": "specialInstructions",
+      "label": "Special Instructions",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false,
+        "full": false,
+        "tags": {
+          "IPTC": ["SpecialInstructions"],
+          "IPTC_types":["java.lang.String"]
+        }
+      }
+    },
+    {
+      "name": "markForArchive",
+      "label": "Mark for Archive",
+      "widget": "pCheckbox",
+      "config": {
+        "editable": false,
+        "defaultValue" : false
+      },
+      "domainObjects": {
+        "data": "contentData/markForArchive"
+      }
+    },
+    {
+      "name": "urgency",
+      "label": "Urgency",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false,
+        "full": false,
+        "tags": {
+          "IPTC": ["Urgency"],
+          "IPTC_types":["java.lang.Double"]
+        }
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    },
+    {
+      "name": "exifMetadata",
+      "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}
+

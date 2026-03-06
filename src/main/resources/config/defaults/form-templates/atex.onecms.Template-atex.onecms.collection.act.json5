@@ -1,0 +1,543 @@
+{
+  "_meta": {"name": "Collection Act Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Collection.act",
+
+  "type": "atex.dam.standard.Collection",
+  "label": "Collection",
+  "namePath": ["contentData", "headline"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Collection",
+      "data": {
+        "inputTemplate": "p.Collection"
+      }
+    },
+    "p.InsertionInfo":{},
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.CONTENT",
+        "fields": [
+          "name",
+          "headline",
+          "byline",
+          "source",
+          "description",
+          "caption",
+          "posterImage"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.MEDIA",
+        "fields": ["images"]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": [
+          "insertParent",
+          "metadata",
+          "tag",
+          "authorProfile",
+          "showAuthorOnWeb",
+          "timeStateOnTime",
+          "timeStateOffTime",
+          "publishingTimeOverride",
+          "publishingUpdatedTimeOverride",
+          "legacyId",
+          "legacyUrl",
+          "premiumType"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.GALLERY",
+        "fields": [
+          "galleryStatus",
+          "cropSelect",
+          "gallery"
+        ]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name":"galleryStatus",
+      "widget": "pGalleryStatus",
+      "domainObjects": {
+        "data": ["contentData", "status"]
+      }
+    },
+    {
+      "name":"cropSelect",
+      "label": "TEMPLATE.FIELD.DEFAULT_CROP",
+      "widget": "pCropSelect",
+      "domainObjects": {
+        "data": ["contentData", "defaultCrop"]
+      }
+    },
+    {
+      "name": "gallery",
+      "widget": "pGalleryExpanded",
+      "config": {
+        "pGalleryFieldsEdit": [
+          {
+            "simple" : true,
+            "label": "TEMPLATE.FIELD.COLLECTION.IMAGE_CAPTION",
+            "fieldName": "caption",
+            "loadSourceValue": true
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": "contentData/contents",
+        "modified": "contentData/lastUpdated"
+      }
+    },
+    {
+      "name": "premiumType",
+      "label": "TEMPLATE.FIELD.PREMIUMTYPE",
+      "widget": "pSelect",
+      "config": {
+        "defaultValue" : "inherit",
+        "options" :
+        [
+          {
+            "label" : "Inherit from section",
+            "id" : "inherit"
+          },
+          {
+            "label" : "Free",
+            "id" : "free"
+          },
+          {
+            "label" : "Premium",
+            "id" : "premium"
+          },
+          {
+            "label": "Registered Premium",
+            "id": "premiumRegistered"
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": ["contentData", "premiumType"]
+      }
+
+    },
+    {
+      "name": "gallery-example",
+      "widget": "pGalleryExpanded",
+      "config": {
+        "pGalleryFieldsEdit": [
+          {
+            "simple" : true,
+            "label" : "Headline",
+            "fieldName": "headline",
+            "loadSourceValue": true
+          },
+          {
+            "simple" : true,
+            "label" : "Caption",
+            "fieldName": "caption",
+            "loadSourceValue": true
+          },
+          {
+            "simple" : false,
+            "label" : "Description",
+            "fieldName": "description",
+            "loadSourceValue": true
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": ["contentData", "contents"]
+      }
+    },
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.common.d"
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId"
+      }
+    },
+    {
+      "name": "slug",
+      "label": "Slug URL",
+      "widget": "aceSlugEditor",
+
+      "domainObjects": {
+        "data": "contentData/aceSlugInfo",
+        "slugBase": "contentData/headline"
+      },
+
+      "validators": {
+        "pattern": {
+          "value": "/^[a-z0-9-]*$/",
+          "message": "It has to ba lowercase, a number or a dash",
+          "expression": "data.getData().customText",
+          "trigger": "data.getData().custom"
+        }
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.WEBSECTION",
+      "name": "insertParent",
+      "widget": "pSiteSelect",
+
+      "config": {
+        "editable": true,
+        "exclude": ["dam.d", "PolopolyPost.d", "dam.assets.d", "dam.system.d"],
+        "storage-id": "7597",
+        "modal": {
+          "title": "TEMPLATE.FIELD.WEBSECTION",
+          "placeholder": "SITE_SELECT_WIDGET.MODAL.PLACEHOLDER"
+        }
+      },
+
+      "domainObject": "p.InsertionInfo/insertParentId",
+      "validators" : {
+        "required": { "message": "Insert Web Section" }
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+
+      "config": {
+      },
+
+      "domainObjects": {
+        "data": "contentData/name"
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.COLLECTION.HEADLINE_PH"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.DESCRIPTION_PH"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "caption",
+      "label": "TEMPLATE.FIELD.CAPTION",
+      "widget": "pTextInput",
+
+      "config": {
+      },
+
+      "domainObjects": {
+        "data": "contentData/caption"
+      }
+    },
+    {
+      "name": "posterImage",
+      "label": "TEMPLATE.FIELD.POSTERIMAGE",
+      "widget": "pResourceArea",
+      "config": {
+        "include-embed": true,
+        "save-on-upload": true,
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        },
+        "imageMetadata": {
+          "atex.onecms.image": {
+            "extraction": true,
+            "fieldMappings": [
+              {
+                "source": "title",
+                "target": "contentData/title"
+              },
+              {
+                "source": "tags/EXIF/Copyright",
+                "target": "contentData/description"
+              },
+              {
+                "source": "byline",
+                "target": "contentData/byline"
+              }
+            ]
+          }
+        },
+        "allowedTypes": [
+          "atex.dam.standard.Image",
+          "atex.dam.standard.WireImage",
+          "com.atex.nosql.image.ImageContentDataBean",
+          "atex.onecms.image"
+        ],
+        "iconMap": {
+          "atex.dam.standard.Collection": "image-x-generic.png",
+          "atex.dam.standard.Video": "video-x-generic.png",
+          "atex.dam.standard.Audio": "audio-x-generic.png"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/posterImage"
+      }
+    },
+    {
+      "name": "images",
+      "label": "TEMPLATE.FIELD.IMAGESRESOURCES",
+      "widget": "pResourceArea",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"},
+          "video/quicktime": "atex.dam.standard.Video",
+          "video/mp4": "atex.dam.standard.Video"
+        },
+        "allowedTypes": ["atex.onecms.image", "atex.dam.standard.Video"],
+        "imageMetadata": {
+          "atex.onecms.image": {
+            "extraction": true,
+            "fieldMappings": [
+              {
+                "source": "title",
+                "target": "contentData/title"
+              },
+              {
+                "source": "tags/EXIF/Copyright",
+                "target": "contentData/description"
+              },
+              {
+                "source": "byline",
+                "target": "contentData/byline"
+              }
+            ]
+          }
+        }
+      },
+      "domainObjects": {
+        "data": ["contentData", "contents"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo",
+        "title": "contentData/headline",
+        "lead": "contentData/lead",
+        "body": "contentData/body"
+      },
+      "config": {
+        "toggle": true,
+        "annotation": true,
+        "dimensions": [
+          "dimension.Organisation",
+          "dimension.Location",
+          "dimension.Person",
+          "dimension.EditorialTag"
+        ],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2,
+        "annotationConfig": {
+          "mapping": {
+            "dimension.Organisation": "dimension.Organisation",
+            "dimension.Person": "dimension.Person",
+            "dimension.Company": "dimension.Organisation",
+            "dimension.Location": "dimension.Location",
+            "dimension.EditorialTag": "dimension.EditorialTag"
+          },
+          "customNameFormatter": "function(entity) { return entity.id && entity.id !== entity.name ? entity.name + '_' + (entity.id.startsWith('1-') ? entity.id.substring(2) : entity.id): entity.name; }"
+        }
+      }
+    },
+    {
+      "name": "tag",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle": true,
+        "dimensions": ["dimension.Tag"],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2
+      }
+    },
+    {
+      "name": "authorProfile",
+      "label": "TEMPLATE.FIELD.AUTHORBIO",
+      "widget": "damAuthor",
+      "config": {
+        "maxRows": 20,
+        "filterAuthorsList": false,
+        "mappings": [
+          {
+            "source": "fullName",
+            "target": "byline"
+          },
+          {
+            "source": "description",
+            "target": "authorBio"
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": "contentData/authors",
+        "byline" : "contentData/byline",
+        "authorBio" : "contentData/authorBio"
+      }
+    },
+    {
+      "name": "showAuthorOnWeb",
+      "label": "TEMPLATE.FIELD.SHOWAUTHORONWEB",
+      "widget": "pCheckbox",
+      "config": {
+        "checkboxLabel": " ",
+        "defaultValue": false
+      },
+      "domainObjects": {
+        "data": "contentData/showAuthorOnWeb"
+      }
+    },
+    {
+      "name": "byline",
+      "label": "TEMPLATE.FIELD.BYLINE",
+      "widget": "pTextInput",
+      "domainObject": "contentData/byline",
+      "default" : {
+        "expression" : "currentUser.fullName"
+      }
+    },
+    {
+      "name": "source",
+      "label": "TEMPLATE.FIELD.SOURCE",
+      "widget": "pTextInput",
+      "domainObject": "contentData/source"
+    },
+    {
+      "label": "TEMPLATE.FIELD.ONTIME",
+      "name": "timeStateOnTime",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.OFFTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/timeState/ontime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.OFFTIME",
+      "name": "timeStateOffTime",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.OFFTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/timeState/offtime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.PUBLISHINGTIME",
+      "name": "publishingTimeOverride",
+      "widget": "pDateTimePicker",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.PUBLISHINGTIME_PH",
+        "editable": true,
+        "dtConfig": {
+          "locale": "en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+        "useTimezone": true
+      },
+      "domainObjects": {
+        "data": "contentData/digitalPublishingTime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.PUBLISHINGUPDATEDTIME",
+      "name": "publishingUpdatedTimeOverride",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.PUBLISHINGUPDATEDTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/publishingUpdateTime"
+      }
+    },
+    {
+      "name": "legacyId",
+      "label": "TEMPLATE.FIELD.LEGACYID",
+      "widget": "pTextInput",
+      "domainObject": "contentData/legacyid",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.LEGACYID_PH"
+      }
+    },
+    {
+      "name": "legacyUrl",
+      "label": "TEMPLATE.FIELD.LEGACYURL",
+      "widget": "pTextInput",
+      "domainObject": "contentData/legacyUrl",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.LEGACYURL_PH"
+      }
+    }
+  ]
+}

@@ -1,0 +1,367 @@
+{
+  "_meta": {"name": "Production Image Desk Preview Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.onecms.image.dam.preview",
+
+  "type": "atex.onecms.image",
+  "hidden": false,
+  "label": "Production Image Preview",
+  "namePath": "contentData/title",
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.image",
+      "data": {
+        "inputTemplate": "p.NosqlImage"
+      }
+    },
+    "atex.Metadata": {},
+    "atex.Files": {},
+    "atex.ImageEditInfo": {},
+    "atex.Image": {},
+    "atex.ImageMetadata": {},
+    "atex.Planning":{}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": [
+          "image",
+          "name",
+          "credit",
+          "byline",
+          "caption",
+          "description",
+          "rights",
+          "webStatement",
+          "licensorURL",
+          "datePhotographTaken",
+          "source",
+          "instructions",
+          "status"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": [
+          "metadata",
+          "exifMetadata"
+        ]
+      },
+      {
+        "label": "Page",
+        "fields": [
+          "activePreview"
+        ]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "image",
+      "widget": "pImagePreview",
+
+      "config": {
+        "showClip": true
+      },
+
+      "domainObjects": {
+        "data": ["contentData"],
+        "imageMetadata": "atex.ImageMetadata"
+      }
+    },
+    {
+      "name": "name",
+      "label": "Slug",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/title"
+      }
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/caption"
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/description"
+      }
+    },
+    {
+      "name": "rights",
+      "label": "Rights - Copyright Notice",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/rights"
+      }
+    },
+    {
+      "name": "webStatement",
+      "label": "Web Statement of Rights",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/webStatement"
+      }
+    },
+    {
+      "name": "licensorURL",
+      "label": "Licensor URL",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/licensorURL"
+      }
+    },
+    {
+      "name": "source",
+      "label": "Source",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/source"
+      }
+    },
+    {
+      "name": "byline",
+      "label": "Creator",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/byline"
+      }
+    },
+    {
+      "name": "imageContentText",
+      "label": "Image Text",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "No text detected in image"
+      },
+
+      "domainObjects": {
+        "data": "contentData/imageContentText"
+      }
+    },
+    {
+      "label": "Date taken",
+      "name": "datePhotographTaken",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "No date/time selected",
+        "editable" : false
+      },
+
+      "domainObjects": {
+        "data": "contentData/datePhotographTaken"
+      }
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "editable": false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "place",
+      "label": "Place/location",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/place"
+      }
+    },
+    {
+      "name": "credit",
+      "label": "Credit Line",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/credit"
+      }
+    },
+    {
+      "name": "section",
+      "label": "Section",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/section"
+      }
+    },
+    {
+      "name": "reporter",
+      "label": "Reporter",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/reporter"
+      }
+    },
+    {
+      "name": "instructions",
+      "label": "Special Instructions",
+      "widget": "damFieldView",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/instructions"
+      }
+    },
+    {
+      "name": "oneTimeUse",
+      "label": "One-time use only",
+      "widget": "pCheckbox",
+      "config": {
+        "editable" : false
+      },
+      "domainObjects": {
+        "data": "contentData/oneTimeUse"
+      }
+    },
+    {
+      "name": "noUsePrint",
+      "label": "No use for print",
+      "widget": "pCheckbox",
+      "config": {
+        "editable" : false
+      },
+      "domainObjects": {
+        "data": "contentData/noUsePrint"
+      }
+    },
+    {
+      "name": "noUseWeb",
+      "label": "No use for web",
+      "widget": "pCheckbox",
+      "config": {
+        "editable" : false
+      },
+      "domainObjects": {
+        "data": "contentData/noUseWeb"
+      }
+    },
+    {
+      "name": "markForArchive",
+      "label": "Mark for Archive",
+      "widget": "pCheckbox",
+      "config": {
+        "editable": false,
+        "defaultValue" : false
+      },
+      "domainObjects": {
+        "data": "contentData/markForArchive"
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    },
+    {
+      "name": "alternativeText",
+      "label": "Alt Text",
+      "widget": "pTextInput",
+      "domainObject": "contentData/alternativeText",
+      "config": {
+        "placeholder": "Alt Text goes here"
+      }
+    },
+    {
+      "name": "exifMetadata",
+      "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": false
+      }
+    },
+    {
+      "name": "activePreview",
+      "label": "Page Preview",
+      "widget": "activePreview",
+      "domainObjects": {
+        "data": ["contentData", "name"],
+        "files": ["atex.Files"],
+        "revision": ["revision"]
+      },
+      "config": {
+        "module": "previewView",
+        "usePrintServer": true,
+        "liveUpdate": false
+      }
+    },
+    {
+      "name": "assignees",
+      "label": "Assignees",
+      "widget": "pUsersList",
+
+      "config": {
+        "editable":false,
+        "dimension": "dimension.sendto.Users"
+      },
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    }
+
+  ]
+}

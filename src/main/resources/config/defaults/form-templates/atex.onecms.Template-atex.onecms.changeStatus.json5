@@ -1,0 +1,59 @@
+{
+  "_meta": {"name": "Change Status Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.changeStatus",
+
+  "type": "",
+  "label": "",
+  "namePath": ["contentData", "name"],
+
+  "multiPageCopyPaths": [
+    "data/aspects/atex.WFContentStatus/data",
+    {
+      "array": "data/aspects/atex.Metadata/data/metadata/dimensions",
+      "key": "id",
+      "value": "dimension.sendto.Users"
+    }
+  ],
+
+  "layout": {
+    "views": [
+      {
+        "label": "Change Status",
+        "fields": ["status", "assignees"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "commentPlaceholder": "Comment",
+        "showComment": true,
+        "useAttributes": false,
+        "checkUsers": false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "assignees",
+      "label": "Sent To",
+      "widget": "pUsersList",
+
+      "config": {
+        "editable": true,
+        "placeholder": "Insert assignees...",
+        "dimension": "dimension.sendto.Users"
+      },
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    }
+  ]
+}

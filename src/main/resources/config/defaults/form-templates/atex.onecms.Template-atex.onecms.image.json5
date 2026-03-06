@@ -1,0 +1,575 @@
+{
+  "_meta": {"name": "One Image Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.onecms.image",
+
+  "type": "atex.onecms.image",
+  "hidden": false,
+  "label": "Image",
+  "namePath": "contentData/title",
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.image",
+      "data": {
+        "inputTemplate": "p.NosqlImage"
+      }
+    },
+    "atex.Metadata": {},
+    "atex.Files": {},
+    "atex.ImageEditInfo": {},
+    "atex.Image": {},
+    "atex.ImageMetadata": {},
+    "atex.Planning":{}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": [
+          "image",
+          "name",
+          "title",
+          "credit",
+          "byline",
+          "caption",
+          "description",
+          "rights",
+          "webStatement",
+          "licensorURL",
+          "datePhotographTaken",
+          "source",
+          "instructions",
+          "status"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": [
+          "metadata",
+          "alternativeText",
+          "waterMark"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.EXIF",
+        "fields": [
+          "exifMetadata"
+        ]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.production.d"
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "image",
+      "label": "TEMPLATE.FIELD.IMAGE",
+      "widget": "pImageEditor",
+
+      "config": {
+        "imageMetadata": {
+          "extraction": true,
+          "fieldMappings": [
+            {
+              "source": "title",
+              "target": "title"
+            },
+            {
+              "source": "tags/IPTC/Headline",
+              "target": "title",
+              "overwrite": true
+            },
+            {
+              "source": "tags/XMP/Headline",
+              "target": "title",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/By-Line",
+              "target": "byline",
+              "overwrite": true
+            },
+            {
+              "source": "tags/XMP/Creator",
+              "target": "byline",
+              "overwrite": true
+            },
+            {
+              "source": "tags/XMP/Description",
+              "target": "caption",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/Caption-Abstract",
+              "target": "caption",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/Description",
+              "target": "caption",
+              "overwrite": true
+            },
+            {
+              "source": "tags/XMP/Description",
+              "target": "description",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/Caption-Abstract",
+              "target": "description",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/Description",
+              "target": "description",
+              "overwrite": true
+            },
+            {
+              "source": "tags/XMP/rights",
+              "target": "rights",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/CopyrightNotice",
+              "target": "rights",
+              "overwrite": true
+            },
+            {
+              "source": "tags/XMP/WebStatement",
+              "target": "webStatement",
+              "overwrite": true
+            },
+            {
+              "source": "tags/XMP/LicensorURL",
+              "target": "licensorURL",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/DateCreated",
+              "target": "datePhotographTaken",
+              "overwrite": true
+            },
+            {
+              "source": "tags/XMP/DateCreated",
+              "target": "datePhotographTaken",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/Credit",
+              "target": "source",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/SpecialInstructions",
+              "target": "instructions",
+              "overwrite": true
+            },
+            {
+              "source": "tags/XMP/Instructions",
+              "target": "instructions",
+              "overwrite": true
+            },
+            {
+              "source": "tags/IPTC/Credit",
+              "target": "credit",
+              "overwrite": true
+            }
+          ]
+        }
+      },
+
+      "domainObjects": {
+        "files": "atex.Files",
+        "editInfo": "atex.ImageEditInfo",
+        "image": "atex.Image",
+        "metadata": "atex.ImageMetadata",
+        "title": "contentData/title",
+        "caption": "contentData/caption",
+        "description": "contentData/description",
+        "byline": "contentData/byline",
+        "rights": "contentData/rights",
+        "webStatement": "contentData/webStatement",
+        "licensorURL": "contentData/licensorURL",
+        "source": "contentData/source",
+        "instructions": "contentData/instructions",
+        "credit": "contentData/credit"
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.SLUGNAME",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.SLUGNAME_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/name"
+      }
+    },
+    {
+      "name": "title",
+      "label": "TEMPLATE.FIELD.TITLE",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.TITLE_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/title"
+      }
+    },
+    {
+      "name": "caption",
+      "label": "TEMPLATE.FIELD.CAPTION",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.CAPTION_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/caption"
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.DESCRIPTION_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/description"
+      }
+    },
+    {
+      "name": "rights",
+      "label": "TEMPLATE.FIELD.RIGHTS",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.RIGHTS_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/rights"
+      }
+    },
+    {
+      "name": "webStatement",
+      "label": "TEMPLATE.FIELD.WEBSTATEMENT",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.WEBSTATEMENT_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/webStatement"
+      }
+    },
+    {
+      "name": "licensorURL",
+      "label": "TEMPLATE.FIELD.LICENSORURL",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.LICENSORURL_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/licensorURL"
+      }
+    },
+    {
+      "name": "source",
+      "label": "TEMPLATE.FIELD.SOURCE",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.SOURCE_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/source"
+      }
+    },
+    {
+      "name": "byline",
+      "label": "TEMPLATE.FIELD.CREATOR",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.CREATOR_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/byline"
+      }
+    },
+    {
+      "name": "imageContentText",
+      "label": "Image Text",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "No text detected in image"
+      },
+      "domainObjects": {
+        "data": "contentData/imageContentText"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.DATETAKEN",
+      "name": "datePhotographTaken",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.DATETAKEN_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/datePhotographTaken"
+      }
+    },
+    {
+      "name": "status",
+      "label": "TEMPLATE.FIELD.WEBSTATUS",
+      "widget": "pContentStatus",
+      "config": {
+        "commentPlaceholder": "TEMPLATE.FIELD.STATUS_COMMENT_PH"
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "place",
+      "label": "Place/location",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Place/location goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/place"
+      }
+    },
+    {
+      "name": "credit",
+      "label": "TEMPLATE.FIELD.CREDITLINE",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.CREDITLINE_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/credit"
+      }
+    },
+    {
+      "name": "instructions",
+      "label": "TEMPLATE.FIELD.SPECIALINSTRUCTION",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.SPECIALINSTRUCTION_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/instructions"
+      }
+    },
+    {
+      "name": "section",
+      "label": "Section",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Section goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/section"
+      }
+    },
+    {
+      "name": "reporter",
+      "label": "Reporter",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Reporter goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/reporter"
+      }
+    },
+    {
+      "name": "specialInstructions",
+      "label": "TEMPLATE.FIELD.SPECIALINSTRUCTION",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "full": false,
+        "tags": {
+          "IPTC": ["SpecialInstructions"],
+          "IPTC_types":["java.lang.String"]
+        }
+      }
+      },
+    {
+      "name": "oneTimeUse",
+      "label": "One-time use only",
+      "widget": "pCheckbox",
+      "domainObjects": {
+        "data": "contentData/oneTimeUse"
+      }
+    },
+    {
+      "name": "waterMark",
+      "label": "Watermark",
+      "widget": "pCheckbox",
+      "domainObjects": {
+        "data": "contentData/useWatermark"
+      }
+    },
+    {
+      "name": "noUsePrint",
+      "label": "No use for print",
+      "widget": "pCheckbox",
+      "domainObjects": {
+        "data": "contentData/noUsePrint"
+      }
+      },
+    {
+      "name": "noUseWeb",
+      "label": "No use for web",
+      "widget": "pCheckbox",
+      "domainObjects": {
+        "data": "contentData/noUseWeb"
+      }
+    },
+    {
+      "name": "markForArchive",
+      "label": "Mark for Archive",
+      "widget": "pCheckbox",
+      "config": {
+        "checkboxLabel": "Ok to Archive",
+        "defaultValue" : false
+      },
+      "domainObjects": {
+        "data": "contentData/markForArchive"
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "caption": "contentData/caption",
+        "insertionInfo": "p.InsertionInfo",
+        "tag": "contentData/tag",
+        "organisation": "contentData/organisation",
+        "location": "contentData/location",
+        "person": "contentData/person"
+      },
+
+      "config": {
+        "toggle": true,
+        "annotation": false,
+        "textsToAnnotate": ["caption"],
+        "dimensions" : [
+          "dimension.Tag",
+          "dimension.EditorialTag",
+          "dimension.Organisation",
+          "dimension.Location",
+          "dimension.Person"
+        ],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2,
+        "annotationConfig": {
+          "mapping": {
+            "dimension.Tag": "dimension.Tag",
+            "dimension.EditorialTag": "dimension.EditorialTag",
+            "dimension.Organisation": "dimension.Organisation",
+            "dimension.Location": "dimension.Location",
+            "dimension.Person": "dimension.Person"
+          }
+        }
+      }
+    },
+    {
+      "name": "alternativeText",
+      "label": "TEMPLATE.FIELD.ALTTEXT",
+      "widget": "pTextInput",
+      "domainObject": "contentData/alternativeText",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.ALTTEXT_PH"
+      }
+    },
+    {
+      "name": "exifMetadata",
+      "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "tags": {
+          "general": ["title", "byline", "description", "imageHeight", "imageWidth"],
+          "general_types":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String"],
+          "IPTC": ["Test","By-line", "Caption-Abstract", "City", "Credit", "Headline", "ObjectName", "Source", "SpecialInstructions", "CopyrightNotice", "Country-PrimaryLocationName", "OriginalTransmissionReference"],
+          "IPTC_types":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.Double"]
+        }
+        }
+    },
+    {
+      "name": "assignees",
+      "label": "Assignees",
+      "widget": "pUsersList",
+
+      "config": {
+        "editable":true,
+        "placeholder":"Insert assignees...",
+        "dimension": "dimension.sendto.Users"
+      },
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Toolbars", "group": "UI"},
   "toolbars": [{
       "id": "default-toolbars-list",
       "description": "Toolbars List - Default Configuration",

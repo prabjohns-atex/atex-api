@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Configuration", "group": "UI"},
   "configurations": [
     {
       "id": "Default",

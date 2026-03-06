@@ -1,0 +1,98 @@
+{
+  "_meta": {"name": "Video Desk Preview Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Video.dam.preview",
+
+  "type": "atex.dam.standard.Video",
+  "label": "Video",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Video",
+      "data": {
+        "inputTemplate": "p.DamVideo"
+      }
+    },
+    "atex.Files": {},
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["videoView", "headline", "description", "premiumType", "transcriptionText", "transcribeFlag"]
+      },
+
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "videoView",
+      "widget": "damVideoView",
+      "domainObjects": {
+        "data": ["atex.Files"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "premiumType",
+      "label": "Premium Type",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "premiumType"]
+      }
+    },
+    {
+      "name": "transcriptionText",
+      "label": "Transcription Text",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "transcriptionText"]
+      }
+    },
+    {
+      "name": "transcribeFlag",
+      "label": "Transcribe",
+      "widget": "pCheckbox",
+      "config": {
+        "editable" : false
+      },
+      "domainObjects": {
+        "data": ["contentData", "transcribeFlag"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

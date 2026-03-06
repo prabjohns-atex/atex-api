@@ -280,6 +280,7 @@
                     <button class="btn btn-outline btn-sm" onclick="showDiff()">Show Diff</button>
                 </div>
             </div>
+            <div id="config-group-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:0.8rem"></div>
             <div id="config-table"><div class="loading">Loading...</div></div>
         </div>
     </div>
@@ -792,27 +793,72 @@ async function deleteGroup(id) {
 // ============================================================
 // Configuration Tab
 // ============================================================
+let configData = null;
+let activeConfigGroup = 'All';
+
 async function loadConfig() {
-    const data = await authJson('/admin/config');
+    configData = await authJson('/admin/config');
     const el = document.getElementById('config-table');
-    if (!data || Object.keys(data).length === 0) {
+    if (!configData || Object.keys(configData).length === 0) {
         el.innerHTML = '<div class="empty-state">No configuration found</div>';
+        document.getElementById('config-group-tabs').innerHTML = '';
         return;
     }
 
-    let html = '<table><thead><tr><th>External ID</th><th>Source Tier</th><th>Actions</th></tr></thead><tbody>';
-    for (const [id, entry] of Object.entries(data)) {
+    // Build group tabs
+    const groups = new Set();
+    for (const entry of Object.values(configData)) {
+        if (typeof entry === 'object' && entry !== null && entry.group) groups.add(entry.group);
+    }
+    const sorted = [...groups].sort();
+    const tabsEl = document.getElementById('config-group-tabs');
+    let tabs = '<button class="btn btn-sm ' + (activeConfigGroup === 'All' ? 'btn-primary' : 'btn-outline') + '" onclick="filterConfigGroup(\'All\')">All</button>';
+    for (const g of sorted) {
+        tabs += '<button class="btn btn-sm ' + (activeConfigGroup === g ? 'btn-primary' : 'btn-outline') + '" onclick="filterConfigGroup(\'' + esc(g) + '\')">' + esc(g) + '</button>';
+    }
+    tabsEl.innerHTML = tabs;
+
+    renderConfigTable();
+}
+
+function filterConfigGroup(group) {
+    activeConfigGroup = group;
+    // Re-render tabs and table without refetching
+    const groups = new Set();
+    for (const entry of Object.values(configData)) {
+        if (typeof entry === 'object' && entry !== null && entry.group) groups.add(entry.group);
+    }
+    const sorted = [...groups].sort();
+    const tabsEl = document.getElementById('config-group-tabs');
+    let tabs = '<button class="btn btn-sm ' + (activeConfigGroup === 'All' ? 'btn-primary' : 'btn-outline') + '" onclick="filterConfigGroup(\'All\')">All</button>';
+    for (const g of sorted) {
+        tabs += '<button class="btn btn-sm ' + (activeConfigGroup === g ? 'btn-primary' : 'btn-outline') + '" onclick="filterConfigGroup(\'' + esc(g) + '\')">' + esc(g) + '</button>';
+    }
+    tabsEl.innerHTML = tabs;
+    renderConfigTable();
+}
+
+function renderConfigTable() {
+    const el = document.getElementById('config-table');
+    let html = '<table><thead><tr><th>External ID</th><th>Name</th><th>Source Tier</th><th>Actions</th></tr></thead><tbody>';
+    for (const [id, entry] of Object.entries(configData)) {
         const tier = typeof entry === 'object' && entry !== null ? (entry.source || 'unknown') : String(entry);
+        const group = typeof entry === 'object' && entry !== null ? (entry.group || '') : '';
+        const name = typeof entry === 'object' && entry !== null && entry.name && entry.name !== id ? entry.name : '';
+
+        if (activeConfigGroup !== 'All' && group !== activeConfigGroup) continue;
+
         html += '<tr>';
         html += '<td class="mono">' + esc(id) + '</td>';
+        html += '<td>' + esc(name) + '</td>';
         html += '<td>' + tierBadge(tier) + '</td>';
-        html += '<td class="btn-group">';
+        html += '<td><div class="btn-group" style="flex-wrap:nowrap">';
         html += '<button class="btn btn-outline btn-sm" onclick="viewConfig(\'' + esc(id) + '\')">View</button>';
         html += '<button class="btn btn-primary btn-sm" onclick="editConfig(\'' + esc(id) + '\')">Edit</button>';
         if (tier === 'live') {
             html += '<button class="btn btn-danger btn-sm" onclick="deleteConfig(\'' + esc(id) + '\')">Revert</button>';
         }
-        html += '</td></tr>';
+        html += '</div></td></tr>';
     }
     html += '</tbody></table>';
     el.innerHTML = html;

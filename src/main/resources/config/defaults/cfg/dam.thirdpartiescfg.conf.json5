@@ -1,5 +1,6 @@
 {
-      "_type": "com.atex.onecms.app.dam.cfg.ThirdPartiesCfgBean",
+  "_meta": {"name": "dam.thirdpartiescfg.conf", "group": "System"},
+  "_type": "com.atex.onecms.app.dam.cfg.ThirdPartiesCfgBean",
       "name": "Third parties Cfg",
       "instagramAccessToken": "",
       "instagramClientId": "",

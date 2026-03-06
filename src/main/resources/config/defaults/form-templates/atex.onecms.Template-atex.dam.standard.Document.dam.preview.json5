@@ -1,0 +1,68 @@
+{
+  "_meta": {"name": "Document Desk Preview Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Document.dam.preview",
+
+  "type": "atex.dam.standard.Document",
+  "label": "Document",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Document",
+      "data": {
+        "inputTemplate": "p.Document"
+      }
+    },
+    "atex.Files": {},
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "Content",
+        "fields": [
+          "headline",
+          "description"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": [
+          "metadata"
+        ]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

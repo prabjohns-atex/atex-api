@@ -1,0 +1,264 @@
+{
+  "_meta": {"name": "Document Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Document",
+
+  "type": "atex.dam.standard.Document",
+  "label": "Document",
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Document",
+      "data": {
+        "inputTemplate": "p.Document"
+      }
+    },
+    "atex.Files": {},
+    "atex.Metadata": {}
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.CONTENT",
+        "fields": [
+          "name",
+          "headline",
+          "byline",
+          "source",
+          "description",
+          "fileUploader",
+          "images"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": [
+          "metadata",
+          "tags",
+          "publishingTimeOverride",
+          "publishingUpdatedTimeOverride"
+        ]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.DOCUMENT.NAME_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "fileUploader",
+      "label": "TEMPLATE.FIELD.DOCUMENT.FILEUPLOADER",
+      "widget": "pFileUploader",
+
+      "domainObjects": {
+        "filePath": "contentData/filePath",
+        "files": "atex.Files"
+      }
+    },
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "pSiteSelect",
+      "config": {
+        "editable": false,
+        "exclude": [],
+        "default": "@homeDepartment",
+        "storage-id": "doclevel",
+        "modal": {
+          "title": "TEMPLATE.FIELD.WEBSECTION",
+          "placeholder": "SITE_SELECT_WIDGET.MODAL.PLACEHOLDER"
+        }
+      },
+      "domainObject": "p.InsertionInfo/securityParentId",
+      "validators" : {
+        "required": { "message": "You must select a Section" }
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.TITLE",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.DOCUMENT.TITLE_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "gongCKEditor",
+      "config": {
+        "ckConfig" : {
+          "height": "200",
+          "hideToolbar": true,
+          "contentsLangDirection" : "auto",
+          "extraPlugins": "wordcount,notification",
+          "wordcount": { "showParagraphs": false, "showWordCount": false, "showCharCount": false },
+          "coreStyles_italic" : { "element": "i", "overrides": "em" },
+          "removeButtons" : "PasteFromWord,Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript",
+          "removePlugins" : "docopyfit, smartembed, selectmedia, smartpaste"
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/description"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.SOURCE",
+      "name": "source",
+      "widget": "pSelect",
+      "domainObjects": {
+        "data": ["contentData", "source"]
+      },
+      "config": {
+        "contentFetch": {
+          "id": "com.atex.onecms.general.default.Configuration",
+          "path": "sourceProviders/default",
+          "appendNone": true
+        }
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.BYLINE",
+      "name": "byline",
+      "widget": "pTextInput",
+      "domainObject": "contentData/byline",
+      "default" : {
+        "expression" : "currentUser.fullName"
+      }
+    },
+    {
+      "name": "images",
+      "label": "TEMPLATE.FIELD.POSTERIMAGE",
+      "widget": "pResourceArea",
+      "config": {
+        "include-embed": true,
+        "save-on-upload": true,
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        },
+        "imageMetadata": {
+          "atex.onecms.image": {
+            "extraction": true,
+            "fieldMappings": [
+              {
+                "source": "title",
+                "target": "contentData/title"
+              },
+              {
+                "source": "tags/EXIF/Copyright",
+                "target": "contentData/description"
+              },
+              {
+                "source": "byline",
+                "target": "contentData/byline"
+              }
+            ]
+          }
+        },
+        "allowedTypes": [
+          "atex.dam.standard.Image",
+          "atex.dam.standard.WireImage",
+          "com.atex.nosql.image.ImageContentDataBean",
+          "atex.onecms.image"
+        ],
+        "iconMap": {
+          "atex.dam.standard.Collection": "image-x-generic.png"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/posterImage"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.METADATA",
+      "name": "metadata",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle" : true,
+        "dimensions" : [
+          "dimension.Organisation",
+          "dimension.Location",
+          "dimension.Person",
+          "dimension.EditorialTag"
+        ],
+        "useInsertParent" : false,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2
+      }
+    },
+
+    {
+      "name": "tags",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": ["atex.Metadata"],
+        "body": ["contentData", "body"]
+      },
+
+      "config": {
+        "annotation": false,
+        "toggle" : true,
+        "textsToAnnotate": [],
+        "dimensions" : [ "dimension.Tag" ],
+        "extraDimensions":[]
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.PUBLISHINGTIME",
+      "name": "publishingTimeOverride",
+      "widget": "pDateTimePicker",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.PUBLISHINGUPDATEDTIME_PH",
+        "editable": true,
+        "dtConfig": {
+          "locale": "en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+        "useTimezone": true
+      },
+      "domainObjects": {
+        "data": "contentData/digitalPublishingTime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.PUBLISHINGUPDATEDTIME",
+      "name": "publishingUpdatedTimeOverride",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.PUBLISHINGUPDATEDTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/publishingUpdateTime"
+      }
+    }
+  ]
+}

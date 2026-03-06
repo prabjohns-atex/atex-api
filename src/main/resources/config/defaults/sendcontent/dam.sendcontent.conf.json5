@@ -1,5 +1,6 @@
 {
-      "configurations": [
+  "_meta": {"name": "dam.sendcontent.conf", "group": "Publishing"},
+  "configurations": [
         {
           "id":"0",
           "service":"email",

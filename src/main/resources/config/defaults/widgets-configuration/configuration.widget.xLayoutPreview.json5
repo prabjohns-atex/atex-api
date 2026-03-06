@@ -1,5 +1,6 @@
 {
-    "mimeTypeMap": {
+  "_meta": {"name": "Copyfit Preview Configuration", "group": "Editor"},
+  "mimeTypeMap": {
         "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
     },
       "allowedTypes": [

@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Redirect Rules", "group": "Permissions"},
   "disable-redirect-rules": [
     {
       "id":"default-disable-redirect-rules",

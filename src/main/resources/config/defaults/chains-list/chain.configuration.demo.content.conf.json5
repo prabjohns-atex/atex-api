@@ -1,5 +1,6 @@
 {
-	  "id":"chain.configuration.demo.content.conf",
+  "_meta": {"name": "chain.configuration.demo.content.conf", "group": "Ingestion"},
+  "id":"chain.configuration.demo.content.conf",
 	  "routes": [
 	  	"route.configuration.unzip.conf",
 	  	"route.configuration.json.conf"

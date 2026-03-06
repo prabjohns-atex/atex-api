@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Article Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "act.template.Article",
 
   "type": "com.atex.standard.article.ArticleBean",

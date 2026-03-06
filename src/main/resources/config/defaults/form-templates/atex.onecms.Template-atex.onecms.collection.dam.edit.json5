@@ -1,0 +1,263 @@
+{
+  "_meta": {"name": "Collection Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Collection",
+
+  "type": "atex.dam.standard.Collection",
+  "label": "Collection",
+  "namePath": ["contentData", "headline"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Collection",
+      "data": {
+        "inputTemplate": "p.Collection"
+      }
+    },
+    "atex.Metadata": {
+    },
+    "p.InsertionInfo":{
+    }
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.COLLECTION",
+        "fields": ["galleryStatus", "cropSelect", "gallery"]
+      },
+      {
+        "label": "TEMPLATE.TAB.GENERALINFO",
+        "fields": ["insertParent", "securityParent", "status", "datetime", "name", "headline", "description", "premiumType"]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "TEMPLATE.TAB.IMAGES",
+        "fields": ["images"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name":"galleryStatus",
+      "widget": "pGalleryStatus",
+      "domainObjects": {
+        "data": ["contentData", "status"]
+      }
+    },
+    {
+      "name":"cropSelect",
+      "label": "TEMPLATE.FIELD.DEFAULT_CROP",
+      "widget": "pCropSelect",
+      "domainObjects": {
+        "data": ["contentData", "defaultCrop"]
+      }
+    },
+    {
+      "name":"datetime",
+      "label": "TEMPLATE.FIELD.DATE",
+      "widget": "pDateTimePicker",
+      "domainObjects": {
+        "data": ["contentData", "datetime"]
+      }
+    },
+    {
+      "name":"gallery",
+      "widget": "pGallery",
+      "domainObjects": {
+        "data": ["contentData", "contents"]
+      },
+
+      "config": {
+        "fields": [
+          {
+            "type": "simple",
+            "label": "TEMPLATE.FIELD.COLLECTION.IMAGE_HEADLINE",
+            "field": "headline",
+            "initFrom": "headline"
+          },
+          {
+            "type": "ckeditor",
+            "label": "TEMPLATE.FIELD.COLLECTION.IMAGE_DESCRIPTION",
+            "field": "description",
+            "initFrom": "description"
+          }
+        ]
+      }
+    },
+    {
+      "name": "premiumType",
+      "label": "TEMPLATE.FIELD.PREMIUMTYPE",
+      "widget": "pSelect",
+      "config": {
+        "defaultValue" : "inherit",
+        "options" :
+        [
+          {
+            "label" : "Inherit from section",
+            "id" : "inherit"
+          },
+          {
+            "label" : "Free",
+            "id" : "free"
+          },
+          {
+            "label" : "Premium",
+            "id" : "premium"
+          },
+          {
+            "label": "Registered Premium",
+            "id": "premiumRegistered"
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": ["contentData", "premiumType"]
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.WEBSECTION",
+      "name": "insertParent",
+      "widget": "pSecurityParent",
+
+      "config": {
+        "editable": true,
+        "excludedSites": ["dam.d"],
+        "defaultSecurityParentId": "externalid/PolopolyPost.d"
+      },
+
+      "domainObject": "p.InsertionInfo/insertParentId",
+      "validators" : {
+        "required": { "message": "You must select a Web Section" }
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.LEVEL",
+      "name": "securityParent",
+      "widget": "pSecurityParent",
+
+      "config": {
+        "editable": true,
+        "excludedSites": ["PolopolyPost.d", "dam.system.d"],
+        "defaultSecurityParentId": "externalid/dam.assets.production.d"
+      },
+
+      "domainObject": "p.InsertionInfo/securityParentId",
+      "validators" : {
+        "required": { "message": "You must select a level" }
+      }
+    },
+
+    {
+      "name": "images",
+      "label": "TEMPLATE.FIELD.IMAGES",
+      "widget": "pResourceArea",
+      "config": {
+        "save-on-upload": true,
+        "ignore-refresh": true,
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        },
+        "allowedTypes": [
+          "atex.dam.standard.Image",
+          "atex.dam.standard.WireImage",
+          "com.atex.nosql.image.ImageContentDataBean",
+          "atex.onecms.image"
+        ],
+        "iconMap": {
+          "atex.dam.standard.Collection": "image-x-generic.png"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/contents"
+      }
+    },
+
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.COLLECTION.HEADLINE_PH"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "pCKEditor",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "status",
+      "label": "TEMPLATE.FIELD.PRINTSTATUS",
+      "widget": "pContentStatus",
+      "config": {
+        "commentPlaceholder" : "TEMPLATE.FIELD.STATUS_COMMENT_PH"
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.COLLECTION.NAME_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo",
+        "title": "contentData/headline",
+        "lead": "contentData/lead",
+        "body": "contentData/body"
+      },
+      "config": {
+        "toggle": true,
+        "annotation": true,
+        "dimensions": [
+          "dimension.Organisation",
+          "dimension.Location",
+          "dimension.Person",
+          "dimension.EditorialTag"
+        ],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2,
+        "annotationConfig": {
+          "mapping": {
+            "dimension.Organisation": "dimension.Organisation",
+            "dimension.Person": "dimension.Person",
+            "dimension.Company": "dimension.Organisation",
+            "dimension.Location": "dimension.Location",
+            "dimension.EditorialTag": "dimension.EditorialTag"
+          },
+          "customNameFormatter": "function(entity) { return entity.id && entity.id !== entity.name ? entity.name + '_' + (entity.id.startsWith('1-') ? entity.id.substring(2) : entity.id): entity.name; }"
+        }
+      }
+    }
+  ]
+}

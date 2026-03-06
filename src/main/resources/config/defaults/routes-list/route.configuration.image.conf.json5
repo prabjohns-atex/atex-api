@@ -1,5 +1,6 @@
 {
-	  "id":"route.configuration.image.conf",
+  "_meta": {"name": "route.configuration.image.conf", "group": "Ingestion"},
+  "id":"route.configuration.image.conf",
 	  "name":"Image Importer",
 	  "errorHandler":"file:{{polopoly.work-dir}}/image-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
 	  "threadsPoolSize":"10",

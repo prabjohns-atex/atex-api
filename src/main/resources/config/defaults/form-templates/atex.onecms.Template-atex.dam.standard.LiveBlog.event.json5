@@ -1,0 +1,161 @@
+{
+  "_meta": {"name": "Live Event Act Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.LiveBlog.event",
+
+  "type": "atex.dam.standard.LiveBlog.event",
+  "webPreviewEnabled" : false,
+  "printPreviewDisabled": true,
+
+  "label": "LiveBlog Event",
+  "namePath": "contentData/name",
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.LiveBlog.event",
+      "data": {
+        "inputTemplate": "p.LiveBlogEvent"
+      }
+    }
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.FIELD.LIVEBLOG.LIVEBLOGEVENT",
+        "fields": [
+          "relevantEvent",
+          "date",
+          "headline",
+          "description"
+        ]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "dummyloader",
+      "widget": "pCKEditor",
+      "config": {
+        "ckConfig": {
+          "height": 400,
+          "fillEmptyBlocks": false
+        },
+        "contentTypeResourceMap": {
+          "image": "images",
+          "default": "resources"
+        },
+        "domainObjects": {
+          "data": "contentData/body"
+        }
+      }
+    },
+    {
+      "name": "relevantEvent",
+      "widget": "pCheckbox",
+      "label": "TEMPLATE.FIELD.IMPORTANT",
+      "config": {
+        "defaultValue": false,
+        "widget-style": "border: dashed 1px #bbb; border-radius: 4px; width: 49%; height: auto; padding: 14px 5px 5px 10px; min-height:52px; float:left; margin-top: 0",
+        "checkboxLabel": " "
+      },
+      "domainObjects": {
+        "data": "contentData/relevant"
+      }
+    },
+
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.TITLE",
+      "widget": "gongCKEditor",
+
+      "config": {
+        "height": 100,
+        "cssClass": "cke_content_Headline",
+        "ckConfig": {
+          "autoGrow_onStartup": true,
+          "autoGrow_minHeight": 100,
+          "autoGrow_maxHeight": 200,
+          "allowedContent": true,
+          "forcePasteAsPlainText": true,
+          "disableNativeSpellChecker": false,
+          "wordcount": { "showParagraphs": false, "showWordCount": false, "showCharCount": false },
+          "toolbarGroups": [
+            { "name": "document",    "groups": [ "mode", "document", "doctools" ] },
+            { "name": "clipboard",   "groups": [ "clipboard", "undo" ] },
+            { "name": "editing",     "groups": [ "find", "selection", "spellchecker" ] },
+            { "name": "notes" },
+            { "name": "basicstyles", "groups": [ "basicstyles", "cleanup" ] },
+            { "name": "paragraph",   "groups": [ "list", "blocks", "align" ] },
+            { "name": "links" },
+            { "name": "others"},
+            { "name": "insert"}
+          ],
+          "removeButtons": "Cut,Copy,Paste,PasteFromWord,PasteText,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript,Image,Table,Iframe,HorizontalRule",
+          "removeDialogTabs": "link:advanced"
+        }
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "gongCKEditor",
+
+      "config": {
+        "height": 200,
+        "ckConfig": {
+          "autoGrow_onStartup": true,
+          "autoGrow_minHeight": 200,
+          "autoGrow_maxHeight": 400,
+          "allowedContent": true,
+          "forcePasteAsPlainText": true,
+          "disableNativeSpellChecker": false,
+          "wordcount": { "showParagraphs": false, "showWordCount": false, "showCharCount": false },
+          "toolbarGroups": [
+            { "name": "document",	 "groups": [ "mode", "document", "doctools" ] },
+            { "name": "clipboard",   "groups": [ "clipboard", "undo" ] },
+            { "name": "editing",     "groups": [ "find", "selection", "spellchecker" ] },
+            { "name": "notes" },
+            { "name": "basicstyles", "groups": [ "basicstyles", "cleanup" ] },
+            { "name": "paragraph",   "groups": [ "list", "blocks", "align" ] },
+            { "name": "links" },
+            { "name": "others"},
+            { "name": "insert"}
+          ],
+          "removeButtons": "Cut,Copy,Paste,PasteFromWord,PasteText,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript,Image,Table,HorizontalRule",
+          "removeDialogTabs": "link:advanced"
+        }
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+
+    {
+      "name": "date",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "widget-style": "border: dashed 1px #bbb; border-radius: 4px; width: 50%; height: auto; padding: 5px 5px 5px 10px; float:right; min-height:52px; margin-top: -29px;",
+        "placeholder": "TEMPLATE.FIELD.EVENTTIME_PH",
+        "editable": true,
+        "dtConfig": {
+          "locale": "en",
+          "format": "DD/MM/YYYY HH:mm"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/date"
+      }
+    }
+  ]
+}

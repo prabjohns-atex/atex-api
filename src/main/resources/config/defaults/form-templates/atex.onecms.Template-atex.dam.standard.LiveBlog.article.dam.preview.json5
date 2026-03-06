@@ -1,0 +1,155 @@
+{
+  "_meta": {"name": "Liveblog Article Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.LiveBlog.article.dam.preview",
+
+  "webPreviewEnabled" : false,
+
+  "hidden":true,
+
+  "type": "atex.dam.standard.LiveBlog.article",
+
+  "label": "LiveBlog Preview",
+  "namePath": "contentData/headline/text",
+
+  "group": {
+    "type": "Article",
+    "default": 1
+  },
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.LiveBlog.article",
+      "data": {
+        "inputTemplate": "p.LiveBlogArticle"
+      }
+    },
+    "atex.Metadata": {},
+    "atex.WebContentStatus": {}
+  },
+
+  "copyfitOptions": {
+    "usePrint": true,
+    "editAllAspects": false
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+
+        "fields": [
+          "name",
+          "headline",
+          "lead",
+          "body",
+          "webstatus",
+          "preview"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/name"
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "pCKEditor",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/headline"
+      }
+    },
+    {
+      "name": "lead",
+      "label": "Lead",
+      "widget": "pCKEditor",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/lead"
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "pCKEditor",
+
+      "config": {},
+
+      "domainObjects": {
+        "data": "contentData/body"
+      }
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "editable": false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "webstatus",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "editable" : false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WebContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "preview",
+      "widget": "xLayoutPreview",
+
+      "config": {
+        "intents": ["Print","Web"],
+        "webPreviewEmbedded": true,
+        "visibleSet": "default"
+      },
+
+      "domainObjects": {
+        "data": "contentData",
+        "printData": "atex.PrintVariants",
+        "associatedSites": "p.InsertionInfo/associatedSites"
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

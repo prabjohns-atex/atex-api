@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Dam Chains List Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "com.atex.onecms.app.dam.camel.configuration.DamChainsListBean",
   "type": "com.atex.onecms.app.dam.camel.configuration.DamChainsListBean",
   "label": "Dam Chains List Configuration",

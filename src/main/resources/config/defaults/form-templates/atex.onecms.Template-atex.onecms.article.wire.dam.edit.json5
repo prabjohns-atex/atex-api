@@ -1,0 +1,103 @@
+{
+  "_meta": {"name": "Wire Article Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.onecms.article",
+
+  "type": "atex.onecms.article",
+  "label": "Wire Article",
+  "namePath": ["contentData", "headline"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.article",
+      "data": {
+        "inputTemplate": "p.DamWireArticle"
+      }
+    },
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["securityParent", "status",  "source", "creationdate", "headline", "body"]
+      },
+
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "source",
+      "label": "Source",
+      "widget": "pTextInput",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "source"]
+      }
+    },
+    {
+      "name": "creationdate",
+      "label": "Date",
+      "widget": "pDateTimePicker",
+      "domainObjects": {
+        "data": ["contentData", "creationdate"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "pTextInput",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "pCKEditor",
+      "config": {
+        "height": "300",
+        "resizable": "true"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+
+        "body": "contentData/body"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["body"]
+      }
+    }
+  ]
+}

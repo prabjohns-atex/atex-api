@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Dam Chain Configuration Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "com.atex.onecms.app.dam.camel.configuration.DamChainConfigurationBean",
   "type": "com.atex.onecms.app.dam.camel.configuration.DamChainConfigurationBean",
   "label": "Dam Route Configuration",

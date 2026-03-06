@@ -1,5 +1,5 @@
 {
-
+  "_meta": {"name": "Desk Menus", "group": "UI"},
   "menus": [
     {
       "id": "default-menus-list",

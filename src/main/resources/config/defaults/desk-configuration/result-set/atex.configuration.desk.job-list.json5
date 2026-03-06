@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Job List", "group": "UI"},
   "job-list": [
     {
       "id": "default-job-list",

@@ -1,5 +1,6 @@
 {
-	  "id":"chain.configuration.reuters.conf",
+  "_meta": {"name": "chain.configuration.reuters.conf", "group": "Ingestion"},
+  "id":"chain.configuration.reuters.conf",
 	  "routes": [
 	    "route.configuration.reuters.conf"
 	 	],

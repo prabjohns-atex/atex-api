@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Page Browser Filters", "group": "UI"},
   "page-browser":[
     {
       "id":"default-page-browser",

@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Distribution List Configuration", "group": "Publishing"},
   "_type": "com.atex.onecms.app.dam.distribution.list.DistributionListAspectBean",
   "lists": []
 }

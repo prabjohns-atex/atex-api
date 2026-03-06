@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Un-Publish Rules", "group": "Permissions"},
   "disable-unpublish-rules":[
     {
       "id":"default-disable-unpublish-rules",

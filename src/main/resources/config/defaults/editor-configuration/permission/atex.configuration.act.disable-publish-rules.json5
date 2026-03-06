@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "ACT Disable Publish Rules", "group": "Permissions"},
   "disable-publish-rules":[
     {
       "id":"default-disable-publish-rules",

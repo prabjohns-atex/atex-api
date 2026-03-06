@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Engage and Edit Rules", "group": "Permissions"},
   "disable-engage-edit-rules":[
     {
       "id":"default-disable-engage-edit-rules",

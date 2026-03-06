@@ -1,5 +1,6 @@
 {
-	 "updates": [ 
+  "_meta": {"name": "dam.smartupdates.conf", "group": "UI"},
+  "updates": [ 
         {
           "value":"AtexTimes Default",
           "field":"headline",

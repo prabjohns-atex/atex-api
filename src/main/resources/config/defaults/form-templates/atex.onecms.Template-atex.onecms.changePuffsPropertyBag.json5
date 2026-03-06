@@ -1,0 +1,73 @@
+{
+  "_meta": {"name": "Change Puffs Values", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.changePuffsPropertyBag",
+
+  "type": "",
+  "label": "",
+  "namePath": ["contentData", "name"],
+
+  "multiPageCopyPaths": [
+    "data/aspects/contentData/data/propertyBag"
+  ],
+
+  "layout": {
+    "views": [
+      {
+        "label": "Change Puffs Values",
+        "fields": ["puffOne", "puffTwo", "puffThree"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "puffOne",
+      "label": "Puff 1",
+      "widget": "pProperties",
+      "config": {
+        "placeholder": "Puff 1",
+        "editable": true,
+        "tags": {
+          "custom": ["puffOne"],
+          "custom_types": ["java.lang.String"]
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/propertyBag"
+      }
+    },
+    {
+      "name": "puffTwo",
+      "label": "Puff 2",
+      "widget": "pProperties",
+      "config": {
+        "placeholder": "Puff 2",
+        "editable": true,
+        "tags": {
+          "custom": ["puffTwo"],
+          "custom_types": ["java.lang.String"]
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/propertyBag"
+      }
+    },
+    {
+      "name": "puffThree",
+      "label": "Puff 3",
+      "widget": "pProperties",
+      "config": {
+        "placeholder": "Puff 3",
+        "editable": true,
+        "tags": {
+          "custom": ["puffThree"],
+          "custom_types": ["java.lang.String"]
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/propertyBag"
+      }
+    }
+
+  ]
+}

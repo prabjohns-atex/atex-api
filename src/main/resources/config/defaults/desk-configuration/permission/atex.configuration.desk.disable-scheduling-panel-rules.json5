@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Publishing Schedules Panel", "group": "Permissions"},
   "disable-scheduling-panel-rules":[
     {
       "id":"default-disable-scheduling-panel-rules",

@@ -1,0 +1,87 @@
+{
+  "_meta": {"name": "Archive Page Desk Preview Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Page.dam.preview",
+
+  "type": "atex.dam.standard.Page",
+  "label": "Page",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Page",
+      "data": {
+        "inputTemplate": "p.DamPage"
+      }
+    },
+    "atex.Files": {},
+    "atex.Metadata": {},
+    "prestige.ContentData": {},
+    "atex.print.Page": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["activePreview", "name"]
+      },
+
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "imgView",
+      "widget": "damImgView",
+      "domainObjects": {
+        "files": ["atex.Files"],
+        "revision": ["revision"]
+      }
+    },
+    {
+      "name": "activePreview",
+      "label": "Archive Page Preview",
+      "widget": "activePreview",
+      "domainObjects": {
+        "data": ["contentData", "name"],
+        "width": ["contentData", "width"],
+        "height": ["contentData", "height"],
+        "files": ["atex.Files"],
+        "contentStatus": ["atex.WFContentStatus"],
+        "pdata": ["prestige.ContentData"],
+        "printPage": ["atex.print.Page"],
+        "revision": ["revision"]
+      },
+      "config": {
+        "module": "previewView",
+        "isPage": true,
+        "usePrintServer": true,
+        "liveUpdate": false
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

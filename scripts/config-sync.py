@@ -40,10 +40,53 @@ SOURCE_BASES = {
     "adm-starterkit": PROJECT_ROOT.parent / "adm-starterkit" / "content" / "custom-content" / "src" / "main" / "content",
     "adm-starterkit-pseries": PROJECT_ROOT.parent / "adm-starterkit" / "content" / "custom-pseries-content" / "src" / "main" / "content",
     "gong-copyfit": PROJECT_ROOT.parent / "gong" / "content" / "copyfit-content" / "src" / "main" / "content",
+    "gong-onecms-common": PROJECT_ROOT.parent / "gong" / "onecms-common" / "content" / "src" / "main" / "content",
 }
 
 # XML namespace used by Polopoly batch files
 NS = {"p": "http://www.polopoly.com/polopoly/cm/xmlio"}
+
+# Map config subdirectory to UI group name
+SUBDIR_TO_GROUP = {
+    "audioai": "Integrations",
+    "ayrshare": "Integrations",
+    "camel-routes": "Ingestion",
+    "cfg": "System",
+    "chains-list": "Ingestion",
+    "desk-configuration": "UI",
+    "desk-configuration/form": "UI",
+    "desk-configuration/permission": "Permissions",
+    "desk-configuration/result-set": "UI",
+    "desk-system-configuration": "System",
+    "distributionlist": "Publishing",
+    "editor-configuration": "Editor",
+    "editor-configuration/permission": "Permissions",
+    "export": "Publishing",
+    "form-templates": "Templates",
+    "gallery-configurations": "UI",
+    "image-service": "System",
+    "importer": "Ingestion",
+    "index": "Search",
+    "layout": "Publishing",
+    "localization/desk": "Locale",
+    "localization/locale": "Locale",
+    "mail-service": "Integrations",
+    "markas": "UI",
+    "partition": "System",
+    "permissions": "Permissions",
+    "processors-list": "Ingestion",
+    "publish": "Publishing",
+    "remotes": "Publishing",
+    "reset-password": "System",
+    "restrictContent": "Permissions",
+    "routes-list": "Ingestion",
+    "sendcontent": "Publishing",
+    "settings": "System",
+    "smartupdates": "UI",
+    "tag-manager": "Integrations",
+    "widgets-configuration": "Editor",
+    "workflow": "Workflow",
+}
 
 
 def parse_mapping(mapping_file: Path) -> list[dict]:
@@ -382,17 +425,48 @@ def fix_json_escape_sequences(content: str) -> str:
     return ''.join(result)
 
 
-def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str, str | None]:
+def inject_meta(content: str, name: str | None, external_id: str, group: str | None = None, fmt: str | None = None) -> str:
+    """
+    Inject a _meta block at the top of a JSON/JSON5 object.
+
+    If name is None, uses the external_id as the display name.
+    Always inserts on a new line with 2-space indentation after the opening '{'.
+    """
+    display_name = name if name else external_id
+    # Escape quotes in the name for JSON
+    display_name = display_name.replace('\\', '\\\\').replace('"', '\\"')
+
+    meta_parts = [f'"name": "{display_name}"']
+    if group:
+        escaped_group = group.replace('\\', '\\\\').replace('"', '\\"')
+        meta_parts.append(f'"group": "{escaped_group}"')
+    if fmt:
+        escaped_fmt = fmt.replace('\\', '\\\\').replace('"', '\\"')
+        meta_parts.append(f'"format": "{escaped_fmt}"')
+    meta_line = '"_meta": {' + ', '.join(meta_parts) + '},'
+
+    # Find the first '{' and insert _meta right after it
+    idx = content.find('{')
+    if idx == -1:
+        return content  # Not a JSON object — leave unchanged
+
+    # Skip any whitespace/newline after the opening brace
+    rest = content[idx + 1:]
+    stripped = rest.lstrip()
+
+    return content[:idx + 1] + "\n  " + meta_line + "\n  " + stripped
+
+
+def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str]:
     """
     Process a single mapping entry.
 
-    Returns (status, message, content_name) where status is one of:
+    Returns (status, message) where status is one of:
       'ok'       - File exists and matches
       'updated'  - File was written (or would be in dry-run)
       'created'  - New file was created (or would be in dry-run)
       'skipped'  - Manual entry or missing source
       'error'    - Failed to process
-    content_name is the display name from the XML (or None if not available).
     """
     ext_type = entry["type"]
     source_base_name = entry["source_base"]
@@ -407,15 +481,15 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str, str |
 
     if ext_type == "manual":
         if dest_file.exists():
-            return "ok", f"[manual] {external_id}", None
-        return "skipped", f"[manual] {external_id} (no source)", None
+            return "ok", f"[manual] {external_id}"
+        return "skipped", f"[manual] {external_id} (no source)"
 
     # Resolve source base directory
     source_dir = SOURCE_BASES.get(source_base_name)
     if source_dir is None:
-        return "error", f"Unknown source_base: {source_base_name}", None
+        return "error", f"Unknown source_base: {source_base_name}"
     if not source_dir.exists():
-        return "error", f"Source directory not found: {source_dir}", None
+        return "error", f"Source directory not found: {source_dir}"
 
     source_file = source_dir / source_path
     content_name = None
@@ -425,13 +499,13 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str, str |
 
     if ext_type == "xml-cdata":
         if not source_file.exists():
-            return "error", f"Source XML not found: {source_file}", None
+            return "error", f"Source XML not found: {source_file}"
         content = extract_xml_cdata(source_file, external_id)
         content_name = extract_content_name(source_file, external_id)
 
     elif ext_type == "xml-component":
         if not source_file.exists():
-            return "error", f"Source XML not found: {source_file}", None
+            return "error", f"Source XML not found: {source_file}"
         content = extract_xml_components(source_file, external_id)
         content_name = extract_content_name(source_file, external_id)
 
@@ -445,12 +519,12 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str, str |
             if json_direct.exists():
                 content = json_direct.read_text(encoding="utf-8")
             else:
-                return "error", f"Source JSON not found: {json_direct}", None
+                return "error", f"Source JSON not found: {json_direct}"
             # Extract name from the XML part
             if xml_file.exists():
                 content_name = extract_content_name(xml_file, external_id)
         elif not source_file.exists():
-            return "error", f"Source XML not found: {source_file}", None
+            return "error", f"Source XML not found: {source_file}"
         else:
             json_path = find_json_ref(source_file, external_id)
             if json_path:
@@ -463,13 +537,19 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str, str |
             content = json_path.read_text(encoding="utf-8")
 
     else:
-        return "error", f"Unknown type: {ext_type}", None
+        return "error", f"Unknown type: {ext_type}"
 
     if content is None:
-        return "error", f"Failed to extract content for {external_id}", None
+        return "error", f"Failed to extract content for {external_id}"
 
     # Fix invalid JSON escape sequences (e.g., \.jpg in Camel route configs)
     content = fix_json_escape_sequences(content)
+
+    # Inject _meta block with display name, group, and format
+    group = SUBDIR_TO_GROUP.get(dest_subdir)
+    # Template configs use input-template name as format (matches Polopoly policy-based serialization)
+    fmt = "atex.onecms.Template.it" if dest_subdir == "form-templates" else None
+    content = inject_meta(content, content_name, external_id, group, fmt)
 
     # Normalize line endings
     content = content.replace("\r\n", "\n")
@@ -480,7 +560,7 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str, str |
     if dest_file.exists():
         existing = dest_file.read_text(encoding="utf-8").replace("\r\n", "\n")
         if existing == content:
-            return "ok", f"{external_id}", content_name
+            return "ok", f"{external_id}"
         status = "updated"
     else:
         status = "created"
@@ -489,7 +569,7 @@ def sync_entry(entry: dict, apply: bool, verbose: bool) -> tuple[str, str, str |
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_file.write_text(content, encoding="utf-8")
 
-    return status, f"{external_id} -> {dest_tier}/{dest_subdir}/{external_id}.json5", content_name
+    return status, f"{external_id} -> {dest_tier}/{dest_subdir}/{external_id}.json5"
 
 
 def main():
@@ -514,17 +594,13 @@ def main():
             print(f"  {name}: {path} [{status}]")
 
     counts = {"ok": 0, "updated": 0, "created": 0, "skipped": 0, "error": 0}
-    names: dict[str, str] = {}
 
     for entry in entries:
         if args.filter and args.filter not in entry["external_id"]:
             continue
 
-        status, message, content_name = sync_entry(entry, apply=args.apply, verbose=args.verbose)
+        status, message = sync_entry(entry, apply=args.apply, verbose=args.verbose)
         counts[status] += 1
-
-        if content_name:
-            names[entry["external_id"]] = content_name
 
         if args.verbose or status not in ("ok", "skipped"):
             prefix = {
@@ -536,33 +612,11 @@ def main():
             }[status]
             print(f"{prefix} {message}")
 
-    # Write config-names.properties for ConfigurationService
-    names_file = DEST_BASE / "config-names.properties"
-    if args.apply and names:
-        sorted_names = sorted(names.items())
-        lines = ["# Auto-generated by config-sync.py — display names extracted from XML sources\n"]
-        for ext_id, name in sorted_names:
-            # Escape backslashes and colons for Java .properties format
-            escaped_id = ext_id.replace("\\", "\\\\").replace(":", "\\:")
-            escaped_name = name.replace("\\", "\\\\")
-            lines.append(f"{escaped_id}={escaped_name}\n")
-        names_content = "".join(lines)
-        if names_file.exists():
-            existing_names = names_file.read_text(encoding="utf-8").replace("\r\n", "\n")
-            if existing_names != names_content:
-                names_file.write_text(names_content, encoding="utf-8")
-                print(f"  UPD  config-names.properties ({len(names)} entries)")
-        else:
-            names_file.write_text(names_content, encoding="utf-8")
-            print(f"  NEW  config-names.properties ({len(names)} entries)")
-
     # Summary
     print()
     mode = "APPLIED" if args.apply else "DRY RUN"
     print(f"[{mode}] {counts['ok']} unchanged, {counts['created']} new, "
           f"{counts['updated']} updated, {counts['skipped']} skipped, {counts['error']} errors")
-    if names:
-        print(f"  {len(names)} config display names extracted")
 
     if args.check and (counts["updated"] > 0 or counts["created"] > 0):
         print("FAIL: Files are out of sync")

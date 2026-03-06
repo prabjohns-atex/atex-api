@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "DamImage Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "atex.dam.standard.Image",
   "type": "atex.dam.standard.Image",
   "label": "Dam Image",

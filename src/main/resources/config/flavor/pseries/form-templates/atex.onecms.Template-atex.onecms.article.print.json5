@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "One Article Print Template - PSeries Override 2.11.0", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "atex.onecms.article.print",
 
   "type": "atex.onecms.article",

@@ -1,0 +1,371 @@
+{
+  "_meta": {"name": "One Article Web Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.onecms.article.web",
+  "webPreviewEnabled" : true,
+  "hidden":true,
+
+  "type": "atex.onecms.article",
+
+  "label": "Production Web Article",
+  "namePath": "contentData/headline/text",
+
+  "group": {
+    "type": "NewArticle",
+    "default": 0
+  },
+
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.article",
+      "data": {
+        "inputTemplate": "p.NosqlArticle"
+      }
+    },
+    "atex.Metadata": {},
+    "p.InsertionInfo":{},
+    "com.atex.plugins.social.manager.SocialManagerAspect": {},
+    "atex.WFContentStatus": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["name", "status", "headline", "lead", "body", "byline", "priority", "publishDate", "locations"]
+      },
+      {
+        "label": "Media Files",
+        "fields": ["images"]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["associatedSites", "metadata"]
+      },
+      {
+        "label": "Social Manager",
+        "fields": ["social-manager", "facebookPreview", "ogTitle", "ogDescription", "ogImages"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Title of article goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/name"
+      }
+    },
+    {
+      "label": "Open graph title",
+      "name": "ogTitle",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "Open graph title of article goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/ogTitle"
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "gongCKEditor",
+
+      "config": {
+        "ckConfig": {
+          "height": 100,
+          "disableNativeSpellChecker": false,
+          "extraPlugins": "notes",
+          "wordcount": { "showParagraphs": false, "showWordCount": false, "showCharCount": false },
+          "toolbarGroups": [
+            { "name": "document",	 "groups": [ "mode", "document", "doctools" ] },
+            { "name": "clipboard",   "groups": [ "clipboard", "undo" ] },
+            { "name": "editing",     "groups": [ "find", "selection", "spellchecker" ] },
+            { "name": "notes" },
+            { "name": "basicstyles", "groups": [ "basicstyles", "cleanup" ] },
+            { "name": "paragraph",   "groups": [ "list", "indent", "blocks", "align" ] },
+            { "name": "links" },
+            { "name": "styles",      "groups": [ "format" ] },
+            { "name": "others" }
+          ],
+          "removeButtons": "Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript",
+          "removeDialogTabs": "link:advanced"
+        },
+
+        "externalPlugins": [
+          {
+            "names": "notes",
+            "path": "/onecms/polopoly_fs/ckeditor.plugins.notes!/notes/",
+            "fileName": "plugin.js"
+          }
+        ]
+      },
+
+      "domainObjects": {
+        "data": "contentData/headline"
+      }
+    },
+    {
+      "name": "lead",
+      "label": "Lead",
+      "widget": "gongCKEditor",
+
+      "config": {
+        "ckConfig": {
+          "height": 100,
+          "disableNativeSpellChecker": false,
+          "extraPlugins": "notes",
+          "wordcount": { "showParagraphs": false, "showWordCount": false, "showCharCount": false },
+          "toolbarGroups": [
+            { "name": "document",	 "groups": [ "mode", "document", "doctools" ] },
+            { "name": "clipboard",   "groups": [ "clipboard", "undo" ] },
+            { "name": "editing",     "groups": [ "find", "selection", "spellchecker" ] },
+            { "name": "notes" },
+            { "name": "basicstyles", "groups": [ "basicstyles", "cleanup" ] },
+            { "name": "paragraph",   "groups": [ "list", "indent", "blocks", "align" ] },
+            { "name": "links" },
+            { "name": "styles",      "groups": [ "format" ] },
+            { "name": "others" }
+          ],
+          "removeButtons": "Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript",
+          "removeDialogTabs": "link:advanced"
+        },
+
+        "externalPlugins": [
+          {
+            "names": "notes",
+            "path": "/onecms/polopoly_fs/ckeditor.plugins.notes!/notes/",
+            "fileName": "plugin.js"
+          }
+        ]
+      },
+
+      "domainObjects": {
+        "data": "contentData/lead"
+      }
+    },
+    {
+      "label": "Open graph description",
+      "name": "ogDescription",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "Open graph description of article goes here..."
+      },
+
+      "domainObjects": {
+        "data": "contentData/ogDescription"
+      }
+    },
+    {
+       "label": "Priority (1 = highest, 5 = lowest)",
+       "name": "priority",
+       "widget": "newsValue",
+       "config": {
+         "defaultValue" : 3,
+         "values": {
+           "1": 1,
+           "2": 2,
+           "3": 3,
+           "4": 4,
+           "5": 5
+         }
+       },
+
+       "domainObjects": {
+         "data": "contentData/priority"
+       }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "gongCKEditor",
+
+      "config": {
+        "ckConfig": {
+          "height": 400,
+          "disableNativeSpellChecker": false,
+          "extraPlugins": "notes",
+          "wordcount": { "showParagraphs": false, "showWordCount": false, "showCharCount": false },
+          "toolbarGroups": [
+            { "name": "document",	 "groups": [ "mode", "document", "doctools" ] },
+            { "name": "clipboard",   "groups": [ "clipboard", "undo" ] },
+            { "name": "editing",     "groups": [ "find", "selection", "spellchecker" ] },
+            { "name": "notes" },
+            { "name": "basicstyles", "groups": [ "basicstyles", "cleanup" ] },
+            { "name": "paragraph",   "groups": [ "list", "indent", "blocks", "align" ] },
+            { "name": "links" },
+            { "name": "styles",      "groups": [ "format" ] },
+            { "name": "others" }
+          ],
+          "removeButtons": "Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript",
+          "removeDialogTabs": "link:advanced"
+        },
+
+        "externalPlugins": [
+          {
+            "names": "notes",
+            "path": "/onecms/polopoly_fs/ckeditor.plugins.notes!/notes/",
+            "fileName": "plugin.js"
+          }
+        ]
+      },
+
+      "domainObjects": {
+        "data": "contentData/body"
+      }
+    },
+    {
+      "label": "Byline",
+      "name": "byline",
+      "widget": "pTextInput",
+
+      "domainObjects": {
+        "data": "contentData/byline"
+      }
+    },
+    {
+      "label": "Published",
+      "name": "publishDate",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "No date/time selected"
+      },
+
+      "domainObjects": {
+        "data": "contentData/publishingTime"
+      }
+    },
+    {
+      "name": "locations",
+      "label": "Locations",
+      "widget": "pGoogleMaps",
+
+      "config": {
+        "height": "550px",
+        "editable": true,
+        "useCurrentLocation": true,
+        
+        "gmConfig": {
+          "center": {
+            "lat": 52.633872,
+            "lng": 1.294744
+          }
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/locations"
+      }
+    },
+    {
+      "name": "images",
+      "label": "Images",
+      "widget": "pResourceArea",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/images"
+      }
+    },
+    {
+      "name": "associatedSites",
+      "label": "Associated Sites",
+      "widget": "pAssociatedSites",
+
+      "domainObjects": {
+        "associatedSites": "p.InsertionInfo/associatedSites",
+        "taxonomyIds": "atex.Metadata/taxonomyIds"
+      }
+    },
+    {
+       "name": "ogImages",
+       "label": "Open graph image",
+       "widget": "pResourceArea",
+       "config": {
+         "mimeTypeMap": {
+           "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+         }
+       },
+       "domainObjects": {
+         "data": "contentData/ogImages"
+       }
+     },
+    {
+       "label": "Facebook preview",
+       "name": "facebookPreview",
+       "widget": "facebookPreview",
+
+      "domainObjects": {
+        "title": "contentData/headline",
+        "lead": "contentData/lead",
+        "body": "contentData/body",
+        "socialTitle": "contentData/ogTitle",
+        "socialLead": "contentData/ogDescription",
+        "associatedSites": "p.InsertionInfo/associatedSites",
+        "socialImages": "contentData/ogImages",
+        "images": "contentData/images"
+      }
+     },
+    {
+      "label": "TEMPLATE.FIELD.METADATA",
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": ["atex.Metadata"],
+        "body": ["contentData", "body"]
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["body"]
+      }
+    },
+    {
+      "label": "Social Manager",
+      "name": "social-manager",
+      "widget": "socialManagerWidget",
+
+      "config": {
+        "selectFirstAccount": true
+      },
+
+      "domainObjects": {
+        "data": "com.atex.plugins.social.manager.SocialManagerAspect"
+      }
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "initialStatus": "atex.WFInitialStatus",
+        "statusList": "atex.WFStatusList",
+        "commentPlaceholder" : "Comment",
+        "showComment" : true,
+        "useAttributes" : false,
+        "checkUsers" : false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    }
+
+  ]
+}

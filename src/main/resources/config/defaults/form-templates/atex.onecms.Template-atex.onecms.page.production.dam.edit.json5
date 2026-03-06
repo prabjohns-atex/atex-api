@@ -1,0 +1,111 @@
+{
+  "_meta": {"name": "Production Page Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Page",
+
+  "type": "atex.dam.standard.Page",
+  "label": "Page",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Page",
+      "data": {
+        "inputTemplate": "p.OnePage"
+      }
+    },
+    "atex.Files": {},
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["securityParent", "name", "status", "deadline"]
+      },
+  
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Page Name"
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "initialStatusID" : "review",
+        "commentPlaceholder" : "Comment",
+        "showComment" : true,
+        "useAttributes" : false,
+        "checkUsers" : false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name":"deadline",
+      "label": "Deadline",
+      "widget": "pDateTimePicker",
+      "config": {
+        "placeholder": "Select a date and time...",
+        "editable": true,
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": false,
+        "disableBeforeToday":false,
+        "additionalCSS":"width:100% !important"
+      },
+      "domainObjects": {
+        "data": ["atex.print.Deadline", "deadline"]
+      }
+    },
+    {
+      "name": "metadata",
+  	  "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+
+        "caption": "contentData/caption",
+        "description": "contentData/description"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["caption", "description"]
+      }
+    }
+  ]
+}

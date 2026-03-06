@@ -1,0 +1,137 @@
+{
+  "_meta": {"name": "Audio Desk Preview Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Audio.dam.preview",
+
+  "type": "atex.dam.standard.Audio",
+  "label": "Audio",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Audio",
+      "data": {
+        "inputTemplate": "p.DamAudio"
+      }
+    },
+    "p.InsertionInfo":{},
+    "atex.Files": {},
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["securityParent", "audio", "name" ,"headline", "summary", "body", "premiumType", "transcriptionText", "transcribeFlag"]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.common.d",
+        "editable":false
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "audio",
+      "label": "Audio",
+      "widget": "damAudio",
+      "config": {
+      },
+      "domainObjects": {
+        "files":"atex.Files"
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "damFieldView",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "damFieldView",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "summary",
+      "label": "Summary",
+      "widget": "damFieldView",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "summary"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "damFieldView",
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "premiumType",
+      "label": "Premium Type",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "premiumType"]
+      }
+    },
+    {
+      "name": "transcriptionText",
+      "label": "Transcription Text",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "transcriptionText"]
+      }
+    },
+    {
+      "name": "transcribeFlag",
+      "label": "Transcribe",
+      "widget": "pCheckbox",
+      "config": {
+        "editable" : false
+      },
+      "domainObjects": {
+        "data": ["contentData", "transcribeFlag"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Field Configurations", "group": "UI"},
   "field-configurations": [
     {
       "id": "default-field-configurations",

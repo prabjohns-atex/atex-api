@@ -1,0 +1,72 @@
+{
+  "_meta": {"name": "Tweet Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Tweet",
+
+  "type": "atex.dam.standard.Tweet",
+  "label": "Tweet",
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Tweet",
+      "data": {
+        "inputTemplate": "p.DamTweet"
+      }
+    },
+    "p.InsertionInfo":{},
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["securityParent", "body"]
+      },
+  
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "body",
+      "label": "Text",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Tweet content"
+      },
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "metadata",
+  	  "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "body": "contentData/body"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["body"]
+      }
+    }
+  ]
+}

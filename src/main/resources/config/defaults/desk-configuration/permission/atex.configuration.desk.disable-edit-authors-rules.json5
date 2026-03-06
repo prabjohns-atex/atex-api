@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Edit Authors Rules", "group": "Permissions"},
   "disable-edit-authors-rules": [
     {
       "id":"always-enable-edit-authors-rules",

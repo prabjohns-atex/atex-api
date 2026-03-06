@@ -1,5 +1,6 @@
 {
-"icons": {
+  "_meta": {"name": "Live Page Preview Configuration - PSeries Override 2.11.0", "group": "Editor"},
+  "icons": {
     "anchor": "fa-thumb-tack",
     "notAnchor": "fa-dot-circle-o",
     "refresh": "fa-refresh"

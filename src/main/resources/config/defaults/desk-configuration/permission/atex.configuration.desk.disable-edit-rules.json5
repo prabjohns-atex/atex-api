@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Edit Rules", "group": "Permissions"},
   "disable-edit-rules":[
     {
       "id":"default-disable-edit-rules",

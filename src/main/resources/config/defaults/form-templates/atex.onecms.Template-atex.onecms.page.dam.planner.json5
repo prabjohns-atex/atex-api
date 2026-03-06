@@ -1,0 +1,45 @@
+{
+  "_meta": {"name": "Page Planner Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Page.dam.planner",
+
+  "type": "atex.dam.standard.Page",
+  "label": "Page",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Page",
+      "data": {
+        "inputTemplate": "p.DamPage"
+      }
+    },
+    "atex.Files": {},
+    "atex.Metadata": {},
+    "prestige.ContentData": {},
+    "atex.print.Page": {}
+  },
+
+
+  "dataBindings": [
+    {
+      "name": "activePreview",
+      "widget": "activePreview",
+      "domainObjects": {
+        "data": ["contentData", "name"],
+        "width": ["contentData", "width"],
+        "height": ["contentData", "height"],
+        "files": ["atex.Files"],
+        "pdata": ["prestige.ContentData"],
+        "printPage": ["atex.print.Page"],
+        "revision": ["revision"]
+      },
+      "config": {
+        "module": "plannerView",
+        "isPage": true,
+        "planView": true,
+        "usePrintServer": true,
+        "liveUpdate": false
+      }
+    }
+  ]
+}

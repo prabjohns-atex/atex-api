@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "General Default Configuration", "group": "System"},
   "sourceProviders": {
     "default": [
       "Finance",

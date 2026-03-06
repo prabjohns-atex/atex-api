@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Facets Panel", "group": "Permissions"},
   "disable-facets-panel-rules":[
     {
       "id":"default-disable-facets-panel-rules",

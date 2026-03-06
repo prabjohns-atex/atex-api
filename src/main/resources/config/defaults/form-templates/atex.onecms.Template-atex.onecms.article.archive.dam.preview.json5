@@ -1,0 +1,108 @@
+{
+  "_meta": {"name": "Archive Article Desk Preview Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.onecms.article.dam.preview",
+
+  "type": "atex.onecms.article",
+  "label": "Archive Article Preview",
+  "namePath": ["contentData", "headline"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.article",
+      "data": {
+        "inputTemplate": "p.DamArticle"
+      }
+    },
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["status", "name", "headline", "body"]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "Publications",
+        "fields": ["publevents"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "editable": false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "damFieldView",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "damFieldView",
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    },
+    {
+      "name": "publevents",
+      "label": "Publication Events",
+      "widget": "pPublicationEvents",
+
+      "config": {
+        "fields": [
+          { "name": "pubdate", "label": "Date", "format": "yyyy-MM-dd"},
+          { "name": "publication", "label": "Publication"},
+          { "name": "edition", "label": "Edition"},
+          { "name": "pagelevel", "label": "Level"},
+          { "name": "page", "label": "Page"}
+        ]
+      },
+
+      "domainObjects": {
+        "data": "atex.dam.standard.Publevents"
+      }
+    }
+  ]
+}

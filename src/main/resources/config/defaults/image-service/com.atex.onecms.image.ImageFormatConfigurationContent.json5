@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Image formats configuration", "group": "System"},
   "_type": "com.atex.onecms.image.ImageFormats",
   "formats": [
     {

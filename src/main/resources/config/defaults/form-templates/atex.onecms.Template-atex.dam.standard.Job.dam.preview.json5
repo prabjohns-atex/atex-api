@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Dam Job Template View", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "atex.dam.standard.Job.dam.preview",
   "type": "atex.dam.standard.Job",
   "label": "Job",

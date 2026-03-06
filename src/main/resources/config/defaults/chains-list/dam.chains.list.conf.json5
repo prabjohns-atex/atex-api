@@ -1,5 +1,6 @@
 {
-	  "chains": [
+  "_meta": {"name": "dam.chains.list.conf", "group": "Ingestion"},
+  "chains": [
 	  	"chain.configuration.demo.content.conf",
 	  	"chain.configuration.image.conf",
 	  	"chain.configuration.reuters.conf",

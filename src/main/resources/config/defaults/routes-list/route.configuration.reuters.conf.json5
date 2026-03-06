@@ -1,5 +1,6 @@
 {
-	  "id":"route.configuration.reuters.conf",
+  "_meta": {"name": "route.configuration.reuters.conf", "group": "Ingestion"},
+  "id":"route.configuration.reuters.conf",
 	  "name":"Reuters Wire Importer",
 	  "errorHandler":"file:{{polopoly.work-dir}}/reuters-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
 	  "threadsPoolSize":"10",

@@ -1,5 +1,6 @@
 {
-	  "field": "icon-coding",
+  "_meta": {"name": "dam.iconcoding.conf", "group": "UI"},
+  "field": "icon-coding",
 	  "icon": "fa fa-star-o",
 	  "selected": "fa fa-star",
 	  "range": "5",

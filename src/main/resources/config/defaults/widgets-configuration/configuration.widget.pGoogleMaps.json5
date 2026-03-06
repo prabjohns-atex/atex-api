@@ -1,5 +1,6 @@
 {
-    "height": "550px",
+  "_meta": {"name": "pGoogleMaps Configuration", "group": "Editor"},
+  "height": "550px",
     "useCurrentLocation": true,
     "gmConfig": {
       "center": {

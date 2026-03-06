@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Dam Task Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "atex.Planning",
   "type": "atex.Planning",
 

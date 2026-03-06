@@ -1,5 +1,6 @@
 {
-	  "configurations": [
+  "_meta": {"name": "dam.routes.list.conf", "group": "Ingestion"},
+  "configurations": [
 	  	"route.configuration.unzip.conf",
 	  	"route.configuration.json.conf",
 	  	"route.configuration.image.conf",

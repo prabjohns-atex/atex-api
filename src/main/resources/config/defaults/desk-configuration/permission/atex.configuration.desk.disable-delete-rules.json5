@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Delete Rules", "group": "Permissions"},
   "disable-delete-rules":[
     {
       "id":"default-disable-delete-rules",

@@ -9,10 +9,7 @@ import com.atex.onecms.content.ContentResult;
 import com.atex.onecms.content.ContentResultBuilder;
 import com.atex.onecms.content.ContentVersionId;
 import com.atex.onecms.content.Status;
-import com.atex.onecms.content.aspects.Aspect;
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import jakarta.annotation.PostConstruct;
 import org.pf4j.PluginManager;
@@ -27,14 +24,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -45,6 +40,9 @@ import java.util.logging.Logger;
  * Scans {@code classpath:config/defaults/} and {@code classpath:config/project/} at startup,
  * plus plugin classloaders for {@code config/project/} resources. All consumers that call
  * {@code ContentManager.resolve(externalId)} get config from resources when no DB content exists.
+ * <p>
+ * Config files may contain a {@code _meta} block at the top level with metadata (display name, etc.)
+ * that is extracted and stored in the {@link ConfigEntry} but stripped from the config data itself.
  */
 @Component
 public class ConfigurationService
@@ -67,32 +65,26 @@ public class ConfigurationService
     private final PluginManager pluginManager;
 
     /**
-     * Cache of external ID → parsed JSON data.
-     * Product defaults loaded first, then overlaid by project configs.
+     * Effective cache: external ID → config entry (data + meta).
+     * Product defaults loaded first, then overlaid by project/plugin/live configs.
      */
-    private final ConcurrentHashMap<String, Map<String, Object>> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ConfigEntry> cache = new ConcurrentHashMap<>();
 
     /**
      * Tracks the source tier of each config for admin/audit.
-     * Values: "product", "project", "plugin"
+     * Values: "product", "project", "plugin", "flavor", "live"
      */
     private final ConcurrentHashMap<String, String> sourceTier = new ConcurrentHashMap<>();
 
     /**
      * Stores the raw product defaults separately so we can compute diffs against live overrides.
      */
-    private final ConcurrentHashMap<String, Map<String, Object>> productDefaults = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ConfigEntry> productDefaults = new ConcurrentHashMap<>();
 
     /**
      * Stores the raw project overrides separately.
      */
-    private final ConcurrentHashMap<String, Map<String, Object>> projectOverrides = new ConcurrentHashMap<>();
-
-    /**
-     * Display names extracted from XML sources by config-sync.py.
-     * Loaded from classpath:config/config-names.properties.
-     */
-    private final ConcurrentHashMap<String, String> configNames = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ConfigEntry> projectOverrides = new ConcurrentHashMap<>();
 
     public ConfigurationService(ConfigProperties properties, @Nullable PluginManager pluginManager)
     {
@@ -143,13 +135,11 @@ public class ConfigurationService
             }
         }
 
-        // 5. Load display names from config-names.properties
-        loadConfigNames(cl);
-
+        long namedCount = cache.values().stream().filter(e -> e.hasName()).count();
         LOG.info("Configuration loaded: " + defaultsCount + " product defaults, "
             + flavorCount + " flavor overrides (" + flavor + "), "
             + projectCount + " project overrides, " + pluginCount + " plugin overrides ("
-            + cache.size() + " total configs, " + configNames.size() + " display names)");
+            + cache.size() + " total configs, " + namedCount + " with display names)");
     }
 
     /**
@@ -161,12 +151,20 @@ public class ConfigurationService
     }
 
     /**
+     * Get the full config entry (data + meta) for the given external ID.
+     */
+    public Optional<ConfigEntry> getEntry(String externalId)
+    {
+        if (!properties.isEnabled()) return Optional.empty();
+        return Optional.ofNullable(cache.get(externalId));
+    }
+
+    /**
      * Get the effective configuration data for the given external ID.
      */
     public Optional<Map<String, Object>> getConfiguration(String externalId)
     {
-        if (!properties.isEnabled()) return Optional.empty();
-        return Optional.ofNullable(cache.get(externalId));
+        return getEntry(externalId).map(ConfigEntry::data);
     }
 
     /**
@@ -174,7 +172,7 @@ public class ConfigurationService
      */
     public Optional<Map<String, Object>> getProductDefault(String externalId)
     {
-        return Optional.ofNullable(productDefaults.get(externalId));
+        return Optional.ofNullable(productDefaults.get(externalId)).map(ConfigEntry::data);
     }
 
     /**
@@ -182,7 +180,7 @@ public class ConfigurationService
      */
     public Optional<Map<String, Object>> getProjectOverride(String externalId)
     {
-        return Optional.ofNullable(projectOverrides.get(externalId));
+        return Optional.ofNullable(projectOverrides.get(externalId)).map(ConfigEntry::data);
     }
 
     /**
@@ -233,13 +231,13 @@ public class ConfigurationService
     @SuppressWarnings("unchecked")
     public <T> ContentResult<T> toContentResultAs(String externalId, Class<T> dataClass)
     {
-        Map<String, Object> data = cache.get(externalId);
-        if (data == null)
+        ConfigEntry entry = cache.get(externalId);
+        if (entry == null)
         {
             return ContentResult.of(null, Status.NOT_FOUND);
         }
 
-        T bean = GSON.fromJson(GSON.toJson(data), dataClass);
+        T bean = GSON.fromJson(GSON.toJson(entry.data()), dataClass);
         ContentVersionId vid = syntheticVersionId(externalId);
         return new ContentResultBuilder<T>()
             .id(vid)
@@ -257,13 +255,13 @@ public class ConfigurationService
     @SuppressWarnings("unchecked")
     public <T> ContentResult<T> toContentResult(String externalId)
     {
-        Map<String, Object> data = cache.get(externalId);
-        if (data == null)
+        ConfigEntry entry = cache.get(externalId);
+        if (entry == null)
         {
             return ContentResult.of(null, Status.NOT_FOUND);
         }
 
-        ConfigurationDataBean bean = toConfigurationDataBean(externalId, data);
+        ConfigurationDataBean bean = entry.toConfigurationDataBean(externalId);
         ContentVersionId vid = syntheticVersionId(externalId);
         return (ContentResult<T>) new ContentResultBuilder<>()
             .id(vid)
@@ -280,10 +278,8 @@ public class ConfigurationService
      */
     public ContentResultDto toContentResultDto(String externalId)
     {
-        Map<String, Object> data = cache.get(externalId);
-        if (data == null) return null;
-
-        ConfigurationDataBean bean = toConfigurationDataBean(externalId, data);
+        ConfigEntry entry = cache.get(externalId);
+        if (entry == null) return null;
 
         ContentResultDto dto = new ContentResultDto();
         dto.setId(CONFIG_DELEGATION_ID + ":" + externalId);
@@ -292,18 +288,44 @@ public class ConfigurationService
         Map<String, AspectDto> aspects = new LinkedHashMap<>();
         AspectDto contentData = new AspectDto();
         contentData.setName("contentData");
-        Map<String, Object> beanMap = new LinkedHashMap<>();
-        beanMap.put("_type", "com.atex.onecms.content.ConfigurationDataBean");
-        beanMap.put("json_type", "java.lang.String");
-        beanMap.put("json", bean.getJson());
-        beanMap.put("dataValue_type", "java.lang.String");
-        beanMap.put("dataValue", bean.getDataValue());
-        beanMap.put("name_type", "java.lang.String");
-        beanMap.put("name", bean.getName());
-        beanMap.put("dataType_type", "java.lang.String");
-        beanMap.put("dataType", bean.getDataType());
-        contentData.setData(beanMap);
-        aspects.put("contentData", contentData);
+
+        // Format depends on _meta.format (matching the original Polopoly input-template):
+        //   atex.onecms.Template.it      → OneCMSTemplateBean: {data: "<json string>"}
+        //   atex.onecms.TemplateList.it   → OneCMSTemplateListBean: {templateList: [...]}
+        //   (default)                     → ConfigurationDataBean: {json: "<json string>", ...}
+        ConfigMeta entryMeta = entry.meta();
+        if (entryMeta != null && entryMeta.isTemplateFormat())
+        {
+            // OneCMSTemplateBean format: template JSON as a string in "data" field
+            Map<String, Object> beanMap = new LinkedHashMap<>();
+            beanMap.put("_type", "com.atex.onecms.app.OneCMSTemplateBean");
+            beanMap.put("data", GSON.toJson(entry.data()));
+            contentData.setData(beanMap);
+        }
+        else if (entryMeta != null && entryMeta.isTemplateListFormat())
+        {
+            // OneCMSTemplateListBean format: list of template external IDs
+            Map<String, Object> beanMap = new LinkedHashMap<>();
+            beanMap.put("_type", "com.atex.onecms.app.OneCMSTemplateListBean");
+            beanMap.put("templateList", entry.contentList() != null ? entry.contentList() : List.of());
+            contentData.setData(beanMap);
+        }
+        else
+        {
+            ConfigurationDataBean bean = entry.toConfigurationDataBean(externalId);
+            Map<String, Object> beanMap = new LinkedHashMap<>();
+            beanMap.put("_type", "com.atex.onecms.content.ConfigurationDataBean");
+            beanMap.put("json_type", "java.lang.String");
+            beanMap.put("json", bean.getJson());
+            beanMap.put("dataValue_type", "java.lang.String");
+            beanMap.put("dataValue", bean.getDataValue());
+            beanMap.put("name_type", "java.lang.String");
+            beanMap.put("name", bean.getName());
+            beanMap.put("dataType_type", "java.lang.String");
+            beanMap.put("dataType", bean.getDataType());
+            contentData.setData(beanMap);
+        }
+
         dto.setAspects(aspects);
 
         MetaDto meta = new MetaDto();
@@ -312,21 +334,6 @@ public class ConfigurationService
         dto.setMeta(meta);
 
         return dto;
-    }
-
-    /**
-     * Build a ConfigurationDataBean wrapping the raw JSON data,
-     * matching the reference Polopoly p.ConfigurationData content type.
-     */
-    private ConfigurationDataBean toConfigurationDataBean(String externalId, Map<String, Object> data)
-    {
-        String jsonString = GSON.toJson(data);
-        ConfigurationDataBean bean = new ConfigurationDataBean();
-        bean.setName(configNames.getOrDefault(externalId, externalId));
-        bean.setJson(jsonString);
-        bean.setDataType("json");
-        bean.setDataValue(jsonString);
-        return bean;
     }
 
     /**
@@ -339,8 +346,8 @@ public class ConfigurationService
         sourceTier.remove(externalId);
 
         // Reload from product defaults and project overrides
-        Map<String, Object> defaults = productDefaults.get(externalId);
-        Map<String, Object> project = projectOverrides.get(externalId);
+        ConfigEntry defaults = productDefaults.get(externalId);
+        ConfigEntry project = projectOverrides.get(externalId);
 
         if (project != null)
         {
@@ -357,10 +364,13 @@ public class ConfigurationService
     /**
      * Update the effective cache with a live (DB) override value.
      * Called by the admin controller when a config is saved to DB.
+     * Preserves existing meta from the file-based entry if available.
      */
     public void setLiveOverride(String externalId, Map<String, Object> data)
     {
-        cache.put(externalId, data);
+        ConfigEntry existing = cache.get(externalId);
+        ConfigMeta meta = existing != null ? existing.meta() : new ConfigMeta(externalId, null, null);
+        cache.put(externalId, new ConfigEntry(data, meta, null));
         sourceTier.put(externalId, "live");
     }
 
@@ -428,21 +438,21 @@ public class ConfigurationService
                     String content = readResource(resource);
                     if (content.isBlank()) continue;
 
-                    Map<String, Object> data = parseJson(content, externalId);
-                    if (data == null) continue;
+                    ConfigEntry entry = parseJson(content, externalId);
+                    if (entry == null) continue;
 
                     // Store in tier-specific maps
                     if ("product".equals(tier))
                     {
-                        productDefaults.put(externalId, data);
+                        productDefaults.put(externalId, entry);
                     }
                     else
                     {
-                        projectOverrides.put(externalId, data);
+                        projectOverrides.put(externalId, entry);
                     }
 
                     // Update effective cache (later tiers override earlier)
-                    cache.put(externalId, data);
+                    cache.put(externalId, entry);
                     sourceTier.put(externalId, tier);
                     count++;
                 }
@@ -467,12 +477,13 @@ public class ConfigurationService
         }
     }
 
-    private Map<String, Object> parseJson(String content, String externalId)
+    private ConfigEntry parseJson(String content, String externalId)
     {
+        Map<String, Object> data;
         try
         {
             // Try standard JSON first
-            return GSON.fromJson(content, MAP_TYPE);
+            data = GSON.fromJson(content, MAP_TYPE);
         }
         catch (Exception e)
         {
@@ -480,7 +491,7 @@ public class ConfigurationService
             try
             {
                 String cleaned = Json5Reader.toJson(content);
-                return GSON.fromJson(cleaned, MAP_TYPE);
+                data = GSON.fromJson(cleaned, MAP_TYPE);
             }
             catch (Exception e2)
             {
@@ -488,33 +499,23 @@ public class ConfigurationService
                 return null;
             }
         }
-    }
 
-    /**
-     * Load display names from config-names.properties (generated by config-sync.py).
-     */
-    private void loadConfigNames(ClassLoader classLoader)
-    {
-        try
+        if (data == null) return null;
+
+        // Extract _meta block if present — stores metadata, strips from config data
+        ConfigMeta meta = ConfigMeta.fromData(data, externalId);
+
+        // Extract _contentList if present — used for template catalog entries
+        List<String> contentList = null;
+        Object clObj = data.remove("_contentList");
+        if (clObj instanceof java.util.List<?> list)
         {
-            ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(classLoader);
-            Resource[] resources = resolver.getResources("classpath*:config/config-names.properties");
-            for (Resource resource : resources)
-            {
-                try (InputStream is = resource.getInputStream())
-                {
-                    java.util.Properties props = new java.util.Properties();
-                    props.load(is);
-                    for (String key : props.stringPropertyNames())
-                    {
-                        configNames.put(key, props.getProperty(key));
-                    }
-                }
-            }
+            contentList = list.stream()
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .toList();
         }
-        catch (IOException e)
-        {
-            LOG.log(Level.FINE, "No config-names.properties found (optional)", e);
-        }
+
+        return new ConfigEntry(data, meta, contentList);
     }
 }

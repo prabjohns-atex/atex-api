@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Web Workflow Statuses", "group": "Workflow"},
   // Web workflow statuses
   // First status is used as default for new content
   "statuses": [

@@ -1,5 +1,6 @@
 {
-	  "id":"processor.configuration.unzip.conf",
+  "_meta": {"name": "processor.configuration.unzip.conf", "group": "Ingestion"},
+  "id":"processor.configuration.unzip.conf",
       "name":"Unzip Processor",
       "classPath":"com.atex.onecms.app.dam.camel.processor.folder.UnzipProcessor",
       "method":"process",

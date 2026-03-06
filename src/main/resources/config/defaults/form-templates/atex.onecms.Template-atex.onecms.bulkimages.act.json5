@@ -1,0 +1,198 @@
+{
+  "_meta": {"name": "BulkImages Act Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.BulkImages.act",
+  "type": "atex.dam.standard.BulkImages",
+  "label": "Upload Images",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.BulkImages",
+      "data": {
+        "inputTemplate": "p.BulkImages"
+      }
+    },
+    "p.InsertionInfo":{},
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views":[
+      {
+        "label": "TEMPLATE.TAB.CONTENT",
+        "fields": [
+          "source",
+          "description",
+          "caption"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": [
+          "metadata"
+        ]
+      },
+      {
+        "label": "TEMPLATE.TAB.MEDIA",
+        "fields": ["images"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "gallery-example",
+      "widget": "pGalleryExpanded",
+      "config": {
+        "pGalleryFieldsEdit": [
+          {
+            "simple" : true,
+            "label" : "TEMPLATE.FIELD.HEADLINE",
+            "fieldName": "headline",
+            "loadSourceValue": true
+          },
+          {
+            "simple" : true,
+            "label" : "TEMPLATE.FIELD.CAPTION",
+            "fieldName": "caption",
+            "loadSourceValue": true
+          },
+          {
+            "simple" : false,
+            "label" : "TEMPLATE.FIELD.DESCRIPTION",
+            "fieldName": "description",
+            "loadSourceValue": true
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": ["contentData", "contents"]
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+
+      "config": {
+      },
+
+      "domainObjects": {
+        "data": "contentData/name"
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "The Collection Headline"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.DESCRIPTION_PH"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "caption",
+      "label": "TEMPLATE.FIELD.CAPTION",
+      "widget": "pTextInput",
+
+      "config": {
+      },
+
+      "domainObjects": {
+        "data": "contentData/caption"
+      }
+    },
+    {
+      "name": "images",
+      "label": "TEMPLATE.FIELD.IMAGESRESOURCES",
+      "widget": "pResourceArea",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"},
+          "video/quicktime": "atex.dam.standard.Video",
+          "video/mp4": "atex.dam.standard.Video"
+        },
+        "allowedTypes": ["atex.onecms.image", "atex.dam.standard.Video"],
+        "imageMetadata": {
+          "atex.onecms.image": {
+            "extraction": true,
+            "fieldMappings": [
+              {
+                "source": "title",
+                "target": "contentData/title"
+              },
+              {
+                "source": "tags/EXIF/Copyright",
+                "target": "contentData/description"
+              },
+              {
+                "source": "byline",
+                "target": "contentData/byline"
+              }
+            ]
+          }
+        }
+      },
+      "domainObjects": {
+        "data": ["contentData", "contents"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo",
+        "title": "contentData/title",
+        "body": "contentData/description"
+      },
+      "config": {
+        "toggle": true,
+        "annotation": false,
+        "dimensions": [
+          "dimension.Tag",
+          "dimension.Organisation",
+          "dimension.Location",
+          "dimension.Person",
+          "dimension.EditorialTag"
+        ],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2,
+        "annotationConfig": {
+          "mapping": {
+            "dimension.Tag": "dimension.Tag",
+            "dimension.Organisation": "dimension.Organisation",
+            "dimension.Location": "dimension.Location",
+            "dimension.Person": "dimension.Person"
+          }
+        }
+      }
+    },
+    {
+      "name": "source",
+      "label": "TEMPLATE.FIELD.SOURCE",
+      "widget": "pTextInput",
+      "domainObject": "contentData/source"
+    }
+  ]
+}

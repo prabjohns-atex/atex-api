@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Facets", "group": "UI"},
   "facets": [
     {
       "id": "default-facets-list",

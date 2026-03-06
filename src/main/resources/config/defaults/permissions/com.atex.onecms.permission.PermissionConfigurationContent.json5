@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Permission Configuration", "group": "Permissions"},
   "_type": "com.atex.gong.permission.PermissionConfigurationBean",
   "groups": [
     {

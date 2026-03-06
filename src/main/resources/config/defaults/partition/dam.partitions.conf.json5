@@ -1,5 +1,6 @@
 {
-   "partitions": [
+  "_meta": {"name": "dam.partitions.conf", "group": "System"},
+  "partitions": [
         {
           "partition":"common",
           "icon":"fa fa-archive",

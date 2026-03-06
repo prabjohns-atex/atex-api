@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Queues Panel - PSeries Override 2.11.0", "group": "Permissions"},
   "disable-queues-panel-rules":[
     {
       "id":"default-disable-queues-panel-rules",

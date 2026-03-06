@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Search Fields", "group": "UI"},
   "search-fields": [
     {
       "id": "default-search-fields",

@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Search Options", "group": "UI"},
   "search-options":[
     {
       "id":"default-search-options",

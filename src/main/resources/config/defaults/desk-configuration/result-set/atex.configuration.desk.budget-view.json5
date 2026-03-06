@@ -1,5 +1,6 @@
 {
-       	"budget-view": [{
+  "_meta": {"name": "Budget view - Override V2.5.0", "group": "UI"},
+  "budget-view": [{
        		"id": "default-budget-view",
        		"description": "Budget View - Default Configuration",
        		"config": {

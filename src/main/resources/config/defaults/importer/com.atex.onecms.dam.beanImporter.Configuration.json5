@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Import Configuration", "group": "Ingestion"},
   // this flags determines whether the system should use the configuration for setting the Status and Web status
   //  if true any status configuration in this file is ignoted
   "usePublicationStatusConfiguration": true,

@@ -1,0 +1,146 @@
+{
+  "_meta": {"name": "Collection Desk Read Only Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Collection.readonly",
+  "hidden":true,
+
+  "type": "atex.dam.standard.Collection",
+  "label": "Collection",
+  "namePath": ["contentData", "headline"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Collection",
+      "data": {
+        "inputTemplate": "p.Collection"
+      }
+    },
+    "atex.Metadata": {
+    },
+    "p.InsertionInfo":{
+    }
+  },
+	
+  "layout": {
+    "views": [
+      {
+        "label": "General Information",
+        "fields": ["securityParent", "name", "headline", "description","premiumType"]
+      },
+      {
+        "label": "Collection",
+        "fields": ["images", "links"]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+        "editable":false
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "name",
+      "label": "Collection Name",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "images",
+      "label": "Images & Resources",
+      "widget": "pResourceArea",
+      "config": {
+        "pasteEnabled":false
+      },
+      "domainObjects": {
+        "data": ["contentData", "contents"]
+      }
+    },
+    {
+      "name": "links",
+      "label": "Suggest Resources",
+      "widget": "damCollectionLinks",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"},
+          "video/quicktime": "atex.dam.standard.Video",
+          "video/mp4": "atex.dam.standard.Video"
+        },
+        "allowedTypes": ["atex.onecms.image", "atex.dam.standard.Video"]
+      },
+      "domainObjects": {
+        "data": ["contentData", "contents"]
+      }
+    },
+    {
+      "name": "premiumType",
+      "label": "Premium Type",
+      "widget": "pSelect",
+      "config": {
+        "defaultValue" : "inherit",
+        "options" :
+        [
+          {
+            "label" : "Inherit from section",
+            "id" : "inherit"
+          },
+          {
+            "label" : "Free",
+            "id" : "free"
+          },
+          {
+            "label" : "Premium",
+            "id" : "premium"
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": ["contentData", "premiumType"]
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "annotation": false,
+        "editable":false
+      }
+    }
+  ]
+}
+  

@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Folder Filters", "group": "UI"},
   "folder-filters":[
     {
       "id":"default-folder-filters",

@@ -1,0 +1,74 @@
+{
+  "_meta": {"name": "Instagram Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Instagram",
+
+  "type": "atex.dam.standard.Instagram",
+  "label": "Instagram",
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Instagram",
+      "data": {
+        "inputTemplate": "p.DamInstagram"
+      }
+    },
+    "p.InsertionInfo":{},
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["securityParent", "caption"]
+      },
+  
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "imgView",
+      "widget": "damExtImgView",
+      "domainObjects": {
+        "data": ["contentData", "url"]
+      }
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Instagram caption"
+      },
+      "domainObjects": {
+        "data": ["contentData", "caption"]
+      }
+    },
+    {
+      "name": "metadata",
+  	  "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "body": "contentData/caption"
+      }
+    }
+  ]
+}

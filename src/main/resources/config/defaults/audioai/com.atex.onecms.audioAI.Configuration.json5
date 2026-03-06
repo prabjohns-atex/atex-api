@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "AudioAI Configuration", "group": "Integrations"},
   "defaults": {
 
     // by default the audio ai is disabled

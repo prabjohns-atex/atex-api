@@ -1,5 +1,6 @@
 {
-	 "configurations": [],
+  "_meta": {"name": "dam.camelroutes.conf", "group": "Ingestion"},
+  "configurations": [],
 	  "_type": "com.atex.onecms.app.dam.camel.DamCamelRoutesBean",
 	  "objectType": "CamelRoutes",
 	  "inputTemplate": "p.DamCamelRoutes",

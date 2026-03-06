@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "ACT Disable Publish Rules - PSeries Override 2.11.0", "group": "Permissions"},
   "disable-publish-rules":[
     {
       "id":"default-disable-publish-rules",

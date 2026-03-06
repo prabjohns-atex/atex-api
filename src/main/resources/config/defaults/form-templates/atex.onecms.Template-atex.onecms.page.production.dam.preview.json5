@@ -1,0 +1,109 @@
+{
+  "_meta": {"name": "Production Page Desk Preview Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Page.dam.preview",
+
+  "type": "atex.dam.standard.Page",
+  "label": "Page",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Page",
+      "data": {
+        "inputTemplate": "p.OnePage"
+      }
+    },
+    "atex.Files": {},
+    "atex.Metadata": {},
+    "atex.WFContentStatus": {},
+    "prestige.ContentData": {},
+    "atex.print.Page": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["activePreview", "name", "status", "deadlineStatus"]
+      },
+
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "imgView",
+      "widget": "damImgView",
+      "domainObjects": {
+        "files": ["atex.Files"],
+        "revision": ["revision"]
+      }
+    },
+    {
+      "name": "activePreview",
+      "widget": "activePreview",
+      "domainObjects": {
+        "data": ["contentData", "name"],
+        "width": ["contentData", "width"],
+        "height": ["contentData", "height"],
+        "files": ["atex.Files"],
+        "contentStatus": ["atex.WFContentStatus"],
+        "pdata": ["prestige.ContentData"],
+        "printPage": ["atex.print.Page"],
+        "publevents": ["atex.dam.standard.Publevents"],
+        "revision": ["revision"]
+      },
+      "config": {
+        "module": "previewView",
+        "isPage": true,
+        "usePrintServer": true,
+        "liveUpdate": false
+      }
+    },
+    {
+      "name": "status",
+      "widget": "pContentStatus",
+      "config": {
+        "editable": false,
+        "showComment" : false
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "deadlineStatus",
+      "widget": "pDeadlineStatus",
+      "config": {
+        "format":"dd MMM yyyy  HH:mm"
+      },
+      "domainObjects": {
+        "deadline": ["atex.print.Deadline"]
+      }
+    },
+    {
+      "name": "name",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

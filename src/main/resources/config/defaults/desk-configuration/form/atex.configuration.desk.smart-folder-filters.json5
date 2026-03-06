@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Smart Folder Filters", "group": "UI"},
   "smart-folder-filters":[
     {
       "id":"default-smart-folder-filters",

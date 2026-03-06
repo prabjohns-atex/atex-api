@@ -1,0 +1,273 @@
+{
+  "_meta": {"name": "Archive Image Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.onecms.image",
+
+  "type": "atex.onecms.image",
+  "label": "Archive Image",
+  "namePath": ["contentData", "title"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.image",
+      "data": {
+        "inputTemplate": "p.DamImage"
+      }
+    },
+    "atex.Files": {},
+    "atex.ImageEditInfo": {},
+    "atex.Image": {},
+    "atex.Metadata": {},
+    "atex.ImageMetadata": {},
+    "atex.dam.standard.Publevents": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["securityParent", "status", "title", "caption", "description", "image", "byline", "specialInstructions", "markForArchive", "urgency"]
+      },
+
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      },
+      {
+        "label": "Exif/Xmp/Iptc",
+        "fields": ["exifMetadata"]
+      },
+      {
+        "label": "Planning",
+        "fields": ["planning"]
+      },
+      {
+        "label": "Publications",
+        "fields": ["publevents"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.common.d"
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "commentPlaceholder" : "Comment"
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+
+    {
+      "name": "title",
+      "label": "Title",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "The Image Title"
+      },
+      "domainObjects": {
+        "data": ["contentData", "title"]
+      }
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "widget": "pTextArea",
+      "config": {
+        "placeholder": "The Image Caption"
+      },
+      "domainObjects": {
+        "data": ["contentData", "caption"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "pTextArea",
+      "config": {
+        "label": "TEMPLATE.FIELD.DESCRIPTION_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "image",
+      "label": "Image",
+      "widget": "pImageEditor",
+
+      "config": {
+        "imageMetadata": {
+          "extraction": true,
+          "fieldMappings": [
+            {
+              "source": "title",
+              "target": "title"
+            },
+            {
+              "source": "tags/EXIF/Copyright",
+              "target": "description",
+              "overwrite": true
+            }
+          ]
+        }
+      },
+
+      "domainObjects": {
+        "files": ["atex.Files"],
+        "editInfo": ["atex.ImageEditInfo"],
+        "image": ["atex.Image"],
+        "metadata": "atex.ImageMetadata",
+        "title": "contentData/title",
+        "description": "contentData/description"
+      }
+    },
+    {
+      "name": "byline",
+      "label": "By-line",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "full": false,
+        "tags": {
+          "IPTC": ["By-line"],
+          "IPTC_types":["java.lang.String"]
+        }
+      }
+    },
+    {
+      "name": "specialInstructions",
+      "label": "Special Instructions",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "full": false,
+        "tags": {
+          "IPTC": ["SpecialInstructions"],
+          "IPTC_types":["java.lang.String"]
+        }
+      }
+    },
+    {
+      "name": "markForArchive",
+      "label": "Mark for Archive",
+      "widget": "pCheckbox",
+      "config": {
+        "checkboxLabel": "Ok to Archive",
+        "defaultValue" : false
+      },
+      "domainObjects": {
+        "data": "contentData/markForArchive"
+      }
+    },
+    {
+      "name": "urgency",
+      "label": "Urgency",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "full": false,
+        "tags": {
+          "IPTC": ["Urgency"],
+          "IPTC_types":["java.lang.Double"]
+        }
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+
+        "caption": "contentData/caption",
+        "description": "contentData/description"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["caption", "description"]
+      }
+    },
+    {
+      "name": "exifMetadata",
+      "label": "Exif/Xmp/Iptc",
+      "widget": "pExifMetadata",
+
+      "domainObjects": {
+        "data": "atex.ImageMetadata"
+      },
+      "config": {
+        "editable": true,
+        "tags": {
+          "general": ["title", "byline", "description", "imageHeight", "imageWidth"],
+          "general_types":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String"],
+          "IPTC": ["Test","By-line", "Caption-Abstract", "City", "Credit", "Headline", "ObjectName", "Source", "SpecialInstructions", "Urgency"],
+          "IPTC_types":["java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.String","java.lang.Double"]
+        }
+      }
+    },
+    {
+      "name": "planning",
+      "widget": "pDamTask",
+
+      "config": {
+        "editable":false,
+        "types" : [{"label":"Article","value":"article"},{"label":"Image","value":"image"},{"label":"Images","value":"images"},{"label":"Video","value":"video"}],
+        "ratios": [{"label":"4:3 standard","value":"4:3 standard"},{"label":"16:9 standard","value":"16:9 standard"},{"label":"21:9","value":"21:9"},{"label":"18:9 (2:1)","value":"18:9 (2:1)"}],
+        "measurementUnit":"characters"
+      },
+
+      "domainObjects": {
+        "data": "atex.Planning"
+      }
+    },
+    {
+      "name": "publevents",
+      "label": "Publication Events",
+      "widget": "pPublicationEvents",
+
+      "config": {
+        "fields": [
+          { "name": "pubdate", "label": "Date", "format": "YYYY-MM-DD"},
+          { "name": "publication", "label": "Publication", "lookupField": "publication"},
+          { "name": "edition", "label": "Edition", "lookupField": "edition"},
+          { "name": "pagelevel", "label": "Level", "lookupField": "pagelevel"},
+          { "name": "page", "label": "Page"}
+        ]
+      },
+
+      "domainObjects": {
+        "data": "atex.dam.standard.Publevents"
+      }
+    }
+  ]
+}

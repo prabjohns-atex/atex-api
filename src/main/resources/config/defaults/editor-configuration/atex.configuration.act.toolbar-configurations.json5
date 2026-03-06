@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Toolbars List", "group": "Editor"},
   "toolbar-configurations": [
     {
       "id": "default-toolbar-configurations",

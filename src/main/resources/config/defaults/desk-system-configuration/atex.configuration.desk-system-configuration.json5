@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk System Configuration", "group": "System"},
   "midnightShiftHours": 0,
 
   "statistics": {

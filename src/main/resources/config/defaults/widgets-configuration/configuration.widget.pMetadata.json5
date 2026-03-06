@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "pMetadata Configuration", "group": "Editor"},
   "imageTaggingService": {
     "enable": false,
     "tags": "dimension.Tag",

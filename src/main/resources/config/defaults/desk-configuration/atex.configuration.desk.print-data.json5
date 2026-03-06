@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Exclude Sites", "group": "UI"},
   "print-data":[
     {
       "id":"default-print-data",

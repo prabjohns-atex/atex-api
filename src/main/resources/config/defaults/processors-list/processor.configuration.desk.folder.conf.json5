@@ -1,5 +1,6 @@
 {
-	  "id":"processor.configuration.desk.folder.conf",
+  "_meta": {"name": "processor.configuration.desk.folder.conf", "group": "Ingestion"},
+  "id":"processor.configuration.desk.folder.conf",
 	  "name":"Assign to Desk Folder Processor",
 	  "classPath":"com.atex.onecms.app.dam.camel.processor.folder.DeskFolderProcessor",
 	  "method":"process",

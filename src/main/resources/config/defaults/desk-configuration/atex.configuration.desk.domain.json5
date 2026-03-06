@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Domains", "group": "UI"},
   "homeVsDomain" : {
   	"PolopolyPost.d": "dam.assets.d"
   },

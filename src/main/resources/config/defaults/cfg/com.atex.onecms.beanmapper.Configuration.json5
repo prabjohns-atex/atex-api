@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Bean Mapper Configuration", "group": "System"},
   "enabled": true,
   "handlers": {
     "atex.onecms.article": {

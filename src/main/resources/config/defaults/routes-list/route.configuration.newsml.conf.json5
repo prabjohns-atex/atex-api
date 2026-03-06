@@ -1,5 +1,6 @@
 {
-	  "id":"route.configuration.newsml.conf",
+  "_meta": {"name": "route.configuration.newsml.conf", "group": "Ingestion"},
+  "id":"route.configuration.newsml.conf",
 	  "name":"Newsml Wire Importer",
 	  "errorHandler":"file:{{polopoly.work-dir}}/newsml-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
 	  "threadsPoolSize":"10",

@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Permission Configuration Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "act.template.PermissionConfiguration.edit",
   "type": "com.atex.gong.configuration.PermissionConfigurationBean",
   "label": "Permission Configuration",

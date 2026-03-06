@@ -1,0 +1,404 @@
+{
+  "_meta": {"name": "Production Article Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.onecms.article",
+
+  "type": "atex.onecms.article",
+  "label": "Production Article",
+  "namePath": ["contentData", "headline"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.article",
+      "data": {
+        "inputTemplate": "p.NosqlArticle"
+      }
+    },
+    "atex.Metadata": {},
+    "atex.WFContentStatus": {},
+    "atex.WebContentStatus": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["name", "status", "webStatus", "headline", "lead", "body", "byline", "priority", "locations"]
+      },
+      {
+        "label": "TEMPLATE.TAB.MEDIAFILES",
+        "fields": ["images", "resources"]
+      },
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["associatedSites", "act-editors", "metadata"]
+      },
+      {
+        "label": "TEMPLATE.TAB.SOCIALMANAGER",
+        "fields": ["social-manager", "ogTitle", "ogDescription", "ogImages"]
+      },
+      {
+        "label": "TEMPLATE.TAB.ANALYTICS",
+        "fields": ["analytics"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.ARTICLEEDIT.NAME_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/name"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.ARTICLEEDIT.OPENGRAPHTITLE",
+      "name": "ogTitle",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.ARTICLEEDIT.OPENGRAPHTITLE_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/ogTitle"
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "gongCKEditor",
+
+      "config": {
+        "ckConfig": {
+          "height": 100,
+          "disableNativeSpellChecker": false,
+          "extraPlugins": "notes",
+          "toolbarGroups": [
+            { "name": "document",	 "groups": [ "mode", "document", "doctools" ] },
+            { "name": "clipboard",   "groups": [ "clipboard", "undo" ] },
+            { "name": "editing",     "groups": [ "find", "selection", "spellchecker" ] },
+            { "name": "notes" },
+            { "name": "basicstyles", "groups": [ "basicstyles", "cleanup" ] },
+            { "name": "paragraph",   "groups": [ "list", "indent", "blocks", "align" ] },
+            { "name": "links" },
+            { "name": "styles",      "groups": [ "format" ] },
+            { "name": "others" }
+          ],
+          "removeButtons": "Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript",
+          "removeDialogTabs": "link:advanced"
+        },
+
+        "externalPlugins": [
+          {
+            "names": "notes",
+            "path": "/onecms/polopoly_fs/ckeditor.plugins.notes!/notes/",
+            "fileName": "plugin.js"
+          }
+        ]
+      },
+
+      "domainObjects": {
+        "data": "contentData/headline"
+      }
+    },
+    {
+      "name": "lead",
+      "label": "TEMPLATE.FIELD.LEAD",
+      "widget": "gongCKEditor",
+
+      "config": {
+        "ckConfig": {
+          "height": 100,
+          "disableNativeSpellChecker": false,
+          "extraPlugins": "notes",
+          "toolbarGroups": [
+            { "name": "document",	 "groups": [ "mode", "document", "doctools" ] },
+            { "name": "clipboard",   "groups": [ "clipboard", "undo" ] },
+            { "name": "editing",     "groups": [ "find", "selection", "spellchecker" ] },
+            { "name": "notes" },
+            { "name": "basicstyles", "groups": [ "basicstyles", "cleanup" ] },
+            { "name": "paragraph",   "groups": [ "list", "indent", "blocks", "align" ] },
+            { "name": "links" },
+            { "name": "styles",      "groups": [ "format" ] },
+            { "name": "others" }
+          ],
+          "removeButtons": "Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript",
+          "removeDialogTabs": "link:advanced"
+        },
+
+        "externalPlugins": [
+          {
+            "names": "notes",
+            "path": "/onecms/polopoly_fs/ckeditor.plugins.notes!/notes/",
+            "fileName": "plugin.js"
+          }
+        ]
+      },
+
+      "domainObjects": {
+        "data": "contentData/lead"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.ARTICLEEDIT.OPENGRAPHDESCRIPTION",
+      "name": "ogDescription",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.ARTICLEEDIT.OPENGRAPHDESCRIPTION_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/ogDescription"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.ARTICLEEDIT.PRIORITY",
+      "name": "priority",
+      "widget": "newsValue",
+      "config": {
+        "defaultValue" : 3,
+        "values": {
+          "1": 1,
+          "2": 2,
+          "3": 3,
+          "4": 4,
+          "5": 5
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/priority"
+      }
+    },
+    {
+      "name": "body",
+      "label": "TEMPLATE.FIELD.BODY",
+      "widget": "gongCKEditor",
+
+      "config": {
+        "ckConfig": {
+          "height": 400,
+          "disableNativeSpellChecker": false,
+          "extraPlugins": "notes",
+          "toolbarGroups": [
+            { "name": "document",	 "groups": [ "mode", "document", "doctools" ] },
+            { "name": "clipboard",   "groups": [ "clipboard", "undo" ] },
+            { "name": "editing",     "groups": [ "find", "selection", "spellchecker" ] },
+            { "name": "notes" },
+            { "name": "basicstyles", "groups": [ "basicstyles", "cleanup" ] },
+            { "name": "paragraph",   "groups": [ "list", "indent", "blocks", "align" ] },
+            { "name": "links" },
+            { "name": "styles",      "groups": [ "format" ] },
+            { "name": "others" }
+          ],
+          "removeButtons": "Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript",
+          "removeDialogTabs": "link:advanced"
+        },
+
+        "externalPlugins": [
+          {
+            "names": "notes",
+            "path": "/onecms/polopoly_fs/ckeditor.plugins.notes!/notes/",
+            "fileName": "plugin.js"
+          }
+        ]
+      },
+
+      "domainObjects": {
+        "data": "contentData/body"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.BYLINE",
+      "name": "byline",
+      "widget": "pTextInput",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.BYLINE_PH"
+      },
+
+      "domainObjects": {
+        "data": "contentData/byline"
+      },
+
+      "default" : {
+        "expression" : "currentUser.fullName"
+      }
+    },
+    {
+      "name": "locations",
+      "label": "TEMPLATE.FIELD.LOCATIONS",
+      "widget": "pGoogleMaps",
+
+      "config": {
+        "height": "550px",
+        "editable": true,
+
+        "gmConfig": {
+          "center": {
+            "lat": 52.633872,
+            "lng": 1.294744
+          }
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/locations"
+      }
+    },
+    {
+      "name": "images",
+      "label": "TEMPLATE.FIELD.IMAGES",
+      "widget": "pResourceArea",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/images"
+      }
+    },
+    {
+      "name": "resources",
+      "label": "TEMPLATE.FIELD.ARTICLEEDIT.OTHERMEDIAFILES",
+      "widget": "pResourceArea",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"},
+          "video/quicktime": "com.atex.plugins.video.VideoContentDataBean",
+          "video/mp4": "com.atex.plugins.video.VideoContentDataBean"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/resources"
+      }
+    },
+    {
+      "name": "associatedSites",
+      "label": "TEMPLATE.FIELD.ARTICLEEDIT.ASSOCIATEDSITES",
+      "widget": "pAssociatedSites",
+
+      "domainObjects": {
+        "associatedSites": "p.InsertionInfo/associatedSites",
+        "taxonomyIds": "atex.Metadata/taxonomyIds"
+      }
+    },
+    {
+      "name": "ogImages",
+      "label": "TEMPLATE.FIELD.ARTICLEEDIT.OPENGRAPHIMAGE",
+      "widget": "pResourceArea",
+      "config": {
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/ogImages"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.ARTICLEEDIT.FACEBOOKPREVIEW",
+      "name": "facebookPreview",
+      "widget": "facebookPreview",
+
+      "domainObjects": {
+        "title": "contentData/title",
+        "lead": "contentData/lead",
+        "body": "contentData/body",
+        "socialTitle": "contentData/ogTitle",
+        "socialLead": "contentData/ogDescription",
+        "associatedSites": "p.InsertionInfo/associatedSites",
+        "socialImages": "contentData/ogImages",
+        "images": "contentData/images"
+      }
+    },
+    {
+      "name": "act-editors",
+      "label": "TEMPLATE.FIELD.ACTEDITORS",
+      "widget": "pUsersList",
+      "config": {
+        "editable": true,
+        "placeholder": "TEMPLATE.FIELD.ACTEDITORS_PH",
+        "dimension": "dimension.sendto.Users"
+      },
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": ["atex.Metadata"],
+        "body": ["contentData", "body"]
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["body"],
+        "extraDimensions":["dimension.sendto.Users"]
+      }
+    },
+    {
+      "name": "status",
+      "label": "TEMPLATE.FIELD.STATUS",
+      "widget": "pContentStatus",
+      "config": {
+        "commentPlaceholder" : "TEMPLATE.FIELD.STATUS_COMMENT_PH"
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "webStatus",
+      "label": "TEMPLATE.FIELD.WEBSTATUS",
+      "widget": "pContentStatus",
+      "config": {
+        "commentPlaceholder": "TEMPLATE.FIELD.STATUS_COMMENT_PH",
+        "statusList": "atex.WebStatusList",
+        "initialStatus": "atex.WebInitialStatus"
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WebContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.ARTICLEEDIT.SOCIALMANAGER",
+      "name": "social-manager",
+      "widget": "socialManagerWidget",
+
+      "config": {
+        "selectFirstAccount": true
+      },
+
+      "domainObjects": {
+        "data": "com.atex.plugins.social.manager.SocialManagerAspect"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.ARTICLEEDIT.ANALYTICS",
+      "name": "analytics",
+      "widget": "pAnalytics",
+
+      "config": {
+        "dimension": "dimension4",
+        "title": "Page views since creation"
+      }
+
+    }
+  ]
+}

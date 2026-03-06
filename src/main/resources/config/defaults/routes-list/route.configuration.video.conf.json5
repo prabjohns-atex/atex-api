@@ -1,5 +1,6 @@
 {
-	  "id":"route.configuration.video.conf",
+  "_meta": {"name": "route.configuration.video.conf", "group": "Ingestion"},
+  "id":"route.configuration.video.conf",
 	  "name":"Video Importer",
 	  "errorHandler":"file:{{polopoly.work-dir}}/video-failed-imports/?fileName=${date:now:yyyy.MM.dd.HH.mm.ss}-${file:name}",
 	  "threadsPoolSize":"10",

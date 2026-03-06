@@ -1,5 +1,6 @@
 {
-	  "id":"chain.configuration.image.conf",
+  "_meta": {"name": "chain.configuration.image.conf", "group": "Ingestion"},
+  "id":"chain.configuration.image.conf",
 	  "routes": [
 	    "route.configuration.image.conf"
 	 	],

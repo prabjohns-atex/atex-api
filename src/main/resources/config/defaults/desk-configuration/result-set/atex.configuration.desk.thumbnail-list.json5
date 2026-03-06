@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Thumbnail List", "group": "UI"},
   "thumbnail-list": [
     {
       "id": "default-thumbnail-list",

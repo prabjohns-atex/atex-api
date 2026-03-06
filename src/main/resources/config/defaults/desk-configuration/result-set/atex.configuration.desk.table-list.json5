@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Table List", "group": "UI"},
   "table-list": [
     {
       "id": "default-table-list",

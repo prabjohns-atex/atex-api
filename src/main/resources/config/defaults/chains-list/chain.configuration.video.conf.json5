@@ -1,5 +1,6 @@
 {
-	  "id":"chain.configuration.video.conf",
+  "_meta": {"name": "chain.configuration.video.conf", "group": "Ingestion"},
+  "id":"chain.configuration.video.conf",
 	  "routes": [
 	    "route.configuration.video.conf"
 	 	],

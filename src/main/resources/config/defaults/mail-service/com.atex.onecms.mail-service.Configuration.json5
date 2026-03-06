@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Mail Service Configuration", "group": "Integrations"},
   "mailServer": {
     // simple validation regular expression
     "validation": "^.+@(?!\\.)\\S+\\.\\S+$",

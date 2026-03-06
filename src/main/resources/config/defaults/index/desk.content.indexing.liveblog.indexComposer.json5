@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "desk.content.indexing.liveblog.indexComposer", "group": "Search"},
   "_type":"com.atex.onecms.content.mapping.MappingConfigBean",
   "converterClass":"com.atex.onecms.app.dam.indexing.LiveBlogIndexComposer",
   "customConfig":{

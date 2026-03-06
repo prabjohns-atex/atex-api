@@ -1,0 +1,80 @@
+{
+  "_meta": {"name": "Wire Article Desk Preview Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.onecms.article.dam.preview",
+
+  "type": "atex.onecms.article",
+  "label": "Wire Article Preview",
+  "namePath": ["contentData", "headline"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.onecms.article",
+      "data": {
+        "inputTemplate": "p.DamWireArticle"
+      }
+    },
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["source", "creationdate", "headline", "body"]
+      },
+
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "source",
+      "label": "Source",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "source"]
+      }
+    },
+    {
+      "name": "creationdate",
+      "label": "Date",
+      "widget": "pDateTimePicker",
+      "domainObjects": {
+        "data": ["contentData", "creationdate"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "damFieldView",
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "widget": "damDraggableFieldView",
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      },
+
+      "config": {
+        "editable": false
+      }
+    }
+  ]
+}

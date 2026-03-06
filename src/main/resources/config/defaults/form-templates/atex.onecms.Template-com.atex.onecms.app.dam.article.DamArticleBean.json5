@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "DamArticle Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "atex.dam.standard.Article",
   "type": "atex.dam.standard.Article",
   "label": "Dam Article",

@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "DamWireArticle Template View", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "atex.dam.standard.WireArticle.dam.preview",
   "type": "atex.dam.standard.WireArticle",
   "label": "Dam Wire",

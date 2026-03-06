@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Editor Configuration Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "act.template.EditorConfiguration.view",
   "type": "com.atex.gong.configuration.EditorConfigurationBean",
   "label": "Editor Configuration",

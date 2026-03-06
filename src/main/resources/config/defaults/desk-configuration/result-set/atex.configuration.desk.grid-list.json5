@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Grid List", "group": "UI"},
   "grid-list": [
     {
       "id": "default-grid-list",

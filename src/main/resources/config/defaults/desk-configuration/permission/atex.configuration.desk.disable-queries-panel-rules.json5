@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Queries Panel", "group": "Permissions"},
   "disable-queries-panel-rules":[
     {
       "id":"default-disable-queries-panel-rules",

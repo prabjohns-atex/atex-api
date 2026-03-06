@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk print", "group": "UI"},
   "print": [
     {
       "id": "default-print-configuration",

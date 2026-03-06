@@ -1,5 +1,6 @@
 {
-	  "id":"processor.configuration.json.conf",
+  "_meta": {"name": "processor.configuration.json.conf", "group": "Ingestion"},
+  "id":"processor.configuration.json.conf",
 	  "name":"JSON Importer Processor",
 	  "classPath":"com.atex.onecms.app.dam.camel.processor.JsonToDeskProcessor",
 	  "method":"",

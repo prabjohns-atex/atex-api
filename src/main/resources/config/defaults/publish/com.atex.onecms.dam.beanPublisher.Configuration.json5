@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Publish Configuration", "group": "Publishing"},
   // use the status attributes to signal an online content.
   // "useAttributesForWebStatus": true,
 

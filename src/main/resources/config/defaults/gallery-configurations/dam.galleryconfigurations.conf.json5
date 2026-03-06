@@ -1,5 +1,6 @@
 {
-	  "field": "gallery-configurations",
+  "_meta": {"name": "dam.galleryconfigurations.conf", "group": "UI"},
+  "field": "gallery-configurations",
 	  "configurations": [ 
 	  	{
 	  		"id"   :"0",

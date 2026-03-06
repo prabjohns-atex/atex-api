@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Editor Configuration", "group": "Editor"},
   "_type": "com.atex.gong.configuration.EditorConfigurationBean",
   "contentTypes": [
     {

@@ -1,0 +1,56 @@
+{
+  "_meta": {"name": "Change Folios Values", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.changeFoliosPropertyBag",
+
+  "type": "",
+  "label": "",
+  "namePath": ["contentData", "name"],
+
+  "multiPageCopyPaths": [
+    "data/aspects/contentData/data/propertyBag"
+  ],
+
+  "layout": {
+    "views": [
+      {
+        "label": "Change Folios Values",
+        "fields": ["folioOne", "folioTwo"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "folioOne",
+      "label": "Folio 1",
+      "widget": "pProperties",
+      "config": {
+        "placeholder": "Folio 1",
+        "editable": true,
+        "tags": {
+          "custom": ["folioOne"],
+          "custom_types": ["java.lang.String"]
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/propertyBag"
+      }
+    },
+    {
+      "name": "folioTwo",
+      "label": "Folio 2",
+      "widget": "pProperties",
+      "config": {
+        "placeholder": "Folio 2",
+        "editable": true,
+        "tags": {
+          "custom": ["folioTwo"],
+          "custom_types": ["java.lang.String"]
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/propertyBag"
+      }
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "_meta": {"name": "Graphic Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Graphic",
+
+  "type": "atex.dam.standard.Graphic",
+  "label": "Graphic",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Graphic",
+      "data": {
+        "inputTemplate": "p.DamGraphic"
+      }
+    },
+    "atex.Metadata": {},
+    "p.InsertionInfo":{},
+    "atex.Files": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["securityParent", "name", "headline", "description"]
+      },
+  
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.common.d"
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId",
+        "insertParentId": "p.InsertionInfo/insertParentId"
+      }
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.GRAPHIC.NAME_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.GRAPHIC.HEADLNE_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "pTextArea",
+      "config": {
+        "label": "TEMPLATE.FIELD.DESCRIPTION_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "metadata",
+      "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata",
+
+        "headline": "contentData/headline",
+        "description": "contentData/description"
+      },
+
+      "config": {
+        "annotation": true,
+        "textsToAnnotate": ["headline", "description"]
+      }
+    }
+  ]
+}

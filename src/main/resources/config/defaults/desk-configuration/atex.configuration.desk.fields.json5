@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Sort", "group": "UI"},
   "fields": [
     {
       "id": "default-fields-list",

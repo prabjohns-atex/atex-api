@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Image Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "act.template.Image.edit",
   "type": "com.atex.standard.image.ImageContentDataBean",
   "label": "Image",

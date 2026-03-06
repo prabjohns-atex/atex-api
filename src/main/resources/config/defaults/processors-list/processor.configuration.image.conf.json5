@@ -1,5 +1,6 @@
 {
-	  "id":"processor.configuration.image.conf",
+  "_meta": {"name": "processor.configuration.image.conf", "group": "Ingestion"},
+  "id":"processor.configuration.image.conf",
 	  "name":"Image Importer Processor",
 	  "classPath":"com.atex.onecms.app.dam.camel.processor.ImageToNoSqlFeedProcessor",
 	  "method":"process",

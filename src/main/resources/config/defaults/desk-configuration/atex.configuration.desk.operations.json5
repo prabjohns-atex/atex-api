@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Operations", "group": "UI"},
   "operations": [{
     "id": "default-operations",
     "description": "Operations List - Default Configuration",

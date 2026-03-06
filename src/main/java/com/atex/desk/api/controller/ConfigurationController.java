@@ -1,5 +1,6 @@
 package com.atex.desk.api.controller;
 
+import com.atex.desk.api.config.ConfigEntry;
 import com.atex.desk.api.config.ConfigurationService;
 import com.atex.desk.api.dto.AspectDto;
 import com.atex.desk.api.dto.ContentWriteDto;
@@ -58,6 +59,13 @@ public class ConfigurationController
         {
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("source", resolveEffectiveTier(id));
+            configurationService.getEntry(id)
+                .map(ConfigEntry::meta)
+                .filter(meta -> meta != null)
+                .ifPresent(meta -> {
+                    if (meta.name() != null) entry.put("name", meta.name());
+                    if (meta.group() != null) entry.put("group", meta.group());
+                });
             result.put(id, entry);
         }
         return ResponseEntity.ok(result);

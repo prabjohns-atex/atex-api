@@ -1,0 +1,267 @@
+{
+  "_meta": {"name": "Authors Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Author",
+
+  "type": "atex.dam.standard.Author",
+  "label": "Author",
+
+  "aspects": {
+    "atex.Files": {},
+    "atex.ImageEditInfo": {},
+    "atex.Image": {},
+    "atex.WFContentStatus": {}
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "Content",
+        "fields": [
+          "name",
+          "authorBio",
+          "position",
+          "fullName",
+          "emailAddress",
+          "publishSites",
+          "hideLinkToAuthorPage",
+          "authorPage",
+          "image",
+          "deskUser",
+          "disabled"
+        ]
+      },
+      {
+        "label": "Social media",
+        "fields": [
+          "twitterId",
+          "facebookId",
+          "instagramId",
+          "tikTokId",
+          "linkedInUrl"
+        ]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Reporter name"
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "position",
+      "label": "Position",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Position"
+      },
+      "domainObjects": {
+        "data": ["contentData", "position"]
+      }
+    },
+    {
+      "name": "fullName",
+      "label": "Author full name",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Full Name"
+      },
+      "domainObjects": {
+        "data": ["contentData", "fullName"]
+      }
+    },
+    {
+      "name": "emailAddress",
+      "label": "Email address",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Email address or organization"
+      },
+      "domainObjects": {
+        "data": ["contentData", "emailAddress"]
+      }
+    },
+    {
+      "name": "publishSites",
+      "label": "Authorized websites",
+      "widget": "pSiteSelect",
+      "config": {
+        "doNotCloseOnselection": true,
+        "editable": true,
+        "exclude": ["dam.d"],
+        "default": "",
+        "storage-id": "7599",
+        "showSitesOnly": true,
+        "multiple": true,
+        "modal": {
+          "title": "Authorized websites",
+          "placeholder": "Select the allowed websites"
+        }
+      },
+      "domainObject": "contentData/publishSites"
+    },
+    {
+      "name": "hideLinkToAuthorPage",
+      "label": "Hide Link to Author Page",
+      "widget": "pCheckbox",
+      "config": {
+        "checkboxLabel": " ",
+        "defaultValue": true
+      },
+      "domainObjects": {
+        "data": ["contentData", "hideLinkToAuthorPage"]
+      }
+    },
+    {
+      "name": "otherContact",
+      "label": "Social/Contact Number",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Social/Contact Number"
+      },
+      "domainObjects": {
+        "data": ["contentData", "otherContact"]
+      }
+    },
+    {
+      "name": "image",
+      "label": "Author Image",
+      "widget": "pResourceArea",
+      "config": {
+        "save-on-upload": true,
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/bioImage"
+      }
+    },
+    {
+      "name": "authorBio",
+      "label": "Bio",
+      "widget": "pCKEditor",
+
+      "config": {
+        "height": "400"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "description"]
+      }
+    },
+    {
+      "name": "deskUser",
+      "label": "Desk User",
+      "widget": "pDeskUsersList",
+      "config": {
+        "editable": true,
+        "placeholder": "Select Desk User..",
+        "emptyLabel": "None Selected"
+      },
+      "domainObjects": {
+        "data": [
+          "contentData",
+          "loginName"
+        ]
+      }
+    },
+    {
+      "name": "twitterId",
+      "label": "Twitter URL",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Twitter URL"
+      },
+      "domainObjects": {
+        "data": ["contentData", "twitterId"]
+      }
+    },
+    {
+      "name": "facebookId",
+      "label": "Facebook URL",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Facebook URL"
+      },
+      "domainObjects": {
+        "data": ["contentData", "facebookId"]
+      }
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "widget": "pContentStatus",
+      "config": {
+        "commentPlaceholder" : "Comment"
+      },
+      "domainObjects": {
+        "contentStatus": "atex.WFContentStatus",
+        "contentData": "contentData"
+      }
+    },
+    {
+      "name": "instagramId",
+      "label": "Instagram URL",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Instagram URL"
+      },
+      "domainObjects": {
+        "data": ["contentData", "instagramId"]
+      }
+    },
+    {
+      "name": "tikTokId",
+      "label": "TikTok ID",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TikTok ID"
+      },
+      "domainObjects": {
+        "data": ["contentData", "tikTokId"]
+      }
+    },
+    {
+      "name": "linkedInUrl",
+      "label": "TEMPLATE.FIELD.AUTHOR.LINKEDIN_URL",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.AUTHOR.LINKEDIN_URL"
+      },
+      "domainObjects": {
+        "data": ["contentData", "linkedInUrl"]
+      }
+    },
+    {
+      "name": "authorPage",
+      "label": "Author Page",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "Link for author page"
+      },
+      "domainObjects": {
+        "data": ["contentData", "authorPage"]
+      }
+    },
+    {
+      "name": "disabled",
+      "label": "Disabled",
+      "widget": "pCheckbox",
+      "config": {
+        "checkboxLabel": " ",
+        "defaultValue": false
+      },
+      "domainObjects": {
+        "data": ["contentData", "disabled"]
+      }
+    }
+  ]
+}

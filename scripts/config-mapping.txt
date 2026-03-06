@@ -349,3 +349,71 @@ xml-cdata|adm-starterkit-pseries|widgets-configuration/configuration.widget.acti
 #
 # --- defaults/layout ---
 xml-component|gong-copyfit|copyfit/config/layout-server-configuration.xml|defaults|layout|atex.plugins.layout.LayoutServerConfiguration
+#
+# --- defaults/form-templates (onecms-common templates) ---
+# Article templates
+json-ref|gong-onecms-common|onecms-templates/article/act/atex.onecms.Template-atex.onecms.article.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.article.preview
+json-ref|gong-onecms-common|onecms-templates/article/act/atex.onecms.Template-atex.onecms.article.print.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.article.print
+json-ref|gong-onecms-common|onecms-templates/article/act/atex.onecms.Template-atex.onecms.article.web.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.article.web
+json-ref|gong-onecms-common|onecms-templates/article/desk/atex.onecms.Template-atex.onecms.article.archive.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.article.archive.dam.edit
+json-ref|gong-onecms-common|onecms-templates/article/desk/atex.onecms.Template-atex.onecms.article.archive.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.article.archive.dam.preview
+json-ref|gong-onecms-common|onecms-templates/article/desk/atex.onecms.Template-atex.onecms.article.production.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.article.production.dam.edit
+json-ref|gong-onecms-common|onecms-templates/article/desk/atex.onecms.Template-atex.onecms.article.production.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.article.production.dam.preview
+json-ref|gong-onecms-common|onecms-templates/article/desk/atex.onecms.Template-atex.onecms.article.wire.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.article.wire.dam.edit
+json-ref|gong-onecms-common|onecms-templates/article/desk/atex.onecms.Template-atex.onecms.article.wire.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.article.wire.dam.preview
+# Audio templates
+json-ref|gong-onecms-common|onecms-templates/audio/desk/atex.onecms.Template-atex.onecms.audio.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.dam.standard.Audio.dam.edit
+json-ref|gong-onecms-common|onecms-templates/audio/desk/atex.onecms.Template-atex.onecms.audio.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.dam.standard.Audio.dam.preview
+# Author templates
+json-ref|gong-onecms-common|onecms-templates/author/desk/atex.onecms.Template-atex.onecms.author.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.author.dam.edit
+# Bulk images templates
+json-ref|gong-onecms-common|onecms-templates/bulkimages/act/atex.onecms.Template-atex.onecms.bulkimages.act.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.bulkimages.act
+# Change property bag templates
+json-ref|gong-onecms-common|onecms-templates/changePropertyBag/atex.onecms.Template-atex.onecms.changeFoliosPropertyBag.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.changeFoliosPropertyBag
+json-ref|gong-onecms-common|onecms-templates/changePropertyBag/atex.onecms.Template-atex.onecms.changePuffsPropertyBag.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.changePuffsPropertyBag
+# Change status template
+json-ref|gong-onecms-common|onecms-templates/changeStatus/atex.onecms.Template-atex.onecms.changeStatus.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.changeStatus
+# Collection templates
+json-ref|gong-onecms-common|onecms-templates/collection/act/atex.onecms.Template-atex.onecms.collection.act.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.collection.act
+json-ref|gong-onecms-common|onecms-templates/collection/desk/atex.onecms.Template-atex.onecms.collection.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.collection.dam.edit
+json-ref|gong-onecms-common|onecms-templates/collection/desk/atex.onecms.Template-atex.onecms.collection.dam.readonly.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.collection.dam.readonly
+# Document templates
+json-ref|gong-onecms-common|onecms-templates/document/desk/atex.onecms.Template-atex.onecms.document.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.dam.standard.Document.dam.edit
+json-ref|gong-onecms-common|onecms-templates/document/desk/atex.onecms.Template-atex.onecms.document.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.dam.standard.Document.dam.preview
+# Embed template
+json-ref|gong-onecms-common|onecms-templates/embed/desk/atex.onecms.Template-atex.onecms.embed.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.dam.standard.Embed.dam.edit
+# Folder templates
+json-ref|gong-onecms-common|onecms-templates/folder/desk/atex.onecms.Template-atex.onecms.folder.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.folder.dam.edit
+json-ref|gong-onecms-common|onecms-templates/folder/desk/atex.onecms.Template-atex.onecms.folder.dam.readonly.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.folder.dam.readonly
+json-ref|gong-onecms-common|onecms-templates/folder/desk/atex.onecms.Template-atex.onecms.folder.smart.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.folder.smart.dam.edit
+# Graphic templates
+json-ref|gong-onecms-common|onecms-templates/graphic/desk/atex.onecms.Template-atex.onecms.graphic.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.graphic.dam.edit
+json-ref|gong-onecms-common|onecms-templates/graphic/desk/atex.onecms.Template-atex.onecms.graphic.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.graphic.dam.preview
+# Image templates
+json-ref|gong-onecms-common|onecms-templates/image/act/atex.onecms.Template-atex.onecms.image.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.image
+json-ref|gong-onecms-common|onecms-templates/image/desk/atex.onecms.Template-atex.onecms.image.archive.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.image.archive.dam.edit
+json-ref|gong-onecms-common|onecms-templates/image/desk/atex.onecms.Template-atex.onecms.image.archive.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.image.archive.dam.preview
+json-ref|gong-onecms-common|onecms-templates/image/desk/atex.onecms.Template-atex.onecms.image.production.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.image.production.dam.edit
+json-ref|gong-onecms-common|onecms-templates/image/desk/atex.onecms.Template-atex.onecms.image.production.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.image.production.dam.preview
+json-ref|gong-onecms-common|onecms-templates/image/desk/atex.onecms.Template-atex.onecms.image.wire.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.image.wire.dam.edit
+json-ref|gong-onecms-common|onecms-templates/image/desk/atex.onecms.Template-atex.onecms.image.wire.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.image.wire.dam.preview
+# Instagram template
+json-ref|gong-onecms-common|onecms-templates/instagram/desk/atex.onecms.Template-atex.onecms.instagram.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.instagram.dam.edit
+# LiveBlog templates
+json-ref|gong-onecms-common|onecms-templates/liveblog/act/atex.onecms.Template-atex.onecms.liveblog.article.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.dam.standard.LiveBlog.article.dam.preview
+json-ref|gong-onecms-common|onecms-templates/liveblog/act/atex.onecms.Template-atex.onecms.liveblog.article.xml|defaults|form-templates|atex.onecms.Template-atex.dam.standard.LiveBlog.article
+json-ref|gong-onecms-common|onecms-templates/liveblog/act/atex.onecms.Template-atex.onecms.liveblog.event.xml|defaults|form-templates|atex.onecms.Template-atex.dam.standard.LiveBlog.event
+# Page templates
+json-ref|gong-onecms-common|onecms-templates/page/desk/atex.onecms.Template-atex.onecms.page.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.page.dam.edit
+json-ref|gong-onecms-common|onecms-templates/page/desk/atex.onecms.Template-atex.onecms.page.dam.planner.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.page.dam.planner
+json-ref|gong-onecms-common|onecms-templates/page/desk/atex.onecms.Template-atex.onecms.page.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.page.dam.preview
+json-ref|gong-onecms-common|onecms-templates/page/desk/atex.onecms.Template-atex.onecms.page.production.dam.build.book.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.page.production.dam.build.book
+json-ref|gong-onecms-common|onecms-templates/page/desk/atex.onecms.Template-atex.onecms.page.production.dam.create.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.page.production.dam.create
+json-ref|gong-onecms-common|onecms-templates/page/desk/atex.onecms.Template-atex.onecms.page.production.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.page.production.dam.edit
+json-ref|gong-onecms-common|onecms-templates/page/desk/atex.onecms.Template-atex.onecms.page.production.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.page.production.dam.preview
+# Tweet template
+json-ref|gong-onecms-common|onecms-templates/tweet/desk/atex.onecms.Template-atex.onecms.tweet.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.tweet.dam.edit
+# Video templates
+json-ref|gong-onecms-common|onecms-templates/video/desk/atex.onecms.Template-atex.onecms.video.dam.edit.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.video.dam.edit
+json-ref|gong-onecms-common|onecms-templates/video/desk/atex.onecms.Template-atex.onecms.video.dam.import.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.video.dam.import
+json-ref|gong-onecms-common|onecms-templates/video/desk/atex.onecms.Template-atex.onecms.video.dam.preview.xml|defaults|form-templates|atex.onecms.Template-atex.onecms.video.dam.preview

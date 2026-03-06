@@ -1,0 +1,64 @@
+{
+  "_meta": {"name": "Embed Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Embed",
+
+  "type": "atex.dam.standard.Embed",
+  "label": "Embed",
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Embed",
+      "data": {
+        "inputTemplate": "p.Embed"
+      }
+    },
+    "atex.Metadata": {}
+  },
+  
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.GENERAL",
+        "fields": ["name", "html"]
+      },
+  
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": ["metadata"]
+      }
+    ]
+  },
+  
+  "dataBindings": [
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.EMBED.NAME_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "html",
+      "label": "Html",
+      "widget": "pTextArea",
+      "config": {
+      },
+      "domainObjects": {
+        "data": ["contentData", "html"]
+      }
+    },
+    {
+      "name": "metadata",
+  	  "label": "TEMPLATE.FIELD.METADATA",
+      "widget": "pMetadata",
+
+      "domainObjects": {
+        "data": "atex.Metadata"
+      }
+    }
+  ]
+}

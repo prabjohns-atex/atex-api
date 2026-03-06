@@ -1,5 +1,6 @@
 {
-	  "id":"chain.configuration.newsml.conf",
+  "_meta": {"name": "chain.configuration.newsml.conf", "group": "Ingestion"},
+  "id":"chain.configuration.newsml.conf",
 	  "routes": [
 	    "route.configuration.newsml.conf"
 	 	],

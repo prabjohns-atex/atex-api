@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Desk Disable Create Job Rules", "group": "Permissions"},
   "disable-create-job-rules":[
     {
       "id":"default-disable-create-job-rules",

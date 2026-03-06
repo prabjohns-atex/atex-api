@@ -1,0 +1,525 @@
+{
+  "_meta": {"name": "Audio Desk Edit Template", "group": "Templates", "format": "atex.onecms.Template.it"},
+  "id": "atex.dam.standard.Audio",
+
+  "type": "atex.dam.standard.Audio",
+  "label": "Audio",
+  "namePath": ["contentData", "name"],
+
+  "aspects": {
+    "contentData": {
+      "type": "atex.dam.standard.Audio",
+      "data": {
+        "inputTemplate": "p.DamAudio"
+      }
+    },
+    "p.InsertionInfo":{},
+    "atex.Files": {},
+    "atex.Metadata": {}
+  },
+
+  "layout": {
+    "views": [
+      {
+        "label": "TEMPLATE.TAB.CONTENT",
+        "fields": [
+          "name",
+          "headline",
+          "byline",
+          "source",
+          "fileUploader",
+          "summary",
+          "body",
+          "description",
+          "caption",
+          "images",
+          "transcriptionText",
+          "transcribeFlag"
+        ]
+      },
+
+      {
+        "label": "TEMPLATE.TAB.METADATA",
+        "fields": [
+          "insertParent",
+          "relatedSection",
+          "authorProfile",
+          "metadata",
+          "tag",
+          "timeStateOnTime",
+          "timeStateOffTime",
+          "publishingTimeOverride",
+          "publishingUpdatedTimeOverride",
+          "legacyId",
+          "legacyUrl",
+          "premiumType"
+        ],
+        "intents": ["Web"]
+      },
+      {
+        "label": "TEMPLATE.TAB.MEDIA",
+        "fields": [
+          "mediaId",
+          "audioPath"
+        ],
+        "intents": ["Web"]
+      }
+    ]
+  },
+
+  "dataBindings": [
+    {
+      "name": "securityParent",
+      "label": "TEMPLATE.FIELD.SECURITYPARENT",
+      "widget": "damSecurityParent",
+      "config": {
+        "defaultSecurityParentId":"externalid/dam.assets.common.d"
+      },
+      "domainObjects": {
+        "securityParentId": "p.InsertionInfo/securityParentId"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.WEBSECTION",
+      "name": "insertParent",
+      "widget": "pSiteSelect",
+
+      "config": {
+        "editable": true,
+        "exclude": ["dam.d", "dam.assets.d", "dam.system.d", "dam.assets.incoming.d", "dam.assets.common.d"],
+        "storage-id": "7598",
+        "modal": {
+          "title": "TEMPLATE.FIELD.WEBSECTION",
+          "placeholder": "TEMPLATE.FIELD.WEBSECTION_VIEW_PH"
+        },
+        "nonSelectables": []
+      },
+
+      "domainObject": "p.InsertionInfo/insertParentId",
+      "validators" : {
+        "required": { "message": "Insert web section" }
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.RELATEDSECTIONS",
+      "name": "relatedSection",
+      "widget": "pSiteSelect",
+
+      "config": {
+        "doNotCloseOnselection": true,
+        "editable": true,
+        "exclude": ["dam.d"],
+        "default": "",
+        "storage-id": "17598",
+        "multiple": true,
+        "modal": {
+          "title": "TEMPLATE.FIELD.RELATEDSECTIONS",
+          "placeholder": "TEMPLATE.FIELD.RELATEDSECTIONS_PH"
+        },
+        "nonSelectables": []
+      },
+
+      "domainObject": "contentData/relatedSections"
+    },
+    {
+      "name": "name",
+      "label": "TEMPLATE.FIELD.NAME",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.AUDIO.NAME_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "name"]
+      }
+    },
+    {
+      "name": "headline",
+      "label": "TEMPLATE.FIELD.HEADLINE",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.AUDIO.HEADLINE_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "headline"]
+      }
+    },
+    {
+      "name": "byline",
+      "label": "TEMPLATE.FIELD.BYLINE",
+      "widget": "pTextInput",
+      "domainObject": "contentData/byline",
+      "default" : {
+        "expression" : "currentUser.fullName"
+      }
+    },
+    {
+      "name": "source",
+      "label": "TEMPLATE.FIELD.SOURCE",
+      "widget": "pTextInput",
+      "domainObject": "contentData/source"
+    },
+    {
+      "name": "summary",
+      "label": "TEMPLATE.FIELD.SUMMARY",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.AUDIO.SUMMARY_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "summary"]
+      }
+    },
+    {
+      "name": "caption",
+      "label": "TEMPLATE.FIELD.CAPTION",
+      "widget": "gongCKEditor",
+      "config": {
+        "ckConfig" : {
+          "height": "200",
+          "hideToolbar": true,
+          "contentsLangDirection" : "auto",
+          "extraPlugins": "wordcount,notification",
+          "wordcount": { "showParagraphs": false, "showWordCount": false, "showCharCount": false },
+          "coreStyles_italic" : { "element": "i", "overrides": "em" },
+          "removeButtons" : "PasteFromWord,Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript",
+          "removePlugins" : "docopyfit, smartembed, selectmedia, smartpaste"
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/caption"
+      }
+    },
+    {
+      "name": "description",
+      "label": "TEMPLATE.FIELD.DESCRIPTION",
+      "widget": "gongCKEditor",
+      "config": {
+        "ckConfig" : {
+          "height": "200",
+          "hideToolbar": true,
+          "contentsLangDirection" : "auto",
+          "extraPlugins": "wordcount,notification",
+          "wordcount": { "showParagraphs": false, "showWordCount": false, "showCharCount": false },
+          "coreStyles_italic" : { "element": "i", "overrides": "em" },
+          "removeButtons" : "PasteFromWord,Cut,Copy,Paste,Undo,Redo,Anchor,Underline,Strike,Subscript,Superscript",
+          "removePlugins" : "docopyfit, smartembed, selectmedia, smartpaste"
+        }
+      },
+
+      "domainObjects": {
+        "data": "contentData/description"
+      }
+    },
+    {
+      "name": "fileUploader",
+      "label": "TEMPLATE.FIELD.AUDIO.FILEUPLOADER",
+      "widget": "pFileUploader",
+
+      "config": {
+        "allowedMimeTypes": ["audio/*"]
+      },
+
+      "domainObjects": {
+        "filePath": "contentData/audioLink",
+        "files": "atex.Files"
+      }
+    },
+    {
+      "name": "body",
+      "label": "TEMPLATE.FIELD.BODY",
+      "widget": "pCKEditor",
+
+      "config": {
+        "height": "400"
+      },
+
+      "domainObjects": {
+        "data": ["contentData", "body"]
+      }
+    },
+    {
+      "name": "premiumType",
+      "label": "TEMPLATE.FIELD.PREMIUMTYPE",
+      "widget": "pSelect",
+      "config": {
+        "defaultValue" : "inherit",
+        "options" :
+        [
+          {
+            "label" : "Inherit from section",
+            "id" : "inherit"
+          },
+          {
+            "label" : "Free",
+            "id" : "free"
+          },
+          {
+            "label" : "Premium",
+            "id" : "premium"
+          },
+          {
+            "label": "Registered Premium",
+            "id": "premiumRegistered"
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": ["contentData", "premiumType"]
+      }
+    },
+    {
+      "name": "transcriptionText",
+      "label": "TEMPLATE.FIELD.TRANSCRIPTIONTEXT",
+      "widget": "pTextArea",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.TRANSCRIPTIONTEXT_PH"
+      },
+      "domainObjects": {
+        "data": "contentData/transcriptionText"
+      }
+    },
+    {
+      "name": "transcribeFlag",
+      "label": "TEMPLATE.FIELD.TRANSCRIBEFLAG",
+      "widget": "pCheckbox",
+      "config": {
+        "editable" : true
+      },
+      "domainObjects": {
+        "data": ["contentData", "transcribeFlag"]
+      }
+    },
+    {
+      "name": "tag",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle": true,
+        "dimensions": ["dimension.Tag"],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2
+      }
+    },
+    {
+      "name": "metadata",
+      "widget": "pTags",
+      "domainObjects": {
+        "data": "atex.Metadata",
+        "insertionInfo": "p.InsertionInfo"
+      },
+      "config": {
+        "toggle": true,
+        "dimensions": [
+          "dimension.Organisation",
+          "dimension.Location",
+          "dimension.Person",
+          "dimension.EditorialTag"
+        ],
+        "useInsertParent": true,
+        "prefixAllOnTagLookUp": true,
+        "clearTagsOnParentChange": true,
+        "queryMinLen": 2,
+        "deep": 2,
+        "annotationConfig": {
+          "mapping": {
+            "dimension.Organisation": "dimension.Organisation",
+            "dimension.Person": "dimension.Person",
+            "dimension.Company": "dimension.Organisation",
+            "dimension.Location": "dimension.Location",
+            "dimension.EditorialTag": "dimension.EditorialTag"
+          },
+          "customNameFormatter": "function(entity) { return entity.id && entity.id !== entity.name ? entity.name + '_' + (entity.id.startsWith('1-') ? entity.id.substring(2) : entity.id): entity.name; }"
+        }
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.ONTIME",
+      "name": "timeStateOnTime",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.ONTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/timeState/ontime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.OFFTIME",
+      "name": "timeStateOffTime",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.OFFTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/timeState/offtime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.PUBLISHINGTIME",
+      "name": "publishingTimeOverride",
+      "widget": "pDateTimePicker",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.PUBLISHINGTIME_PH",
+        "editable": true,
+        "dtConfig": {
+          "locale": "en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+        "useTimezone": true
+      },
+      "domainObjects": {
+        "data": "contentData/digitalPublishingTime"
+      }
+    },
+    {
+      "label": "TEMPLATE.FIELD.PUBLISHINGUPDATEDTIME",
+      "name": "publishingUpdatedTimeOverride",
+      "widget": "pDateTimePicker",
+
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.PUBLISHINGUPDATEDTIME_PH",
+        "editable": true,
+
+        "dtConfig": {
+          "locale":"en",
+          "format": "DD/MM/YYYY h:mm A"
+        },
+
+        "useTimezone": true
+      },
+
+      "domainObjects": {
+        "data": "contentData/publishingUpdateTime"
+      }
+    },
+    {
+      "name": "mediaId",
+      "label": "MediaId",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.AUDIO.MEDIAID_PH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "mediaId"]
+      }
+    },
+    {
+      "name": "audioPath",
+      "label": "MediaURL",
+      "widget": "pTextInput",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.AUDIO.AUDIOPATH"
+      },
+      "domainObjects": {
+        "data": ["contentData", "audioLink"]
+      }
+    },
+    {
+      "name": "images",
+      "label": "TEMPLATE.FIELD.POSTERIMAGE",
+      "widget": "pResourceArea",
+      "config": {
+        "save-on-upload": true,
+        "mimeTypeMap": {
+          "image/*": {"type": "atex.onecms.image", "inputTemplate": "p.NosqlImage"}
+        },
+        "imageMetadata": {
+          "atex.onecms.image": {
+            "extraction": true,
+            "fieldMappings": [
+              {
+                "source": "title",
+                "target": "contentData/title"
+              },
+              {
+                "source": "tags/EXIF/Copyright",
+                "target": "contentData/description"
+              },
+              {
+                "source": "byline",
+                "target": "contentData/byline"
+              }
+            ]
+          }
+        },
+        "allowedTypes": [
+          "atex.dam.standard.Image",
+          "atex.dam.standard.WireImage",
+          "com.atex.nosql.image.ImageContentDataBean",
+          "atex.onecms.image"
+        ],
+        "iconMap": {
+          "atex.dam.standard.Collection": "image-x-generic.png"
+        }
+      },
+      "domainObjects": {
+        "data": "contentData/images"
+      }
+    },
+    {
+      "name": "legacyId",
+      "label": "TEMPLATE.FIELD.LEGACYID",
+      "widget": "pTextInput",
+      "domainObject": "contentData/legacyid",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.LEGACYID_PH"
+      }
+    },
+    {
+      "name": "legacyUrl",
+      "label": "TEMPLATE.FIELD.LEGACYURL",
+      "widget": "pTextInput",
+      "domainObject": "contentData/legacyUrl",
+      "config": {
+        "placeholder": "TEMPLATE.FIELD.LEGACYURL_PH"
+      }
+    },
+    {
+      "name": "authorProfile",
+      "label": "TEMPLATE.FIELD.AUTHORBIO",
+      "widget": "damAuthor",
+      "config": {
+        "maxRows": 20,
+        "filterAuthorsList": false,
+        "mappings": [
+          {
+            "source": "fullName",
+            "target": "byline"
+          }
+        ]
+      },
+      "domainObjects": {
+        "data": "contentData/authors",
+        "byline" : "contentData/byline"
+      }
+    }
+  ]
+}

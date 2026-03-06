@@ -1,4 +1,5 @@
 {
+  "_meta": {"name": "Dam Export Template", "group": "Templates", "format": "atex.onecms.Template.it"},
   "id": "com.atex.onecms.app.dam.export.DamExportBean",
   "type": "com.atex.onecms.app.dam.export.DamExportBean",
   "label": "Export Configuration",
