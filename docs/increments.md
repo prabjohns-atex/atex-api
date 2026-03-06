@@ -338,3 +338,44 @@ All ~130 existing config JSON5 files updated with `_meta.group` field for admin 
 | All ~130 JSON5 config files | Added `_meta.group` field |
 | 49 new template JSON5 files | Template content with `atex.onecms.Template.it` format |
 | 3 new catalog JSON5 files | Template lists with `atex.onecms.TemplateList.it` format |
+
+## Increment 30 — Runtime Bug Fixes (Config Serving, Auth Expiry, Gson/Java 25)
+
+Three runtime bugs discovered during mytype-new integration testing.
+
+### Fix 1: Missing aspects.put in ConfigurationService
+
+**Problem:** After the format-aware refactoring (Increment 29), `toContentResultDto()` created and populated a `contentData` AspectDto but never added it to the `aspects` map. Config content API responses had empty aspects, breaking mytype-new's `extractConfigJson()` which checks `aspects/contentData/data/json`.
+
+**Root cause:** The line `aspects.put("contentData", contentData)` was accidentally removed during the format-aware serialization refactoring.
+
+**Fix:** Restored the missing `aspects.put("contentData", contentData)` call in `ConfigurationService.toContentResultDto()`.
+
+### Fix 2: Token Expiry Too Short
+
+**Problem:** mytype-new kept getting auth expired errors. Tokens were expiring after 5 minutes.
+
+**Root cause:** `SecurityController.DEFAULT_EXPIRATION` was set to `Duration.ofMinutes(5)` instead of matching the configured `desk.auth.max-lifetime=86400` (24 hours). mytype-new has no token refresh logic — it stores the token in localStorage/sessionStorage and uses it until it expires.
+
+**Fix:** Changed `DEFAULT_EXPIRATION` from `Duration.ofMinutes(5)` to `Duration.ofHours(24)`.
+
+### Fix 3: Gson InaccessibleObjectException on Java 25
+
+**Problem:** `DamDataResource.solrquery()` crashed with `InaccessibleObjectException: Unable to make field private int java.text.SimpleDateFormat.serialVersionOnStream accessible: module java.base does not "opens java.text" to unnamed module`. Gson tried to reflectively access `SimpleDateFormat` internals blocked by Java 25's module system.
+
+**Root cause:** `QueryField` had an unused instance field `private final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy-MM-dd")`. This was dead code in the original gong source too — declared but never referenced. Gson attempted to serialize/deserialize it when processing `DamQueryAspectBean` (which contains `List<QueryField>`).
+
+**Fix:** Removed the unused `FORMATTER` field entirely from `QueryField`.
+
+### Modified Files (3)
+
+| File | Change |
+|------|--------|
+| `config/ConfigurationService.java` | Restored missing `aspects.put("contentData", contentData)` |
+| `controller/SecurityController.java` | `DEFAULT_EXPIRATION`: `Duration.ofMinutes(5)` → `Duration.ofHours(24)` |
+| `dam/util/QueryField.java` | Removed unused `SimpleDateFormat FORMATTER` field |
+
+### Design Notes
+
+- **No `--add-opens` JVM flag**: Rather than adding `--add-opens java.base/java.text=ALL-UNNAMED` to work around the module system, the dead field was simply removed — cleaner and avoids masking future issues
+- **Token expiry alignment**: The `desk.auth.max-lifetime` property (86400s) controls the maximum allowed lifetime at validation time. `DEFAULT_EXPIRATION` controls the actual expiry set when creating tokens. Both should match.

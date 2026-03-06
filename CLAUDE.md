@@ -16,6 +16,7 @@ Spring Boot 4.0.3 API (Java 25) porting features from the Atex/Polopoly platform
 - **JJWT uses Gson backend** (not Jackson, to avoid Jackson 2 vs 3 conflict)
 - **SolrJ**: `HttpSolrClient` (NOT `Http2SolrClient` — Jetty 11 vs 12 incompatibility)
 - **Hibernate naming**: CamelCase MySQL tables need backtick quoting in `@Table`/`@Column` annotations
+- **Java 25 module system**: Gson cannot reflectively access JDK internal classes (`SimpleDateFormat`, etc.). Don't add JDK types as instance fields on Gson-serialized beans — use `transient` or remove
 - **JDK path**: `C:\Users\peter\.jdks\openjdk-25.0.2` (JAVA_HOME must be set for Gradle)
 
 ## Source Codebases (porting references)
