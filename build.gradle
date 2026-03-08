@@ -38,6 +38,7 @@ dependencies {
     // AWS Cognito (conditional, only used when desk.cognito.enabled=true)
     implementation platform('software.amazon.awssdk:bom:2.31.3')
     implementation 'software.amazon.awssdk:cognitoidentityprovider'
+    implementation 'software.amazon.awssdk:s3'
 
     // DAM dependencies
     implementation 'com.google.code.gson:gson:2.11.0'

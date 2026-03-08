@@ -5,9 +5,6 @@ import com.atex.onecms.content.files.FileInfo;
 import com.atex.onecms.content.files.FileService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,15 +24,15 @@ import java.util.stream.Stream;
  *
  * URI format: {space}://{host}/{filename}
  * Storage path: {baseDir}/{space}/{host}/{filename}
+ *
+ * Bean creation is handled by FileServiceAutoConfiguration.
  */
-@Service
 public class LocalFileService implements FileService {
 
     private static final Logger LOG = LoggerFactory.getLogger(LocalFileService.class);
-
     private final Path baseDir;
 
-    public LocalFileService(@Value("${desk.file-service.base-dir:./files}") String baseDirPath) {
+    public LocalFileService(String baseDirPath) {
         this.baseDir = Path.of(baseDirPath);
         try {
             Files.createDirectories(this.baseDir);

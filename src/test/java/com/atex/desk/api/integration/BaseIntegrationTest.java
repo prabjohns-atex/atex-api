@@ -115,6 +115,16 @@ public abstract class BaseIntegrationTest {
         return rawRequest("GET", path, null, token != null ? Map.of("X-Auth-Token", token) : null);
     }
 
+    protected HttpResponse<byte[]> rawGetBytes(String path, Map<String, String> headers) throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl() + path))
+            .GET();
+        if (headers != null) {
+            headers.forEach(builder::header);
+        }
+        return rawClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
+    }
+
     protected HttpResponse<String> rawPost(String path, String body, String token) throws Exception {
         Map<String, String> headers = token != null ? Map.of("X-Auth-Token", token) : null;
         return rawRequest("POST", path, body, headers);

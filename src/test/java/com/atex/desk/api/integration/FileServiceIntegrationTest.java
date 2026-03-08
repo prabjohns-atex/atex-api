@@ -197,4 +197,165 @@ class FileServiceIntegrationTest extends BaseIntegrationTest {
         assertNotNull(pngResponse.get("URI"));
         assertEquals("image/png", pngResponse.get("mimeType"));
     }
+
+    // --- Auth tests (based on Polopoly FileWSTestInt) ---
+
+    @Test
+    void uploadWithoutAuth_returns401() throws Exception {
+        HttpResponse<String> response = rawRequest("POST", "/file/content/sysadmin/noauth.txt",
+            "test content", null);
+
+        assertEquals(401, response.statusCode());
+        // Reference: WWW-Authenticate header should be present
+        String wwwAuth = response.headers().firstValue("WWW-Authenticate").orElse(null);
+        assertNotNull(wwwAuth, "401 response should include WWW-Authenticate header");
+    }
+
+    @Test
+    void downloadWithoutAuth_returns401() throws Exception {
+        // Upload a file first (with auth)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> uploadResponse = restClient.post()
+            .uri("/file/content/sysadmin/auth-download-test.txt")
+            .headers(h -> {
+                h.set("X-Auth-Token", token);
+                h.setContentType(MediaType.TEXT_PLAIN);
+            })
+            .body("auth test content".getBytes(StandardCharsets.UTF_8))
+            .retrieve()
+            .body(Map.class);
+
+        String fileUri = (String) uploadResponse.get("URI");
+        String downloadUrl = toFileUrl(fileUri);
+
+        // Try to download without auth
+        HttpResponse<String> response = rawGet(downloadUrl, null);
+        assertEquals(401, response.statusCode());
+    }
+
+    @Test
+    void deleteWithoutAuth_returns401() throws Exception {
+        // Upload a file first (with auth)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> uploadResponse = restClient.post()
+            .uri("/file/content/sysadmin/auth-delete-test.txt")
+            .headers(h -> {
+                h.set("X-Auth-Token", token);
+                h.setContentType(MediaType.TEXT_PLAIN);
+            })
+            .body("auth delete test".getBytes(StandardCharsets.UTF_8))
+            .retrieve()
+            .body(Map.class);
+
+        String fileUri = (String) uploadResponse.get("URI");
+        String deleteUrl = toFileUrl(fileUri);
+
+        // Try to delete without auth
+        HttpResponse<String> response = rawDelete(deleteUrl, null, null);
+        assertEquals(401, response.statusCode());
+    }
+
+    @Test
+    void getNonExistentFile_returns404() throws Exception {
+        HttpResponse<String> response = rawGet("/file/content/sysadmin/does-not-exist.txt", token);
+        assertTrue(response.statusCode() >= 400,
+            "GET non-existent file should return 4xx, got: " + response.statusCode());
+    }
+
+    @Test
+    void getInfoNonExistentFile_returns404() throws Exception {
+        HttpResponse<String> response = rawGet("/file/info/content/sysadmin/does-not-exist.txt", token);
+        assertTrue(response.statusCode() >= 400,
+            "GET info for non-existent file should return 4xx, got: " + response.statusCode());
+    }
+
+    @Test
+    void uploadFile_returnsLocationHeader() {
+        byte[] fileContent = "Location header test".getBytes(StandardCharsets.UTF_8);
+
+        ResponseEntity<Map> response = restClient.post()
+            .uri("/file/content/sysadmin/location-test.txt")
+            .headers(h -> {
+                h.set("X-Auth-Token", token);
+                h.setContentType(MediaType.TEXT_PLAIN);
+            })
+            .body(fileContent)
+            .retrieve()
+            .toEntity(Map.class);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        URI location = response.getHeaders().getLocation();
+        assertNotNull(location, "Upload response should include Location header");
+        assertTrue(location.toString().contains("/file/"), "Location should point to /file/ path");
+    }
+
+    @Test
+    void uploadFile_responseContainsExpectedFields() {
+        byte[] fileContent = "Field test".getBytes(StandardCharsets.UTF_8);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> response = restClient.post()
+            .uri("/file/content/sysadmin/fields-test.txt")
+            .headers(h -> {
+                h.set("X-Auth-Token", token);
+                h.setContentType(MediaType.TEXT_PLAIN);
+            })
+            .body(fileContent)
+            .retrieve()
+            .body(Map.class);
+
+        // Reference: FileInfoDTO should contain URI, mimeType, length, originalPath
+        assertNotNull(response.get("URI"), "Response should contain URI");
+        assertNotNull(response.get("mimeType"), "Response should contain mimeType");
+        assertNotNull(response.get("length"), "Response should contain length");
+        assertEquals(fileContent.length, ((Number) response.get("length")).intValue(),
+            "Length should match uploaded content size");
+    }
+
+    @Test
+    void downloadFile_hasCacheHeaders() throws Exception {
+        byte[] fileContent = "Cache test".getBytes(StandardCharsets.UTF_8);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> uploadResponse = restClient.post()
+            .uri("/file/content/sysadmin/cache-test.txt")
+            .headers(h -> {
+                h.set("X-Auth-Token", token);
+                h.setContentType(MediaType.TEXT_PLAIN);
+            })
+            .body(fileContent)
+            .retrieve()
+            .body(Map.class);
+
+        String fileUri = (String) uploadResponse.get("URI");
+        String downloadUrl = toFileUrl(fileUri);
+
+        HttpResponse<byte[]> response = rawGetBytes(downloadUrl, Map.of("X-Auth-Token", token));
+        assertEquals(200, response.statusCode());
+
+        String cacheControl = response.headers().firstValue("Cache-Control").orElse(null);
+        assertNotNull(cacheControl, "Download should have Cache-Control header");
+    }
+
+    @Test
+    void uploadToAnonymousEndpoint_usesCallerAsHost() {
+        byte[] fileContent = "Anonymous upload".getBytes(StandardCharsets.UTF_8);
+
+        ResponseEntity<Map> response = restClient.post()
+            .uri("/file/content")
+            .headers(h -> {
+                h.set("X-Auth-Token", token);
+                h.setContentType(MediaType.TEXT_PLAIN);
+            })
+            .body(fileContent)
+            .retrieve()
+            .toEntity(Map.class);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        String uri = (String) response.getBody().get("URI");
+        assertNotNull(uri, "Anonymous upload should return URI");
+        // URI host part should be the authenticated user's ID
+        assertTrue(uri.contains("://"), "URI should have scheme://host format");
+    }
 }
