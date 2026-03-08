@@ -631,3 +631,42 @@ Client → desk-api (resolve + sign + 302) → desk-image (Rust) → S3/filesyst
 - **Format crops**: When `f=2x1` is requested, desk-api looks up the crop rectangle from `ImageEditInfoAspectBean.crops` map and adds it as `c=x,y,w,h`
 - **Conditional activation**: Controller only registers when `desk.image-service.enabled=true` — no impact on existing deployments
 - **Rust toolchain required**: `cargo build --release` in `desk-image/` to produce the binary
+
+### Docker Container Support
+- `desk-image/Dockerfile` — multi-stage build: `rust:1-bookworm` → `debian:bookworm-slim` (~161MB)
+- Dependency caching: dummy `main.rs` compiles deps first, then real source replaces it
+- `compose.yaml` — `desk-image` service alongside MySQL, port 8090, volume mount for local files
+- **Environment variable overrides** for container config:
+  - `DESK_IMAGE_HOST`, `DESK_IMAGE_PORT`, `DESK_IMAGE_SECRET`
+  - `DESK_IMAGE_STORAGE_BACKEND`, `DESK_IMAGE_LOCAL_DIR`
+  - `DESK_IMAGE_S3_REGION`, `DESK_IMAGE_S3_ENDPOINT`, `DESK_IMAGE_S3_BUCKET`, `DESK_IMAGE_S3_ACCESS_KEY`, `DESK_IMAGE_S3_SECRET_KEY`
+  - `DESK_IMAGE_CACHE_ENABLED`, `DESK_IMAGE_CACHE_MAX_ENTRIES`, `DESK_IMAGE_CACHE_MAX_SIZE`
+
+### Review Against Polopoly Reference
+Compared against `polopoly/plugins/image-plugin` and `gong/desk` image handling:
+
+**Additional features implemented after review:**
+- SVG passthrough — serve raw SVGs without processing (detected by extension or XML/SVG headers)
+- Aspect ratio param (`a=16:9`) — crops to target ratio with focal point centering
+- `ow`/`oh` params — original image dimensions passed from desk-api to sidecar
+- `X-Original-Image-Width/Height` and `X-Rendered-Image-Width/Height` response headers
+- ETag headers for cache validation
+- File-service scheme paths (`/image/content/...`, `/image/tmp/...`, `/image/s3/...`)
+
+**Known gaps (lower priority):**
+- Pixelation support (rarely used editorial feature)
+- Workspace parameter for draft images
+- Accept header content negotiation (WebP auto-conversion)
+- CDN proxy redirect (OneCMSContentProxyInfo)
+- Timeout/queue management for processing pipeline
+- Metrics/observability endpoints
+
+### Integration Tests (10 tests)
+`ImageServiceIntegrationTest` extends `BaseIntegrationTest`:
+- Auth required (401 without token)
+- 404 for unknown content (unversioned, versioned, original with/without filename)
+- 302 redirect with correct sidecar URL, query params (w, ow, oh), and HMAC signature
+- 302 redirect for versioned content ID (`/contentid/` path)
+- Original image redirect to file service (`/file/` path)
+- 404 when content exists but has no `atex.Image` aspect
+- Edit info passthrough (rotation, flip in redirect URL)
