@@ -379,3 +379,69 @@ Three runtime bugs discovered during mytype-new integration testing.
 
 - **No `--add-opens` JVM flag**: Rather than adding `--add-opens java.base/java.text=ALL-UNNAMED` to work around the module system, the dead field was simply removed — cleaner and avoids masking future issues
 - **Token expiry alignment**: The `desk.auth.max-lifetime` property (86400s) controls the maximum allowed lifetime at validation time. `DEFAULT_EXPIRATION` controls the actual expiry set when creating tokens. Both should match.
+
+## Increment 31 — Type Service & Aspect Name Fixes
+
+Implements `GET /content/type/{typeName}` for mytype-new's type schema system, and fixes incorrect aspect names.
+
+### Type Service
+
+**Problem:** mytype-new calls `GET /onecms/content/type/{typeName}` to get `ModelTypeBean` schemas describing bean fields and Java types. This is used to detect `StructuredText` fields and coerce values to correct Java types on content create/update. No endpoint existed in desk-api.
+
+**Solution:** New `TypeService` scans `@AspectDefinition` and `@AceAspect` annotations at startup via Spring's classpath scanner, introspects bean fields via `java.beans.Introspector`, and generates `ModelTypeBean` responses matching the Polopoly format.
+
+### TypeController (`GET /content/type/{typeName}`)
+
+Separate controller at `/content/type` to keep `ContentController` focused. Returns:
+```json
+{
+  "_type": "com.polopoly.model.ModelTypeBean",
+  "typeName": "atex.onecms.article",
+  "typeClass": "bean",
+  "generator": "desk-api",
+  "attributes": [
+    {"name": "headline", "typeName": "com.atex.plugins.structured.text.StructuredText", "modifiers": 3},
+    {"name": "images", "typeName": "java.util.List<com.atex.onecms.content.ContentId>", "modifiers": 3},
+    {"name": "p.beanClass", "typeName": "java.lang.String", "modifiers": 9, "value": "com.atex.onecms.app.dam.standard.aspects.OneArticleBean"},
+    {"name": "p.publicInterfaces", "typeName": "java.lang.String", "modifiers": 9, "value": "..."},
+    {"name": "p.mt", "typeName": "java.lang.String", "modifiers": 9, "value": "atex.onecms.article"},
+    {"name": "_data", "typeName": "java.lang.String", "modifiers": 257}
+  ],
+  "beanClass": "com.atex.onecms.app.dam.standard.aspects.OneArticleBean",
+  "addAll": "true"
+}
+```
+
+Modifier constants (from `com.polopoly.model.ModelTypeFieldData`):
+- `MOD_READ = 1`, `MOD_WRITE = 2`, `MOD_STATIC = 8`, `MOD_TRANSIENT = 256`
+- Normal RW fields: `3` (READ|WRITE), metadata: `9` (READ|STATIC), `_data`: `257` (READ|TRANSIENT)
+
+Response is cached (`Cache-Control: public, max-age=3600`).
+
+### Aspect Name Fixes (verified against gong source)
+
+| Bean | Old (wrong) | Correct (gong) |
+|------|-------------|-----------------|
+| `DamContentAccessAspectBean` | `atex.dam.contentAccess` | `atex.dam.standard.ContentAccess` |
+| `DamPubleventsAspectBean` | `damPubleventsAspect` | `atex.dam.standard.Publevents` |
+| `WFStatusListBean` | `dam.wfstatuslist.d` | `atex.WFStatusList` |
+| `CollectionAspect` | `collectionAspect` | `atex.collection` |
+| `EngagementAspect` | `atex.dam.engagement` | `engagementAspect` |
+
+### Added Missing @AspectDefinition (8 beans)
+
+`WFContentStatusAspectBean`, `WebContentStatusAspectBean`, `WFStatusListBean`, `CollectionAspect`, `DamContentAccessAspectBean`, `DamPubleventsAspectBean`, `PrestigeItemStateAspectBean`, `AliasesAspectBean`
+
+### New Files (2)
+
+| File | Description |
+|------|-------------|
+| `controller/TypeController.java` | `GET /content/type/{typeName}` endpoint |
+| `service/TypeService.java` | Classpath scan, bean introspection, ModelTypeBean generation |
+
+### Design Notes
+
+- **Plugin override**: `TypeService.registerType()` allows plugins to override core type definitions at runtime
+- **@AceAspect support**: Scanner also picks up `@AceAspect`-annotated beans (3 ACE metadata types)
+- **Generic types**: Getter return types include generic parameters (e.g., `java.util.List<com.atex.onecms.content.ContentId>`) matching Polopoly's format
+- **No database storage**: Types are generated from annotations at startup — no migration or content import needed

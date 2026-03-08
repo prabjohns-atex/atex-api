@@ -39,6 +39,7 @@ Dependency order: `polopoly → gong → adm-starterkit / adm-content-service`
 ```
 desk-api (Spring Boot 4)
   ├─ ContentController (/content/*)         — OneCMS-compatible CRUD (Inc 1, 18a, 23)
+  ├─ TypeController (/content/type/*)       — Content type schemas (Inc 31)
   ├─ DamDataResource (/dam/content)         — 68 endpoints from gong/desk (Inc 3)
   ├─ SecurityController (/security/*)       — JWT auth (Inc 2)
   ├─ PrincipalsController (/principals/*)   — User management (Inc 18b)
@@ -59,7 +60,7 @@ desk-api (Spring Boot 4)
 | Entities (12) | `c.a.desk.api.entity` | `IdType`, `ContentId`, `ContentVersion`, `Content`, `Aspect`, `AspectLocation`, `View`, `ContentView`, `Alias`, `ContentAlias` |
 | Repositories (10) | `c.a.desk.api.repository` | Spring Data JPA with JPQL queries |
 | DTOs (7) | `c.a.desk.api.dto` | `ContentResultDto`, `AspectDto`, `ContentWriteDto`, `MetaDto`, `ErrorResponseDto` |
-| Service | `c.a.desk.api.service` | `ContentService` (CRUD, resolve, alias, purge), `IdGenerator` (Camflake) |
+| Service | `c.a.desk.api.service` | `ContentService` (CRUD, resolve, alias, purge), `IdGenerator` (Camflake), `TypeService` (type schema from annotations) |
 | OneCMS Compat | `c.a.desk.api.onecms` | `LocalContentManager`, `LocalPolicyCMServer`, `LocalCmClient`, `LocalFileService` |
 | Auth | `c.a.desk.api.auth` | `TokenService`, `AuthFilter`, `AuthConfig` (RS256 JWT) |
 | Plugins | `c.a.desk.api.plugin` | PF4J 3.15.0, `DeskPreStoreHook`, `DeskContentComposer` |
@@ -110,6 +111,13 @@ New migrations: SQL in `src/main/resources/db/migration/`, Java in `c.a.desk.api
 - **ID resolution**: supports `delegationId:key`, versioned `a:b:c`, and external IDs (no colons)
 - **excludedSites**: comma-separated IDs/external IDs filtered from tree (with parent chain walk)
 - **Response**: `ContentResultDto` format with `contentData.data.children` array and synthesized `atex.Aliases` aspect from `meta.aliases`
+
+### Type Service (Increment 31)
+`GET /content/type/{typeName}` returns `ModelTypeBean` JSON with field introspection.
+- **TypeService**: scans `@AspectDefinition` and `@AceAspect` annotations at startup, introspects bean fields
+- **TypeController**: separate controller at `/content/type`, returns cached responses (1hr)
+- **Plugin override**: `TypeService.registerType()` allows plugins to replace core type definitions
+- **Format**: `{_type, typeName, typeClass:"bean", attributes:[{name, typeName, modifiers}], beanClass, addAll:"true"}`
 
 ### Publishing Pipeline
 `DamPublisherFactory` → `DamPublisherBuilder` → `DamPublisherImpl` → `DamBeanPublisherImpl` → `ContentAPIPublisher` → Remote CMS HTTP
