@@ -39,11 +39,13 @@ Dependency order: `polopoly → gong → adm-starterkit / adm-content-service`
 ```
 desk-api (Spring Boot 4)
   ├─ ContentController (/content/*)         — OneCMS-compatible CRUD (Inc 1, 18a, 23)
+  ├─ ContentResolveController (/content/*)  — External ID & view resolution (Inc 32)
   ├─ TypeController (/content/type/*)       — Content type schemas (Inc 31)
   ├─ DamDataResource (/dam/content)         — 68 endpoints from gong/desk (Inc 3)
   ├─ SecurityController (/security/*)       — JWT auth (Inc 2)
   ├─ PrincipalsController (/principals/*)   — User management (Inc 18b)
   ├─ FileController (/file/*)               — File upload/download (Inc 16)
+  ├─ FileDeliveryController (/filedelivery) — Public file serving with Range (Inc 32)
   ├─ ActivityController (/activities/*)      — Content locking (Inc 16)
   ├─ SearchController (/search/*)           — Solr search (Inc 10)
   ├─ PreviewController (/preview/*)         — Web preview (Inc 17)
@@ -65,6 +67,7 @@ desk-api (Spring Boot 4)
 | Auth | `c.a.desk.api.auth` | `TokenService`, `AuthFilter`, `AuthConfig` (RS256 JWT) |
 | Plugins | `c.a.desk.api.plugin` | PF4J 3.15.0, `DeskPreStoreHook`, `DeskContentComposer` |
 | Indexing | `c.a.desk.api.indexing` | `ContentIndexer`, `DamIndexComposer`, `SolrIndexProcessor` |
+| File Service | `c.a.desk.api.file` | `FileServiceAutoConfiguration`, `S3FileService`, `DelegatingFileService` (local/S3/hybrid) |
 | DAM Classes | `c.a.onecms.app.dam.*` | ~90 classes preserving original packages from gong/desk |
 
 ### Content ID Format

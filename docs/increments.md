@@ -472,3 +472,76 @@ Supporting image types ported: `Rectangle`, `AspectRatio`, `ImageFormat`, `CropI
 - **@AceAspect support**: Scanner also picks up `@AceAspect`-annotated beans (3 ACE metadata types)
 - **Generic types**: Getter return types include generic parameters (e.g., `java.util.List<com.atex.onecms.content.ContentId>`) matching Polopoly's format
 - **No database storage**: Types are generated from annotations at startup — no migration or content import needed
+
+## Increment 32 — File Service Backends, File Delivery & Controller Refactoring
+
+Adds pluggable file storage backends (local/S3/hybrid), a public file delivery endpoint with HTTP Range request support, and extracts resolution endpoints from ContentController.
+
+### File Service Backends
+`com.atex.desk.api.file` — Three backend implementations selectable via `desk.file-service.backend` property:
+
+- **`LocalFileService`** (default) — Filesystem-backed storage under `desk.file-service.base-dir`. Refactored from `@Service` to config-driven instantiation via constructor.
+- **`S3FileService`** — Full Amazon S3 implementation (AWS SDK v2). Supports one-bucket mode (prefix separation) and two-bucket mode. Date-based S3 key prefixes, metadata storage, Range request support, MD5 checksums.
+- **`DelegatingFileService`** — Hybrid routing by URI scheme (`content://` → S3, `tmp://` → local). Used when `backend=hybrid`.
+- **`FileServiceAutoConfiguration`** — Spring `@Configuration` bean factory, selects backend via switch on `desk.file-service.backend` property.
+- **`FileServiceProperties`** — `@ConfigurationProperties(prefix = "desk.file-service")` with S3 sub-properties (region, endpoint, credentials, buckets, one-bucket mode, multipart threshold).
+
+### File Delivery Controller
+`FileDeliveryController` at `/filedelivery` — Public endpoint (no auth required), ported from Polopoly's filedelivery-service WAR:
+
+- `GET /filedelivery/{id}/{path}` — Deliver file by content ID (short form)
+- `GET /filedelivery/contentid/{id}/{path}` — Deliver file by content ID (long form)
+- `GET /filedelivery/externalid/{externalId}/{path}` — Deliver file by external ID
+- `GET /filedelivery` — Ping
+
+Features:
+- HTTP Range request support (RFC 7233): partial, open-ended, suffix ranges
+- `If-Range` conditional range support
+- ETag, Accept-Ranges, Cache-Control headers
+- Resolves file URIs from content's `files` aspect
+- Fallback to first file if requested path not found
+- StreamingResponseBody for efficient large file delivery
+
+### ContentController Refactoring
+Extracted 5 endpoints into `ContentResolveController` to reduce ContentController from 687 → ~520 lines:
+
+- `GET /content/externalid/{id}` — Resolve external ID with config fallback
+- `GET /content/contentid/externalid/{externalId}` — URL-decoded path variant
+- `GET /content/externalid/{id}/history` — History redirect by external ID
+- `GET /content/view/{view}/contentid/{id}` — View-based resolution
+- `GET /content/view/{view}/externalid/{id}` — View + external ID resolution
+
+ContentController delegates to `ContentResolveController` for the `externalid/` path in `getContent()`.
+
+### Configuration
+`application.properties` additions:
+```properties
+desk.file-service.base-dir=./files
+desk.file-service.backend=local
+desk.file-service.s3.enabled=false
+desk.file-service.s3.region=eu-west-1
+```
+
+`build.gradle`: Added `software.amazon.awssdk:s3` dependency.
+
+### Tests (19 new tests)
+`FileDeliveryIntegrationTest` — 11 tests:
+- Full file delivery by content ID (short + long form)
+- 404 for non-existent content
+- Response headers (Accept-Ranges, ETag, Cache-Control, Content-Length)
+- Range requests: partial (`bytes=0-9`), open-ended (`bytes=10-`), suffix (`bytes=-5`)
+- If-Range with matching/non-matching ETag
+- Ping endpoint, no-auth-required verification
+
+`FileServiceIntegrationTest` — 8 new tests (total 14):
+- Auth enforcement: upload/download/delete without token → 401 with WWW-Authenticate
+- 404 for non-existent file GET and info
+- Location header and response fields on upload
+- Cache headers on download
+- Anonymous upload endpoint
+
+### Design Notes
+- **No auth on `/filedelivery`**: Matches Polopoly's public file serving pattern — files are accessible without tokens
+- **ETag generation**: Uses `fileUri.hashCode()` — lightweight, sufficient for cache invalidation
+- **S3 ported from Polopoly**: `FileServiceS3` reference in `polopoly/public-artifacts/file-storage-server`
+- **DelegatingFileService simplified**: Hardcoded two-backend (local + S3) instead of Polopoly's pluggable `FileServiceDelegator` interface — sufficient for current needs
