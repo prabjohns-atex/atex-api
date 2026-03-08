@@ -1,12 +1,15 @@
 package com.atex.desk.api.controller;
 
 import com.atex.desk.api.config.ConfigurationService;
+import com.atex.desk.api.dto.AspectDto;
 import com.atex.desk.api.dto.ContentHistoryDto;
 import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.dto.ContentWriteDto;
 import com.atex.desk.api.dto.ErrorResponseDto;
 import com.atex.desk.api.onecms.LocalContentManager;
 import com.atex.desk.api.service.ContentService;
+import com.atex.desk.api.site.SiteStructureService;
+import com.atex.onecms.app.siteengine.SiteStructureBean;
 import com.atex.onecms.content.ContentManager;
 import com.atex.onecms.content.ContentResult;
 import com.atex.onecms.content.ContentVersionId;
@@ -39,30 +42,38 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.lang.Nullable;
 
 import java.net.URI;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/content")
 @Tag(name = "Content")
 public class ContentController
 {
+    private static final Logger LOG = Logger.getLogger(ContentController.class.getName());
     private static final String DEFAULT_USER = "system";
+    private static final String STRUCTURE_VARIANT = "atex.onecms.structure";
 
     private final ContentService contentService;
     private final ConfigurationService configurationService;
     private final ContentManager contentManager;
     private final LocalContentManager localContentManager;
+    private final SiteStructureService siteStructureService;
 
     public ContentController(ContentService contentService,
                               ConfigurationService configurationService,
                               @Nullable ContentManager contentManager,
-                              @Nullable LocalContentManager localContentManager)
+                              @Nullable LocalContentManager localContentManager,
+                              SiteStructureService siteStructureService)
     {
         this.contentService = contentService;
         this.configurationService = configurationService;
         this.contentManager = contentManager;
         this.localContentManager = localContentManager;
+        this.siteStructureService = siteStructureService;
     }
 
     /**
@@ -82,8 +93,10 @@ public class ContentController
     public ResponseEntity<?> getContent(
         @Parameter(description = "Content ID (versioned or unversioned)", example = "onecms:abc123")
         @PathVariable String id,
-        @Parameter(description = "Variant name for content composition (e.g. atex.onecms.preview)")
-        @RequestParam(value = "variant", required = false) String variant)
+        @Parameter(description = "Variant name for content composition (e.g. atex.onecms.structure)")
+        @RequestParam(value = "variant", required = false) String variant,
+        @Parameter(description = "Comma-separated site IDs to exclude from structure variant")
+        @RequestParam(value = "excludedSites", required = false) String excludedSites)
     {
         // Handle encoded external ID: "externalid/X" arrives via %2F decoding in {id}
         if (id.startsWith("externalid/")) {
@@ -93,7 +106,7 @@ public class ContentController
 
         // If variant is requested and ContentManager is available, use variant-aware path
         if (variant != null && !variant.isEmpty() && contentManager != null) {
-            return getContentWithVariant(id, variant);
+            return getContentWithVariant(id, variant, excludedSites);
         }
 
         if (contentService.isVersionedId(id))
@@ -130,28 +143,117 @@ public class ContentController
 
     /**
      * Fetch content via ContentManager with variant composition.
+     * Handles standard (delegationId:key) and external ID formats.
      */
-    private ResponseEntity<?> getContentWithVariant(String id, String variant) {
+    private ResponseEntity<?> getContentWithVariant(String id, String variant, String excludedSites) {
         try {
-            ContentVersionId vid;
-            if (contentService.isVersionedId(id)) {
-                vid = IdUtil.fromVersionedString(id);
-            } else {
-                var cid = IdUtil.fromString(id);
-                if (cid == null) return notFound("Invalid content ID");
-                vid = contentManager.resolve(cid, Subject.NOBODY_CALLER);
-                if (vid == null) return notFound("Content not found");
+            ContentVersionId vid = resolveToVersionId(id);
+            if (vid == null) return notFound("Content not found");
+
+            // Structure variant: build site tree directly from DTOs
+            if (STRUCTURE_VARIANT.equals(variant)) {
+                return buildStructureResponse(vid, excludedSites);
+            }
+
+            // Generic variant: use composer chain
+            Map<String, Object> params = null;
+            if (excludedSites != null) {
+                params = Map.of("excludedSites", excludedSites);
             }
             ContentResult<Object> result = contentManager.get(
-                vid, variant, Object.class, null, Subject.NOBODY_CALLER);
+                vid, variant, Object.class, params, Subject.NOBODY_CALLER);
             if (result == null || !result.getStatus().isSuccess()) {
                 return notFound("Content not found");
             }
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            LOG.log(Level.WARNING, "Variant fetch failed for id=" + id + " variant=" + variant, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to compose variant: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Resolve an ID string to a ContentVersionId.
+     * Supports versioned (a:b:c), unversioned (a:b), and external ID formats.
+     */
+    private ContentVersionId resolveToVersionId(String id) {
+        if (contentService.isVersionedId(id)) {
+            return IdUtil.fromVersionedString(id);
+        }
+        // Try standard delegationId:key format
+        try {
+            var cid = IdUtil.fromString(id);
+            ContentVersionId vid = contentManager.resolve(cid, Subject.NOBODY_CALLER);
+            if (vid != null) return vid;
+        } catch (IllegalArgumentException ignored) {
+            // Not standard format — fall through to external ID
+        }
+        // Resolve as external ID
+        return contentManager.resolve(id, Subject.NOBODY_CALLER);
+    }
+
+    /**
+     * Build the atex.onecms.structure variant response.
+     * Delegates to SiteStructureService for tree building, wraps result in ContentResultDto.
+     */
+    private ResponseEntity<?> buildStructureResponse(ContentVersionId vid, String excludedSites) {
+        SiteStructureBean structure = siteStructureService.getStructure(vid, excludedSites);
+        if (structure == null) {
+            return notFound("Content not found");
+        }
+
+        // Build ContentResultDto wrapping the structure as contentData
+        String idStr = IdUtil.toIdString(vid.getContentId());
+        String versionStr = IdUtil.toVersionedIdString(vid);
+
+        ContentResultDto dto = new ContentResultDto();
+        dto.setId(idStr);
+        dto.setVersion(versionStr);
+
+        // Fetch the original content to get aliases and other aspects
+        Optional<ContentResultDto> original = contentService.getContent(
+            vid.getDelegationId(), vid.getKey(), vid.getVersion());
+
+        Map<String, AspectDto> aspects = new LinkedHashMap<>();
+        if (original.isPresent()) {
+            ContentResultDto orig = original.get();
+            Map<String, AspectDto> origAspects = orig.getAspects();
+            if (origAspects != null) {
+                origAspects.forEach((k, v) -> {
+                    if (!"contentData".equals(k)) aspects.put(k, v);
+                });
+            }
+            // Synthesize atex.Aliases aspect from meta.aliases (mytype-new reads it here)
+            if (orig.getMeta() != null && orig.getMeta().getAliases() != null
+                    && !orig.getMeta().getAliases().isEmpty()) {
+                AspectDto aliasesAspect = new AspectDto();
+                aliasesAspect.setName("atex.Aliases");
+                aliasesAspect.setData(Map.of("aliases", orig.getMeta().getAliases()));
+                aspects.put("atex.Aliases", aliasesAspect);
+            }
+            dto.setMeta(orig.getMeta());
+        }
+
+        // Build contentData aspect with the structure bean
+        AspectDto contentDataAspect = new AspectDto();
+        contentDataAspect.setName("contentData");
+        Map<String, Object> contentData = new LinkedHashMap<>();
+        contentData.put("_type", "com.atex.onecms.app.siteengine.PageBean");
+        contentData.put("name", structure.getName());
+        contentData.put("id", structure.getId());
+        if (structure.getExternalId() != null) {
+            contentData.put("externalId", structure.getExternalId());
+        }
+        if (structure.getPathSegment() != null) {
+            contentData.put("pathSegment", structure.getPathSegment());
+        }
+        contentData.put("children", structure.getChildren());
+        contentDataAspect.setData(contentData);
+        aspects.put("contentData", contentDataAspect);
+
+        dto.setAspects(aspects);
+        return ResponseEntity.ok(dto);
     }
 
     /**

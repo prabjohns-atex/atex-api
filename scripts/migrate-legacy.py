@@ -32,7 +32,7 @@ DESK_API = "http://localhost:8081"
 REFERENCE = "http://localhost:38084/onecms"
 
 USERNAME = "sysadmin"
-PASSWORD = "sysadmin"
+PASSWORD = os.environ.get("DESK_PASSWORD", "sysadmin")
 
 # External IDs served by ConfigurationService (classpath resources).
 # Loaded from scripts/config-mapping.txt — these don't need migration.
@@ -62,6 +62,22 @@ def load_config_external_ids():
 
 CONFIG_EXTERNAL_IDS = load_config_external_ids()
 
+
+def load_skip_ids():
+    """Load external IDs to skip from scripts/migrate-skip.txt."""
+    skip_file = os.path.join(os.path.dirname(__file__), "migrate-skip.txt")
+    ids = set()
+    try:
+        with open(skip_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    ids.add(line)
+    except FileNotFoundError:
+        pass
+    return ids
+
+
 # ---------------------------------------------------------------------------
 # Console colours
 # ---------------------------------------------------------------------------
@@ -84,7 +100,7 @@ def login(base_url):
     resp = requests.post(
         f"{base_url}/security/token",
         json={"username": USERNAME, "password": PASSWORD},
-        timeout=10
+        timeout=30
     )
     resp.raise_for_status()
     return resp.json()["token"]
@@ -256,6 +272,16 @@ def filter_entries(entries, args):
         if skipped_cfg:
             print(f"{C.DIM}Skipped {skipped_cfg} config entries (served by ConfigurationService){C.RESET}")
 
+    # Skip external IDs known to cause issues on the reference server.
+    # Maintained in scripts/migrate-skip.txt (one external ID per line).
+    skip_ids = load_skip_ids()
+    if skip_ids:
+        before = len(entries)
+        entries = [(eid, pid) for eid, pid in entries if eid not in skip_ids]
+        skipped_known = before - len(entries)
+        if skipped_known:
+            print(f"{C.DIM}Skipped {skipped_known} known-problematic entries (see migrate-skip.txt){C.RESET}")
+
     return entries
 
 
@@ -330,6 +356,8 @@ def cmd_migrate(args):
     skipped = 0
     failed = 0
     not_found = 0
+    not_found_ids = []
+    failed_ids = []
 
     for i, (ext_id, policy_id) in enumerate(entries):
         # Progress
@@ -350,19 +378,21 @@ def cmd_migrate(args):
         except Exception as e:
             print(f"  {C.FAIL}FETCH ERROR {ext_id}: {e}{C.RESET}")
             failed += 1
+            failed_ids.append((ext_id, f"FETCH: {e}"))
             continue
 
         if resp.status_code != 200:
             if args.verbose:
                 print(f"  {C.DIM}NOT FOUND on reference: {ext_id} ({resp.status_code}){C.RESET}")
             not_found += 1
+            not_found_ids.append(ext_id)
             continue
 
         content_json = resp.json()
 
         if args.verbose:
             aspect_names = list(content_json.get("aspects", {}).keys())
-            print(f"  {C.INFO}MIGRATE {ext_id} → {policy_id or '?'} "
+            print(f"  {C.INFO}MIGRATE {ext_id} -> {policy_id or '?'} "
                   f"({len(aspect_names)} aspects){C.RESET}")
 
         if migrate_one(desk_token, ext_id, content_json, policy_id,
@@ -370,6 +400,7 @@ def cmd_migrate(args):
             migrated += 1
         else:
             failed += 1
+            failed_ids.append((ext_id, "migrate_one returned False"))
 
         # Brief pause to avoid overwhelming servers
         if not args.dry_run and (i + 1) % 100 == 0:
@@ -382,6 +413,23 @@ def cmd_migrate(args):
     print(f"  {C.DIM}Not found on reference: {not_found}{C.RESET}")
     if failed:
         print(f"  {C.FAIL}Failed: {failed}{C.RESET}")
+
+    # Write report file
+    report_path = os.path.join(os.path.dirname(__file__), "migrate-report.txt")
+    with open(report_path, "w") as f:
+        f.write(f"# Migration report - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"# Migrated: {migrated}, Skipped: {skipped}, "
+                f"Not found: {not_found}, Failed: {failed}\n\n")
+        if failed_ids:
+            f.write("## FAILED (need investigation)\n")
+            for eid, reason in failed_ids:
+                f.write(f"{eid} | {reason}\n")
+            f.write("\n")
+        if not_found_ids:
+            f.write("## NOT FOUND on reference server\n")
+            for eid in not_found_ids:
+                f.write(f"{eid}\n")
+    print(f"\n  Report written to: {report_path}")
 
 
 def cmd_verify(args):

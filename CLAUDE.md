@@ -103,6 +103,14 @@ DamContentBean (legacy, deprecated) → DamArchiveAspectBean → DamArticleAspec
 Flyway: V1 = legacy baseline (23 tables), V2 = desk-api additions (Java migration).
 New migrations: SQL in `src/main/resources/db/migration/`, Java in `c.a.desk.api.migration`.
 
+### Site Structure Variant
+`GET /content/contentid/{id}?variant=atex.onecms.structure&excludedSites=...` builds a recursive site tree.
+- **Beans**: `PageBean`, `SiteBean`, `SiteStructureBean` in `c.a.onecms.app.siteengine` (ported from polopoly/gong, using OneCMS `ContentId` not Polopoly)
+- **Service**: `SiteStructureService` in `c.a.desk.api.site` (ported from `SiteStructureUtils` in gong/site)
+- **ID resolution**: supports `delegationId:key`, versioned `a:b:c`, and external IDs (no colons)
+- **excludedSites**: comma-separated IDs/external IDs filtered from tree (with parent chain walk)
+- **Response**: `ContentResultDto` format with `contentData.data.children` array and synthesized `atex.Aliases` aspect from `meta.aliases`
+
 ### Publishing Pipeline
 `DamPublisherFactory` → `DamPublisherBuilder` → `DamPublisherImpl` → `DamBeanPublisherImpl` → `ContentAPIPublisher` → Remote CMS HTTP
 
@@ -132,7 +140,7 @@ JAVA_HOME=C:/Users/peter/.jdks/openjdk-25.0.2 ./gradlew test --tests "*ContentCr
 python scripts/compat-test.py --desk-only
 ```
 
-50 integration tests (Testcontainers MySQL): Security, ContentCrud, ContentVersioning, Alias, FileService, Principals, Workspace, ErrorResponse.
+56 integration tests (Testcontainers MySQL): Security, ContentCrud, ContentVersioning, Alias, FileService, Principals, Workspace, ErrorResponse, SiteStructure.
 
 ## Remaining Stubs / Not Implemented
 - 501 endpoints: `create-page`, `sendcontent`, `assigncontent`, `mergeMultiplePdf`, `collectionpreview`

@@ -1,0 +1,5 @@
+# External IDs to skip during migration.
+# These cause errors on the reference server (stack overflow, recursion, etc.)
+# and need to be handled separately.
+p.CategoryTree
+com.atex.plugins.textmining.calais.textMiningConfigTemplate
