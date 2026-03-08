@@ -156,8 +156,13 @@ python scripts/compat-test.py --desk-only
 - Service stubs: `AyrShareService`, `TagManagerService`, `PublicationsService`, `AtexPdfium`
 - P3 compat issue: Changes feed empty response format
 
-## Workflow Rules
-- **After every increment/iteration**: update CLAUDE.md summary, append details to `docs/increments.md`, then commit and push. This is a default step — do not wait to be asked.
+## Workflow Rules (mandatory after every increment)
+1. **Review against reference**: verify the implementation against the original source (polopoly/gong) to ensure no features, fields, or edge cases were missed
+2. **Update/add tests**: ensure integration tests cover the new functionality, including edge cases found during review
+3. **Update docs**: update CLAUDE.md summary and append details to `docs/increments.md`
+4. **Commit and push**: stage relevant files, commit with descriptive message, push to remote
+
+These steps are automatic — do not wait to be asked.
 
 ## Detailed Documentation
 - **[docs/increments.md](docs/increments.md)** — Full per-increment implementation details
