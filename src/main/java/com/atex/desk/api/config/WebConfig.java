@@ -3,8 +3,10 @@ package com.atex.desk.api.config;
 import org.apache.tomcat.util.buf.EncodedSolidusHandling;
 import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -19,6 +21,37 @@ public class WebConfig implements WebMvcConfigurer
     {
         registry.addRedirectViewController("/dashboard", "/dashboard.html");
         registry.addRedirectViewController("/swagger-ui", "/swagger-ui.html");
+    }
+
+    /**
+     * Strip /onecms prefix from incoming requests.
+     * The app was previously deployed as onecms.war, so some configuration
+     * still references the /onecms context path. This filter quietly forwards
+     * those requests to the root path.
+     */
+    @Bean
+    public FilterRegistrationBean<OncePerRequestFilter> onecmsContextFilter() {
+        OncePerRequestFilter filter = new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest request,
+                                            jakarta.servlet.http.HttpServletResponse response,
+                                            jakarta.servlet.FilterChain chain)
+                    throws java.io.IOException, jakarta.servlet.ServletException {
+                String path = request.getRequestURI();
+                if (path.startsWith("/onecms/")) {
+                    String newPath = path.substring("/onecms".length());
+                    request.getRequestDispatcher(newPath).forward(request, response);
+                } else if (path.equals("/onecms")) {
+                    request.getRequestDispatcher("/").forward(request, response);
+                } else {
+                    chain.doFilter(request, response);
+                }
+            }
+        };
+        FilterRegistrationBean<OncePerRequestFilter> reg = new FilterRegistrationBean<>(filter);
+        reg.addUrlPatterns("/onecms/*", "/onecms");
+        reg.setOrder(0);
+        return reg;
     }
 
     /**
