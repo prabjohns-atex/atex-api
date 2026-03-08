@@ -432,12 +432,39 @@ Response is cached (`Cache-Control: public, max-age=3600`).
 
 `WFContentStatusAspectBean`, `WebContentStatusAspectBean`, `WFStatusListBean`, `CollectionAspect`, `DamContentAccessAspectBean`, `DamPubleventsAspectBean`, `PrestigeItemStateAspectBean`, `AliasesAspectBean`
 
-### New Files (2)
+### Ported Missing Aspect Beans (5 + 6 supporting types)
+
+mytype-new queries 17 type names. Five were missing from desk-api:
+
+| Bean | Aspect Name | Source |
+|------|-------------|--------|
+| `ImageInfoAspectBean` | `atex.Image` | polopoly/core/image-service |
+| `ImageEditInfoAspectBean` | `atex.ImageEditInfo` | polopoly/core/image-service |
+| `MetadataTagsAspectBean` | `atex.ImageMetadata` | polopoly/core/image-service |
+| `ContentAccessBean` | `p.ContentAccess` | polopoly/core/data-api-api |
+| `PlanningAspectBean` | `atex.Planning` | gong/onecms-common/beans |
+
+Supporting image types ported: `Rectangle`, `AspectRatio`, `ImageFormat`, `CropInfo`, `Pixelation`, `FocalPoint` (all in `c.a.onecms.image`).
+
+### New Files
 
 | File | Description |
 |------|-------------|
 | `controller/TypeController.java` | `GET /content/type/{typeName}` endpoint |
 | `service/TypeService.java` | Classpath scan, bean introspection, ModelTypeBean generation |
+| `c.a.onecms.image.*` | 8 image classes (3 aspect beans + 5 supporting types) |
+| `c.a.onecms.content.ContentAccessBean` | Content access control bean |
+| `c.a.onecms.app.dam.planning.PlanningAspectBean` | Editorial planning bean |
+
+### Tests (18)
+
+`TypeServiceIntegrationTest` — covers all 17 type names queried by mytype-new:
+- Schema structure (\_type, typeName, typeClass, beanClass, addAll, attributes)
+- StructuredText field detection (headline, lead, body)
+- Field type accuracy (String, boolean, int, List<ContentId>)
+- Metadata attributes (p.beanClass, p.mt, \_data with correct modifiers)
+- Boolean `is*` methods (flipVertical, flipHorizontal)
+- 404 for unknown types, Cache-Control header
 
 ### Design Notes
 

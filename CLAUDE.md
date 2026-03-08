@@ -148,7 +148,7 @@ JAVA_HOME=C:/Users/peter/.jdks/openjdk-25.0.2 ./gradlew test --tests "*ContentCr
 python scripts/compat-test.py --desk-only
 ```
 
-56 integration tests (Testcontainers MySQL): Security, ContentCrud, ContentVersioning, Alias, FileService, Principals, Workspace, ErrorResponse, SiteStructure.
+74 integration tests (Testcontainers MySQL): Security, ContentCrud, ContentVersioning, Alias, FileService, Principals, Workspace, ErrorResponse, SiteStructure, TypeService.
 
 ## Remaining Stubs / Not Implemented
 - 501 endpoints: `create-page`, `sendcontent`, `assigncontent`, `mergeMultiplePdf`, `collectionpreview`
