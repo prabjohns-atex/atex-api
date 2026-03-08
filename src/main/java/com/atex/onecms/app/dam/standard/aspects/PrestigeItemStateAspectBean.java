@@ -1,8 +1,11 @@
 package com.atex.onecms.app.dam.standard.aspects;
 
+import com.atex.onecms.content.aspects.annotations.AspectDefinition;
+
 /**
  * Aspect bean for item state (spike/unspike).
  */
+@AspectDefinition(PrestigeItemStateAspectBean.ASPECT_NAME)
 public class PrestigeItemStateAspectBean {
     public static final String ASPECT_NAME = "atex.dam.itemState";
 

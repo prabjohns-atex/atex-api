@@ -2,8 +2,11 @@ package com.atex.onecms.app.dam.workflow;
 
 import java.util.List;
 
+import com.atex.onecms.content.aspects.annotations.AspectDefinition;
+
+@AspectDefinition(WFStatusListBean.ASPECT_NAME)
 public class WFStatusListBean {
-    public static final String ASPECT_NAME = "dam.wfstatuslist.d";
+    public static final String ASPECT_NAME = "atex.WFStatusList";
 
     private List<WFStatusBean> statuses;
     public List<WFStatusBean> getStatuses() { return statuses; }

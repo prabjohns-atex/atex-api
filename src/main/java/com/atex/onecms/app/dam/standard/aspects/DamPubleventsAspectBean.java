@@ -2,10 +2,13 @@ package com.atex.onecms.app.dam.standard.aspects;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.atex.onecms.app.dam.publevent.DamPubleventBean;
 
+import com.atex.onecms.app.dam.publevent.DamPubleventBean;
+import com.atex.onecms.content.aspects.annotations.AspectDefinition;
+
+@AspectDefinition(DamPubleventsAspectBean.ASPECT_NAME)
 public class DamPubleventsAspectBean {
-    public static final String ASPECT_NAME = "damPubleventsAspect";
+    public static final String ASPECT_NAME = "atex.dam.standard.Publevents";
 
     private List<DamPubleventBean> publevents;
     private List<DamPubleventBean> events;

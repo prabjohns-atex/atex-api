@@ -2,8 +2,11 @@ package com.atex.onecms.app.dam.collection.aspect;
 
 import java.util.List;
 
+import com.atex.onecms.content.aspects.annotations.AspectDefinition;
+
+@AspectDefinition(CollectionAspect.ASPECT_NAME)
 public class CollectionAspect {
-    public static final String ASPECT_NAME = "collectionAspect";
+    public static final String ASPECT_NAME = "atex.collection";
 
     private List<String> contentIds;
     private String contentId;

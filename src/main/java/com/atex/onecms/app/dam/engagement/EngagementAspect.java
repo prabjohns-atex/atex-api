@@ -5,9 +5,9 @@ import com.atex.onecms.content.aspects.annotations.AspectDefinition;
 import java.util.ArrayList;
 import java.util.List;
 
-@AspectDefinition({"atex.dam.engagement"})
+@AspectDefinition({"engagementAspect"})
 public class EngagementAspect {
-    public static final String ASPECT_NAME = "atex.dam.engagement";
+    public static final String ASPECT_NAME = "engagementAspect";
 
     private List<EngagementDesc> engagements;
 
