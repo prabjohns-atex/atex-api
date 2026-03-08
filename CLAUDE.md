@@ -156,6 +156,9 @@ python scripts/compat-test.py --desk-only
 - Service stubs: `AyrShareService`, `TagManagerService`, `PublicationsService`, `AtexPdfium`
 - P3 compat issue: Changes feed empty response format
 
+## Workflow Rules
+- **After every increment/iteration**: update CLAUDE.md summary, append details to `docs/increments.md`, then commit and push. This is a default step — do not wait to be asked.
+
 ## Detailed Documentation
 - **[docs/increments.md](docs/increments.md)** — Full per-increment implementation details
 - **MEMORY.md** files in `.claude/projects/` — Cross-session notes
