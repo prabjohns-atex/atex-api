@@ -7,12 +7,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::AppState;
-use crate::processing::{self, CropRect, FocalPointParam, ImageParams, OutputFormat, ResizeMode};
+use crate::processing::{self, AspectRatioParam, CropRect, FocalPointParam, ImageParams, OutputFormat, ResizeMode};
 use crate::signing;
 
 /// Handle image requests.
 ///
-/// URL format: /image/{file_uri}/{filename}.{ext}?w=&h=&m=&q=&c=&fp=&rot=&flipv=&fliph=&sig_key=sig_value
+/// URL format: /image/{file_uri}/{filename}.{ext}?w=&h=&m=&q=&c=&fp=&rot=&flipv=&fliph=&a=&sig
 ///
 /// The `file_uri` is the storage path (e.g., "content/host/2024/01/uuid.jpg").
 /// desk-api resolves the content ID to this path and signs the URL.
@@ -33,12 +33,44 @@ pub async fn handle_image(
     }
 
     // Parse the path: everything before the last '/' segment is the file URI
-    // Format: {space}/{host}/{date_path}/{uuid.ext}/{friendly_name.ext}
-    // The friendly name is the last segment, file URI is everything before it
     let (file_uri, filename) = match path.rsplit_once('/') {
         Some((uri, name)) => (uri, name),
         None => return (StatusCode::BAD_REQUEST, "Invalid path").into_response(),
     };
+
+    // Check cache first
+    let cache_key = format!("{}?{}", path, query_to_sorted_string(&query));
+    if let Some(ref cache) = state.cache {
+        if let Some((data, content_type)) = cache.get(&cache_key) {
+            let mut headers = HeaderMap::new();
+            headers.insert(header::CONTENT_TYPE, content_type.parse().unwrap());
+            headers.insert(header::CACHE_CONTROL, "public, max-age=31536000".parse().unwrap());
+            headers.insert(header::ETAG, format!("\"{}\"", &cache_key[..cache_key.len().min(64)]).parse().unwrap());
+            headers.insert("X-Cache", "HIT".parse().unwrap());
+            return (StatusCode::OK, headers, data).into_response();
+        }
+    }
+
+    // Fetch original image from storage
+    let raw_bytes = match state.storage.get_file(file_uri).await {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            tracing::warn!("File not found: {} — {}", file_uri, e);
+            return (StatusCode::NOT_FOUND, "Image not found").into_response();
+        }
+    };
+
+    // SVG passthrough — serve raw without processing
+    let is_svg = filename.ends_with(".svg")
+        || filename.ends_with(".svgz")
+        || (raw_bytes.len() > 5 && &raw_bytes[..5] == b"<?xml")
+        || (raw_bytes.len() > 4 && &raw_bytes[..4] == b"<svg");
+    if is_svg {
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, "image/svg+xml".parse().unwrap());
+        headers.insert(header::CACHE_CONTROL, "public, max-age=31536000".parse().unwrap());
+        return (StatusCode::OK, headers, raw_bytes).into_response();
+    }
 
     // Determine output format from filename extension
     let output_format = filename
@@ -58,6 +90,7 @@ pub async fn handle_image(
             .and_then(|v| v.parse().ok())
             .unwrap_or(state.config.processing.default_quality),
         crop: parse_crop(query.get("c").map(|s| s.as_str())),
+        aspect_ratio: parse_aspect_ratio(query.get("a").map(|s| s.as_str())),
         rotation: query.get("rot").and_then(|v| v.parse().ok()),
         flip_vertical: query.get("flipv").map(|v| v == "1" || v == "true").unwrap_or(false),
         flip_horizontal: query.get("fliph").map(|v| v == "1" || v == "true").unwrap_or(false),
@@ -65,29 +98,12 @@ pub async fn handle_image(
         output_format,
     };
 
-    // Check cache
-    let cache_key = format!("{}?{}", path, query_to_sorted_string(&query));
-    if let Some(ref cache) = state.cache {
-        if let Some((data, content_type)) = cache.get(&cache_key) {
-            let mut headers = HeaderMap::new();
-            headers.insert(header::CONTENT_TYPE, content_type.parse().unwrap());
-            headers.insert(header::CACHE_CONTROL, "public, max-age=31536000".parse().unwrap());
-            headers.insert("X-Cache", "HIT".parse().unwrap());
-            return (StatusCode::OK, headers, data).into_response();
-        }
-    }
-
-    // Fetch original image from storage
-    let raw_bytes = match state.storage.get_file(file_uri).await {
-        Ok(bytes) => bytes,
-        Err(e) => {
-            tracing::warn!("File not found: {} — {}", file_uri, e);
-            return (StatusCode::NOT_FOUND, "Image not found").into_response();
-        }
-    };
+    // Get original dimensions from query (passed by desk-api from ImageInfoAspectBean)
+    let orig_width = query.get("ow").and_then(|v| v.parse::<u32>().ok());
+    let orig_height = query.get("oh").and_then(|v| v.parse::<u32>().ok());
 
     // Process image
-    let (output_bytes, format) = match processing::process_image(
+    let (output_bytes, format, rendered_width, rendered_height) = match processing::process_image(
         &raw_bytes,
         &params,
         state.config.processing.max_width,
@@ -102,13 +118,26 @@ pub async fn handle_image(
 
     // Store in cache
     if let Some(ref cache) = state.cache {
-        cache.put(cache_key, output_bytes.clone(), format.content_type().to_string());
+        cache.put(cache_key.clone(), output_bytes.clone(), format.content_type().to_string());
     }
 
     let mut headers = HeaderMap::new();
     headers.insert(header::CONTENT_TYPE, format.content_type().parse().unwrap());
     headers.insert(header::CACHE_CONTROL, "public, max-age=31536000".parse().unwrap());
+    headers.insert(header::ETAG, format!("\"{}\"", &cache_key[..cache_key.len().min(64)]).parse().unwrap());
     headers.insert("X-Cache", "MISS".parse().unwrap());
+
+    // Original image dimensions (from desk-api)
+    if let Some(w) = orig_width {
+        headers.insert("X-Original-Image-Width", w.to_string().parse().unwrap());
+    }
+    if let Some(h) = orig_height {
+        headers.insert("X-Original-Image-Height", h.to_string().parse().unwrap());
+    }
+
+    // Rendered image dimensions
+    headers.insert("X-Rendered-Image-Width", rendered_width.to_string().parse().unwrap());
+    headers.insert("X-Rendered-Image-Height", rendered_height.to_string().parse().unwrap());
 
     (StatusCode::OK, headers, output_bytes).into_response()
 }
@@ -123,6 +152,20 @@ fn parse_crop(value: Option<&str>) -> Option<CropRect> {
             y: parts[1],
             width: parts[2],
             height: parts[3],
+        })
+    } else {
+        None
+    }
+}
+
+/// Parse aspect ratio from "w:h" format (e.g., "16:9", "3:2")
+fn parse_aspect_ratio(value: Option<&str>) -> Option<AspectRatioParam> {
+    let s = value?;
+    let parts: Vec<u32> = s.split(':').filter_map(|p| p.trim().parse().ok()).collect();
+    if parts.len() == 2 && parts[0] > 0 && parts[1] > 0 {
+        Some(AspectRatioParam {
+            width: parts[0],
+            height: parts[1],
         })
     } else {
         None

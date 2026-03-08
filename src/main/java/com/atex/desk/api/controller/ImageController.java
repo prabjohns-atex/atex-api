@@ -4,10 +4,9 @@ import com.atex.desk.api.config.ImageServiceProperties;
 import com.atex.desk.api.dto.AspectDto;
 import com.atex.desk.api.dto.ContentResultDto;
 import com.atex.desk.api.service.ContentService;
-import com.atex.onecms.app.dam.ws.ContentApiException;
+import com.atex.desk.api.dto.ErrorResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -61,25 +60,31 @@ public class ImageController {
     }
 
     /**
-     * Serve image by unversioned content ID: /image/{delegationId}:{key}/{filename}
+     * Serve image by content ID: /image/{id}/{filename}
+     * Content ID format: "delegationId:key" or "delegationId:key:version"
      */
-    @GetMapping("/{id:[^/]+:[^/]+}/{filename:.+}")
+    @GetMapping("/{id}/{filename:.+}")
     @Operation(summary = "Get processed image by content ID")
-    public ResponseEntity<Void> getImage(
+    public ResponseEntity<?> getImage(
             @PathVariable("id") String id,
             @PathVariable("filename") String filename,
-            @RequestParam Map<String, String> queryParams,
-            HttpServletRequest request) {
+            @RequestParam Map<String, String> queryParams) {
+
+        // File-service scheme path: /image/{scheme}/{host}/...
+        // Differentiate by checking if id is a scheme name
+        if ("content".equals(id) || "tmp".equals(id) || "s3".equals(id)) {
+            return handleFileUri(id, filename, queryParams);
+        }
 
         return resolveAndRedirect(id, filename, queryParams);
     }
 
     /**
-     * Serve image by versioned content ID: /image/contentid/{delegationId}:{key}:{version}/{filename}
+     * Serve image by versioned content ID: /image/contentid/{id}/{filename}
      */
-    @GetMapping("/contentid/{id:.+}/{filename:.+}")
+    @GetMapping("/contentid/{id}/{filename:.+}")
     @Operation(summary = "Get processed image by versioned content ID")
-    public ResponseEntity<Void> getImageByVersionedId(
+    public ResponseEntity<?> getImageByVersionedId(
             @PathVariable("id") String id,
             @PathVariable("filename") String filename,
             @RequestParam Map<String, String> queryParams) {
@@ -90,9 +95,9 @@ public class ImageController {
     /**
      * Download original (unprocessed) image: /image/original/{id}/{filename}
      */
-    @GetMapping("/original/{id:.+}/{filename:.+}")
+    @GetMapping("/original/{id}/{filename:.+}")
     @Operation(summary = "Download original image")
-    public ResponseEntity<Void> getOriginal(
+    public ResponseEntity<?> getOriginal(
             @PathVariable("id") String id,
             @PathVariable("filename") String filename) {
         return redirectToOriginal(id);
@@ -101,25 +106,23 @@ public class ImageController {
     /**
      * Download original without filename: /image/original/{id}
      */
-    @GetMapping("/original/{id:[^/]+:[^/]+}")
+    @GetMapping("/original/{id}")
     @Operation(summary = "Download original image (no filename)")
-    public ResponseEntity<Void> getOriginalNoFilename(
+    public ResponseEntity<?> getOriginalNoFilename(
             @PathVariable("id") String id) {
         return redirectToOriginal(id);
     }
 
     /**
-     * File-service scheme path: /image/{scheme}/{host}/{path}
-     * Proxies image processing for files addressed by URI scheme.
-     * Publicly accessible (no HMAC required), matching Polopoly behavior.
+     * Handle file-service scheme path: /image/{scheme}/{host}/{path}
+     * The scheme is "content", "tmp", or "s3" — detected in getImage().
      */
-    @GetMapping("/{scheme:content|tmp|s3}/{host}/{path:.*}")
-    @Operation(summary = "Process image by file URI")
-    public ResponseEntity<Void> getImageByFileUri(
-            @PathVariable("scheme") String scheme,
-            @PathVariable("host") String host,
-            @PathVariable("path") String path,
-            @RequestParam Map<String, String> queryParams) {
+    private ResponseEntity<?> handleFileUri(String scheme, String hostAndPath,
+                                                Map<String, String> queryParams) {
+        // hostAndPath = "host/date/path/file.jpg" — first segment is host
+        int slashIdx = hostAndPath.indexOf('/');
+        String host = slashIdx > 0 ? hostAndPath.substring(0, slashIdx) : hostAndPath;
+        String path = slashIdx > 0 ? hostAndPath.substring(slashIdx + 1) : "";
 
         String fileUri = scheme + "/" + host + "/" + path;
         String filename = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
@@ -137,8 +140,11 @@ public class ImageController {
                 .build();
     }
 
-    private ResponseEntity<Void> redirectToOriginal(String id) {
+    private ResponseEntity<?> redirectToOriginal(String id) {
         ContentImageInfo info = resolveImageInfo(id);
+        if (info == null || info.fileUri == null) {
+            return notFound("Content not found: " + id);
+        }
         String redirectUrl = "/file/" + info.fileUri;
 
         return ResponseEntity.status(HttpStatus.FOUND)
@@ -149,18 +155,26 @@ public class ImageController {
                 .build();
     }
 
-    private ResponseEntity<Void> resolveAndRedirect(String id, String filename,
+    private ResponseEntity<?> resolveAndRedirect(String id, String filename,
                                                      Map<String, String> queryParams) {
         ContentImageInfo info = resolveImageInfo(id);
+        if (info == null) {
+            return notFound("Content not found: " + id);
+        }
+        if (info.fileUri == null) {
+            return notFound("No image file for content: " + id);
+        }
 
         // Build signed redirect URL to the Rust sidecar
         // Path format: /image/{file_uri}/{filename}
         String fileUri = info.fileUri;
         String sidecarPath = fileUri + "/" + filename;
 
-        // Add image edit info from content aspects
+        // Add image edit info and original dimensions from content aspects
         Map<String, String> params = new TreeMap<>(queryParams);
         applyEditInfo(params, info);
+        if (info.origWidth != null) params.putIfAbsent("ow", String.valueOf(info.origWidth));
+        if (info.origHeight != null) params.putIfAbsent("oh", String.valueOf(info.origHeight));
 
         // Sign the URL
         String signedQuery = buildSignedQuery(sidecarPath, params);
@@ -178,9 +192,14 @@ public class ImageController {
      * Resolve a content ID string to image info (file URI + edit metadata).
      */
     private ContentImageInfo resolveImageInfo(String idString) {
-        String[] parts = contentService.parseContentId(idString);
+        String[] parts;
+        try {
+            parts = contentService.parseContentId(idString);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
         if (parts == null || parts.length < 2) {
-            throw ContentApiException.badRequest("Invalid content ID: " + idString);
+            return null;
         }
 
         String delegationId = parts[0];
@@ -190,24 +209,21 @@ public class ImageController {
         if (contentService.isVersionedId(idString)) {
             result = contentService.getContent(delegationId, key, parts[2]);
         } else {
-            // Resolve unversioned to latest version
             Optional<String> versionedId = contentService.resolve(delegationId, key);
-            if (versionedId.isEmpty()) {
-                throw ContentApiException.notFound("Content not found: " + idString);
-            }
+            if (versionedId.isEmpty()) return null;
             String[] vParts = contentService.parseContentId(versionedId.get());
             result = contentService.getContent(vParts[0], vParts[1], vParts[2]);
         }
 
-        if (result.isEmpty()) {
-            throw ContentApiException.notFound("Content not found: " + idString);
-        }
+        if (result.isEmpty()) return null;
 
         ContentResultDto content = result.get();
         Map<String, AspectDto> aspects = content.getAspects();
 
-        // Extract file URI from atex.Image aspect (ImageInfoAspectBean)
+        // Extract file URI and dimensions from atex.Image aspect (ImageInfoAspectBean)
         String fileUri = null;
+        Integer origWidth = null;
+        Integer origHeight = null;
         if (aspects != null && aspects.containsKey("atex.Image")) {
             Map<String, Object> imageData = aspects.get("atex.Image").getData();
             if (imageData != null) {
@@ -215,11 +231,13 @@ public class ImageController {
                 if (filePath != null) {
                     fileUri = filePath.toString();
                 }
+                if (imageData.get("width") instanceof Number w) {
+                    origWidth = w.intValue();
+                }
+                if (imageData.get("height") instanceof Number h) {
+                    origHeight = h.intValue();
+                }
             }
-        }
-
-        if (fileUri == null) {
-            throw ContentApiException.notFound("No image file for content: " + idString);
         }
 
         // Extract edit info from atex.ImageEditInfo aspect
@@ -228,7 +246,7 @@ public class ImageController {
             editInfo = aspects.get("atex.ImageEditInfo").getData();
         }
 
-        return new ContentImageInfo(fileUri, editInfo);
+        return new ContentImageInfo(fileUri, editInfo, origWidth, origHeight);
     }
 
     /**
@@ -358,5 +376,11 @@ public class ImageController {
     /**
      * Holds resolved image content info.
      */
-    private record ContentImageInfo(String fileUri, Map<String, Object> editInfo) {}
+    private ResponseEntity<ErrorResponseDto> notFound(String message) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponseDto(HttpStatus.NOT_FOUND, message));
+    }
+
+    private record ContentImageInfo(String fileUri, Map<String, Object> editInfo,
+                                       Integer origWidth, Integer origHeight) {}
 }

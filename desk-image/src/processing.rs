@@ -31,11 +31,18 @@ pub struct ImageParams {
     pub mode: ResizeMode,
     pub quality: f32,
     pub crop: Option<CropRect>,
+    pub aspect_ratio: Option<AspectRatioParam>,
     pub rotation: Option<u16>,
     pub flip_vertical: bool,
     pub flip_horizontal: bool,
     pub focal_point: Option<FocalPointParam>,
     pub output_format: Option<OutputFormat>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct AspectRatioParam {
+    pub width: u32,
+    pub height: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -97,7 +104,7 @@ pub fn process_image(
     params: &ImageParams,
     max_width: u32,
     max_height: u32,
-) -> anyhow::Result<(Vec<u8>, OutputFormat)> {
+) -> anyhow::Result<(Vec<u8>, OutputFormat, u32, u32)> {
     let reader = ImageReader::new(Cursor::new(input))
         .with_guessed_format()
         .map_err(|e| anyhow::anyhow!("Cannot detect image format: {}", e))?;
@@ -137,8 +144,37 @@ pub fn process_image(
         }
     }
 
-    // 4. Apply focal point crop (if no explicit crop and dimensions given)
+    // 4. Apply aspect ratio crop (if no explicit crop)
     if params.crop.is_none() {
+        if let Some(ar) = &params.aspect_ratio {
+            let (iw, ih) = img.dimensions();
+            let target_ratio = ar.width as f64 / ar.height as f64;
+            let img_ratio = iw as f64 / ih as f64;
+
+            if (img_ratio - target_ratio).abs() > 0.01 {
+                let (cw, ch) = if img_ratio > target_ratio {
+                    ((ih as f64 * target_ratio) as u32, ih)
+                } else {
+                    (iw, (iw as f64 / target_ratio) as u32)
+                };
+
+                // Center the crop, or use focal point if available
+                let (cx, cy) = if let Some(fp) = &params.focal_point {
+                    let fx = (fp.x * iw as f64) as u32;
+                    let fy = (fp.y * ih as f64) as u32;
+                    (fx.saturating_sub(cw / 2).min(iw.saturating_sub(cw)),
+                     fy.saturating_sub(ch / 2).min(ih.saturating_sub(ch)))
+                } else {
+                    ((iw.saturating_sub(cw)) / 2, (ih.saturating_sub(ch)) / 2)
+                };
+
+                img = img.crop_imm(cx, cy, cw, ch);
+            }
+        }
+    }
+
+    // 5. Apply focal point crop (if no explicit crop/aspect ratio and dimensions given)
+    if params.crop.is_none() && params.aspect_ratio.is_none() {
         if let Some(fp) = &params.focal_point {
             if let (Some(tw), Some(th)) = (params.width, params.height) {
                 if params.mode == ResizeMode::Fill {
@@ -148,7 +184,7 @@ pub fn process_image(
         }
     }
 
-    // 5. Resize
+    // 6. Resize
     let (src_w, src_h) = img.dimensions();
     if let Some((tw, th)) = compute_target_size(src_w, src_h, params, max_width, max_height) {
         if tw != src_w || th != src_h {
@@ -182,7 +218,8 @@ pub fn process_image(
         }
     }
 
-    Ok((output.into_inner(), format))
+    let (rendered_w, rendered_h) = img.dimensions();
+    Ok((output.into_inner(), format, rendered_w, rendered_h))
 }
 
 fn apply_focal_crop(img: &DynamicImage, fp: &FocalPointParam, tw: u32, th: u32) -> DynamicImage {
