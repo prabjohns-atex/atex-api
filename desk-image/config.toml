@@ -1,0 +1,47 @@
+# desk-image configuration
+
+[server]
+host = "127.0.0.1"
+port = 8090
+
+[signing]
+# HMAC-SHA256 secret (shared with desk-api)
+secret = "changeme"
+# Signature length (first N hex chars) — Polopoly uses 7
+signature_length = 7
+
+[storage]
+# Backend: "local" or "s3"
+backend = "local"
+
+[storage.local]
+# Base directory for file storage (matches desk-api's desk.file-service.base-dir)
+base_dir = "./files"
+
+[storage.s3]
+region = "eu-west-1"
+# endpoint = "http://localhost:9000"  # For MinIO/localstack
+bucket_content = "content"
+bucket_tmp = "tmp"
+one_bucket_mode = false
+content_prefix = "content"
+tmp_prefix = "tmp"
+# access_key = ""
+# secret_key = ""
+
+[cache]
+# In-memory LRU cache for processed images
+enabled = true
+# Max entries in cache
+max_entries = 1000
+# Max total cache size in bytes (256MB)
+max_size_bytes = 268435456
+
+[processing]
+# Max output dimensions
+max_width = 4096
+max_height = 4096
+# Default JPEG quality (0.0-1.0)
+default_quality = 0.85
+# Strip EXIF metadata from output
+strip_metadata = true

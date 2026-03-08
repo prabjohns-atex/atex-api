@@ -545,3 +545,89 @@ desk.file-service.s3.region=eu-west-1
 - **ETag generation**: Uses `fileUri.hashCode()` — lightweight, sufficient for cache invalidation
 - **S3 ported from Polopoly**: `FileServiceS3` reference in `polopoly/public-artifacts/file-storage-server`
 - **DelegatingFileService simplified**: Hardcoded two-backend (local + S3) instead of Polopoly's pluggable `FileServiceDelegator` interface — sufficient for current needs
+
+---
+
+## Increment 33: Image Service with Rust Sidecar
+
+### Goal
+Replace Polopoly's Java-based image processing (ImageService, imgscalr, ImageIO) with a high-performance Rust sidecar. desk-api resolves content IDs and redirects to the Rust service, which reads directly from storage — zero image bytes flow through Java.
+
+### Architecture
+```
+Client → desk-api (resolve + sign + 302) → desk-image (Rust) → S3/filesystem
+```
+
+### Java Side (desk-api)
+
+**ImageController** (`c.a.desk.api.controller.ImageController`):
+- `GET /image/{id}/{filename}` — image by unversioned content ID
+- `GET /image/contentid/{id}/{filename}` — image by versioned content ID
+- `GET /image/original/{id}/{filename}` — download original (auth required, no processing)
+- `GET /image/original/{id}` — download original without filename
+- `GET /image/{scheme}/{host}/{path}` — process image by file URI (public, no HMAC)
+- Resolves content ID → extracts `atex.Image` filePath + `atex.ImageEditInfo` (rotation, flip, crops, focal point)
+- Builds HMAC-SHA256 signed redirect URL to Rust sidecar
+- Conditional on `desk.image-service.enabled=true`
+
+**ImageServiceProperties** (`c.a.desk.api.config.ImageServiceProperties`):
+- `desk.image-service.enabled` — enable/disable (default: false)
+- `desk.image-service.url` — Rust sidecar base URL
+- `desk.image-service.secret` — shared HMAC secret
+- `desk.image-service.signature-length` — hex chars (default: 7, matches Polopoly)
+- `desk.image-service.redirect` — redirect vs proxy mode
+- `desk.image-service.cache-max-age` — Cache-Control seconds
+
+### Rust Side (desk-image/)
+
+**Standalone HTTP service** (axum framework):
+- `GET /image/{file_uri}/{filename}?w=&h=&m=&q=&c=&rot=&flipv=&fliph=&fp=&sig`
+- HMAC-SHA256 signature validation (shared secret with desk-api)
+- Direct S3/filesystem read — no data through Java
+- Image processing: resize (fit/fill), crop, rotate, flip, focal point, quality, format conversion
+- `image` + `fast_image_resize` crates (SIMD-accelerated, 5-10x faster than Java ImageIO)
+- LRU cache for processed images (configurable size/entries)
+- TOML configuration (`config.toml`)
+
+**Operations supported** (matching Polopoly ImageService):
+| Param | Description |
+|-------|-------------|
+| `w` | Width in pixels |
+| `h` | Height in pixels |
+| `m` | Resize mode: FIT (default) or FILL |
+| `q` | JPEG quality (0.0-1.0) |
+| `c` | Crop rectangle: x,y,w,h |
+| `rot` | Rotation: 90, 180, 270 |
+| `flipv` | Vertical flip |
+| `fliph` | Horizontal flip |
+| `fp` | Focal point: x,y,zoom (auto-crop centering) |
+
+**Signing format** (Polopoly-compatible):
+- Key: `$p$w$h$m$...` (sorted param names prefixed with $)
+- Value: first 7 hex chars of HMAC-SHA256(secret, path + concatenated values)
+
+### Files Created
+- `src/main/java/.../controller/ImageController.java` — Java redirect controller
+- `src/main/java/.../config/ImageServiceProperties.java` — Configuration
+- `desk-image/Cargo.toml` — Rust project manifest
+- `desk-image/config.toml` — Default configuration
+- `desk-image/src/main.rs` — Entry point, router setup
+- `desk-image/src/config.rs` — TOML config loading
+- `desk-image/src/handler.rs` — Request handler, param parsing
+- `desk-image/src/processing.rs` — Image operations, LRU cache
+- `desk-image/src/signing.rs` — HMAC validation
+- `desk-image/src/storage.rs` — S3/local file reader
+
+### Files Modified
+- `DeskApiApplication.java` — added ImageServiceProperties
+- `AuthConfig.java` — added `/image/*` to auth filter
+- `application.properties` — added `desk.image-service.*` config
+- `CLAUDE.md` — added ImageController to architecture
+
+### Design Notes
+- **Zero Java image bytes**: desk-api only does content resolution + URL signing, then 302 redirects. Image data flows storage → Rust → client (1 hop)
+- **Polopoly HMAC compatibility**: Same algorithm (HmacSHA256), same key format ($p$w$h...), same signature length (7 hex chars)
+- **Edit info baked in**: Rotation, flip, focal point from `atex.ImageEditInfo` aspect are injected into the redirect URL params
+- **Format crops**: When `f=2x1` is requested, desk-api looks up the crop rectangle from `ImageEditInfoAspectBean.crops` map and adds it as `c=x,y,w,h`
+- **Conditional activation**: Controller only registers when `desk.image-service.enabled=true` — no impact on existing deployments
+- **Rust toolchain required**: `cargo build --release` in `desk-image/` to produce the binary
