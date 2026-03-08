@@ -8,3 +8,29 @@ services:
       - 'MYSQL_ROOT_PASSWORD=root'
     ports:
       - '3306:3306'
+
+  desk-image:
+    build:
+      context: ./desk-image
+      dockerfile: Dockerfile
+    ports:
+      - '8090:8090'
+    environment:
+      - RUST_LOG=desk_image=info
+      - DESK_IMAGE_HOST=0.0.0.0
+      - DESK_IMAGE_PORT=8090
+      - DESK_IMAGE_SECRET=changeme
+      - DESK_IMAGE_STORAGE_BACKEND=local
+      - DESK_IMAGE_LOCAL_DIR=/data/files
+      - DESK_IMAGE_CACHE_ENABLED=true
+      - DESK_IMAGE_CACHE_MAX_ENTRIES=1000
+      - DESK_IMAGE_CACHE_MAX_SIZE=268435456
+    volumes:
+      - ./files:/data/files:ro
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8090/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped

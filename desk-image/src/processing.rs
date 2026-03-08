@@ -1,4 +1,4 @@
-use fast_image_resize::{images::Image as FirImage, IntoImageView, Resizer};
+use fast_image_resize::{images::Image as FirImage, Resizer};
 use image::{DynamicImage, GenericImageView, ImageFormat, ImageReader};
 use lru::LruCache;
 use std::io::Cursor;
@@ -261,21 +261,21 @@ fn resize_image(img: &DynamicImage, width: u32, height: u32) -> anyhow::Result<D
     let (src_w, src_h) = src_image.dimensions();
 
     let src_view = FirImage::from_vec_u8(
-        std::num::NonZeroU32::new(src_w).unwrap(),
-        std::num::NonZeroU32::new(src_h).unwrap(),
+        src_w,
+        src_h,
         src_image.into_raw(),
         fast_image_resize::PixelType::U8x4,
     )?;
 
     let mut dst_image = FirImage::new(
-        std::num::NonZeroU32::new(width).unwrap(),
-        std::num::NonZeroU32::new(height).unwrap(),
+        width,
+        height,
         fast_image_resize::PixelType::U8x4,
     );
 
     let mut resizer = Resizer::new();
     resizer.resize(
-        &src_view.into_image_view(),
+        &src_view,
         &mut dst_image,
         None,
     )?;

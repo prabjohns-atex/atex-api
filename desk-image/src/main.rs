@@ -34,7 +34,40 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let cli = Cli::parse();
-    let config = config::Config::load(&cli.config)?;
+    let mut config = config::Config::load(&cli.config)?;
+
+    // Environment variable overrides (for container deployment)
+    if let Ok(v) = std::env::var("DESK_IMAGE_HOST") { config.server.host = v; }
+    if let Ok(v) = std::env::var("DESK_IMAGE_PORT") { config.server.port = v.parse().unwrap_or(config.server.port); }
+    if let Ok(v) = std::env::var("DESK_IMAGE_SECRET") { config.signing.secret = v; }
+    if let Ok(v) = std::env::var("DESK_IMAGE_STORAGE_BACKEND") { config.storage.backend = v; }
+    if let Ok(v) = std::env::var("DESK_IMAGE_LOCAL_DIR") {
+        config.storage.local.get_or_insert_with(|| config::LocalStorageConfig { base_dir: String::new() }).base_dir = v;
+    }
+    if let Ok(v) = std::env::var("DESK_IMAGE_S3_REGION") {
+        if let Some(s3) = config.storage.s3.as_mut() { s3.region = v; }
+    }
+    if let Ok(v) = std::env::var("DESK_IMAGE_S3_ENDPOINT") {
+        if let Some(s3) = config.storage.s3.as_mut() { s3.endpoint = Some(v); }
+    }
+    if let Ok(v) = std::env::var("DESK_IMAGE_S3_BUCKET") {
+        if let Some(s3) = config.storage.s3.as_mut() { s3.bucket_content = v; }
+    }
+    if let Ok(v) = std::env::var("DESK_IMAGE_S3_ACCESS_KEY") {
+        if let Some(s3) = config.storage.s3.as_mut() { s3.access_key = Some(v); }
+    }
+    if let Ok(v) = std::env::var("DESK_IMAGE_S3_SECRET_KEY") {
+        if let Some(s3) = config.storage.s3.as_mut() { s3.secret_key = Some(v); }
+    }
+    if let Ok(v) = std::env::var("DESK_IMAGE_CACHE_ENABLED") {
+        config.cache.enabled = v == "true" || v == "1";
+    }
+    if let Ok(v) = std::env::var("DESK_IMAGE_CACHE_MAX_ENTRIES") {
+        config.cache.max_entries = v.parse().unwrap_or(config.cache.max_entries);
+    }
+    if let Ok(v) = std::env::var("DESK_IMAGE_CACHE_MAX_SIZE") {
+        config.cache.max_size_bytes = v.parse().unwrap_or(config.cache.max_size_bytes);
+    }
 
     let bind_addr = format!("{}:{}", config.server.host, config.server.port);
     tracing::info!("Starting desk-image on {}", bind_addr);
@@ -64,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
         // /image/{file_uri}/{filename}?w=&h=&m=&f=&q=&c=&fp=&rot=&flipv=&fliph=&sig=
-        .route("/image/*path", get(handler::handle_image))
+        .route("/image/{*path}", get(handler::handle_image))
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
