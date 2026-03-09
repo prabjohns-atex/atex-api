@@ -98,8 +98,16 @@ public class PrincipalsController
                 .body(new ErrorResponseDto(HttpStatus.UNAUTHORIZED, "No authenticated user"));
         }
 
+        // Cache the entire response by loginName — avoids DB query + content enrichment
+        UserMeDto cached = cacheService.get(CACHE_USER_ME, loginName);
+        if (cached != null) return ResponseEntity.ok(cached);
+
         return userRepository.findByLoginName(loginName)
-            .<ResponseEntity<?>>map(user -> ResponseEntity.ok(toUserMeDto(user)))
+            .<ResponseEntity<?>>map(user -> {
+                UserMeDto dto = buildUserMeDto(user);
+                cacheService.put(CACHE_USER_ME, loginName, dto);
+                return ResponseEntity.ok(dto);
+            })
             .orElseGet(() -> notFound("User not found: " + loginName));
     }
 
@@ -125,8 +133,15 @@ public class PrincipalsController
     public ResponseEntity<?> getUser(
         @Parameter(description = "User login name") @PathVariable String userId)
     {
+        UserMeDto cached = cacheService.get(CACHE_USER_ME, userId);
+        if (cached != null) return ResponseEntity.ok(cached);
+
         return userRepository.findByLoginName(userId)
-            .<ResponseEntity<?>>map(user -> ResponseEntity.ok(toUserMeDto(user)))
+            .<ResponseEntity<?>>map(user -> {
+                UserMeDto dto = buildUserMeDto(user);
+                cacheService.put(CACHE_USER_ME, userId, dto);
+                return ResponseEntity.ok(dto);
+            })
             .orElseGet(() -> notFound("User not found: " + userId));
     }
 
@@ -308,13 +323,9 @@ public class PrincipalsController
         return dto;
     }
 
-    private UserMeDto toUserMeDto(AppUser user)
+    private UserMeDto buildUserMeDto(AppUser user)
     {
         String principalId = effectivePrincipalId(user);
-
-        // Check global cache first
-        UserMeDto cached = cacheService.get(CACHE_USER_ME, principalId);
-        if (cached != null) return cached;
 
         UserMeDto dto = new UserMeDto();
         dto.setLoginName(user.getLoginName());
@@ -382,9 +393,6 @@ public class PrincipalsController
         dto.setGroups(groups);
 
         dto.setHomeDepartmentId(null);
-
-        // Cache the result
-        cacheService.put(CACHE_USER_ME, principalId, dto);
 
         return dto;
     }
