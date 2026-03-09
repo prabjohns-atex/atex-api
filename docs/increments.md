@@ -692,10 +692,27 @@ Compared against `polopoly/plugins/image-plugin` and `gong/desk` image handling:
 - **Sample images**: downloaded from learningcontainer.com (2MB, 5MB, 10MB), cached on disk
 - **smoke-test.sh**: Added `_type` fields to `atex.Image` and `atex.Files` aspects for reference server compatibility
 
+### Aspect contentId format (bug fix)
+- **Original change**: aspect `contentid` changed from random Camflake to `delegation:key:version`
+- **Bug**: all aspects of the same content version got the same `contentid`, violating the `aspects_contentid_UNIQUE` constraint
+- **Fix**: each aspect gets `delegation:key:uniqueCamflakeId` — unique per row, still 3-part format for `CmsIdUtil.fromVersionedString()` compatibility
+- **Reference format confirmed**: each aspect `version` field has its own unique content ID (verified from live reference JSON)
+
+### Reference format findings (from live content JSON)
+- `_type` values use **aspect names** (e.g. `"atex.Image"`, `"atex.Files"`) — NOT full Java class names
+- `atex.Image` is a **separate aspect** from contentData (not embedded despite `storeWithMainAspect=true`)
+- `atex.Image.filePath` is just the filename; full `content://` URI only in `atex.Files`
+- `width`/`height` duplicated in both `contentData.data` and `atex.Image.data`
+
 ### Files changed
 - `SecurityController.java` — userId→principalId, renewTime, RENEWAL_WINDOW constant
-- `ContentService.java` — aspect contentId now uses `delegation:key:version` format
+- `ContentService.java` — aspect contentId: `delegation:key:uniqueId` (unique per aspect row)
+- `ActivityServiceSecured.java` — accept principalId for ownership check
+- `LocalContentManager.java` — commitTemporaryFiles (tmp→content on create/update)
+- `LocalFileService.java` — path normalization
 - `SecurityIntegrationTest.java` — updated assertions for new response format
-- `scripts/compat-test.py` — 5 new comparison tests, performance monitoring, sample images
+- `scripts/compat-test.py` — 5 new comparison tests, performance monitoring, bug fixes (login before filtered tests, correct `_type` values, Accept header for JSON)
 - `scripts/smoke-test.sh` — added `_type` on atex.Image/atex.Files aspects
-- `CLAUDE.md` — added compat-test step to workflow rules
+- `compose.yaml` — desk-api container, shared file volume, removed cache config
+- `desk-image/` — removed LRU cache layer
+- `CLAUDE.md` — Docker Compose docs, compat-test workflow rule
