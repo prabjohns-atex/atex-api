@@ -139,10 +139,35 @@ Config files in `src/main/resources/config/`, synced via `scripts/config-sync.py
 
 **Profile endpoint**: `GET /configuration/profile?profile={name}` serves merged config for a named profile.
 
+## Running
+
+### Docker Compose (primary)
+desk-api runs in Docker via `compose.yaml` alongside desk-image (Rust sidecar) and MySQL.
+
+```bash
+# Build the jar (no Docker build needed — jar is mounted as a volume)
+JAVA_HOME=C:/Users/peter/.jdks/openjdk-25.0.2 ./gradlew bootJar
+
+# Start all services
+docker compose up -d
+
+# After code changes, rebuild jar and restart (fast — no image rebuild)
+JAVA_HOME=C:/Users/peter/.jdks/openjdk-25.0.2 ./gradlew bootJar && docker compose restart desk-api
+```
+
+**Volume note**: The `build/libs/` directory is mounted (not the jar file directly) to avoid WSL inode issues where bind-mounted files get stale after rebuild.
+
+**Shared file storage**: `adm-mpp_file-data` is an external Docker volume from the ADM compose stack, mounted into both desk-api (read-write) and desk-image (read-only).
+
+### Local (without Docker)
+```bash
+JAVA_HOME=C:/Users/peter/.jdks/openjdk-25.0.2 ./gradlew bootRun
+```
+
 ## Tests
 
 ```bash
-# Integration tests (requires Docker)
+# Integration tests (requires Docker for Testcontainers MySQL)
 JAVA_HOME=C:/Users/peter/.jdks/openjdk-25.0.2 ./gradlew test
 
 # Specific test class
@@ -163,8 +188,9 @@ python scripts/compat-test.py --desk-only
 ## Workflow Rules (mandatory after every increment)
 1. **Review against reference**: verify the implementation against the original source (polopoly/gong) to ensure no features, fields, or edge cases were missed
 2. **Update/add tests**: ensure integration tests cover the new functionality, including edge cases found during review
-3. **Update docs**: update CLAUDE.md summary and append details to `docs/increments.md`
-4. **Commit and push**: stage relevant files, commit with descriptive message, push to remote
+3. **Update compat-test.py**: add comparison tests to `scripts/compat-test.py` for every new or modified web service endpoint, verifying desk-api behaves identically to the reference OneCMS server
+4. **Update docs**: update CLAUDE.md summary and append details to `docs/increments.md`
+5. **Commit and push**: stage relevant files, commit with descriptive message, push to remote
 
 These steps are automatic — do not wait to be asked.
 

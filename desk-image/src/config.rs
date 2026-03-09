@@ -6,7 +6,6 @@ pub struct Config {
     pub server: ServerConfig,
     pub signing: SigningConfig,
     pub storage: StorageConfig,
-    pub cache: CacheConfig,
     pub processing: ProcessingConfig,
 }
 
@@ -45,13 +44,6 @@ pub struct S3StorageConfig {
     pub tmp_prefix: String,
     pub access_key: Option<String>,
     pub secret_key: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct CacheConfig {
-    pub enabled: bool,
-    pub max_entries: usize,
-    pub max_size_bytes: u64,
 }
 
 #[derive(Debug, Deserialize, Clone)]

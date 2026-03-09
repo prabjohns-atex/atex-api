@@ -29,14 +29,6 @@ tmp_prefix = "tmp"
 # access_key = ""
 # secret_key = ""
 
-[cache]
-# In-memory LRU cache for processed images
-enabled = true
-# Max entries in cache
-max_entries = 1000
-# Max total cache size in bytes (256MB)
-max_size_bytes = 268435456
-
 [processing]
 # Max output dimensions
 max_width = 4096

@@ -1,9 +1,6 @@
 use fast_image_resize::{images::Image as FirImage, Resizer};
 use image::{DynamicImage, GenericImageView, ImageFormat, ImageReader};
-use lru::LruCache;
 use std::io::Cursor;
-use std::num::NonZeroUsize;
-use std::sync::Mutex;
 
 /// Resize mode matching Polopoly's ResizeMode enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -322,54 +319,4 @@ fn resize_image(img: &DynamicImage, width: u32, height: u32) -> anyhow::Result<D
         .ok_or_else(|| anyhow::anyhow!("Failed to create output image"))?;
 
     Ok(DynamicImage::ImageRgba8(rgba))
-}
-
-/// LRU cache for processed images.
-pub struct ImageCache {
-    cache: Mutex<LruCache<String, CachedImage>>,
-    max_size_bytes: u64,
-    current_size: Mutex<u64>,
-}
-
-struct CachedImage {
-    data: Vec<u8>,
-    content_type: String,
-}
-
-impl ImageCache {
-    pub fn new(max_entries: usize, max_size_bytes: u64) -> Self {
-        ImageCache {
-            cache: Mutex::new(LruCache::new(NonZeroUsize::new(max_entries).unwrap())),
-            max_size_bytes,
-            current_size: Mutex::new(0),
-        }
-    }
-
-    pub fn get(&self, key: &str) -> Option<(Vec<u8>, String)> {
-        let mut cache = self.cache.lock().unwrap();
-        cache.get(key).map(|entry| (entry.data.clone(), entry.content_type.clone()))
-    }
-
-    pub fn put(&self, key: String, data: Vec<u8>, content_type: String) {
-        let size = data.len() as u64;
-        let mut current = self.current_size.lock().unwrap();
-
-        // Evict if over size limit
-        if *current + size > self.max_size_bytes {
-            let mut cache = self.cache.lock().unwrap();
-            while *current + size > self.max_size_bytes {
-                if let Some((_, evicted)) = cache.pop_lru() {
-                    *current = current.saturating_sub(evicted.data.len() as u64);
-                } else {
-                    break;
-                }
-            }
-        }
-
-        let mut cache = self.cache.lock().unwrap();
-        if let Some(old) = cache.push(key, CachedImage { data, content_type }) {
-            *current = current.saturating_sub(old.1.data.len() as u64);
-        }
-        *current += size;
-    }
 }

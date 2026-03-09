@@ -39,6 +39,8 @@ public class SecurityController
 {
     private static final String AUTH_HEADER = "X-Auth-Token";
     private static final Duration DEFAULT_EXPIRATION = Duration.ofHours(24);
+    /** How long before expiry the token can be renewed (matches Polopoly sessionKeyRenewalTime default). */
+    private static final Duration RENEWAL_WINDOW = Duration.ofHours(12);
 
     private final TokenService tokenService;
     private final AppUserRepository userRepository;
@@ -146,10 +148,13 @@ public class SecurityController
 
         TokenResponseDto response = new TokenResponseDto();
         response.setToken(token);
-        response.setUserId(user.getLoginName());
+        // Reference returns numeric principalId, not login name
+        response.setUserId(user.getPrincipalId() != null ? user.getPrincipalId() : user.getLoginName());
         if (decoded != null && decoded.expiration() != null)
         {
-            response.setExpireTime(Long.toString(decoded.expiration().getTime()));
+            long expireMs = decoded.expiration().getTime();
+            response.setExpireTime(Long.toString(expireMs));
+            response.setRenewTime(Long.toString(expireMs - RENEWAL_WINDOW.toMillis()));
         }
 
         return ResponseEntity.ok(response);
@@ -176,12 +181,22 @@ public class SecurityController
         try
         {
             DecodedToken decoded = tokenService.decodeToken(authToken);
+            // Look up principalId from DB to match reference format
+            String userId = decoded.subject();
+            AppUser user = userRepository.findByLoginName(decoded.subject()).orElse(null);
+            if (user != null && user.getPrincipalId() != null)
+            {
+                userId = user.getPrincipalId();
+            }
+
             TokenResponseDto response = new TokenResponseDto();
             response.setToken(authToken);
-            response.setUserId(decoded.subject());
+            response.setUserId(userId);
             if (decoded.expiration() != null)
             {
-                response.setExpireTime(Long.toString(decoded.expiration().getTime()));
+                long expireMs = decoded.expiration().getTime();
+                response.setExpireTime(Long.toString(expireMs));
+                response.setRenewTime(Long.toString(expireMs - RENEWAL_WINDOW.toMillis()));
             }
             return ResponseEntity.ok(response);
         }
@@ -288,12 +303,22 @@ public class SecurityController
 
         DecodedToken decoded = decodeTokenSafe(token);
 
+        // Look up principalId for OAuth user too
+        String userId = loginName;
+        AppUser oauthUser = userRepository.findByLoginName(loginName).orElse(null);
+        if (oauthUser != null && oauthUser.getPrincipalId() != null)
+        {
+            userId = oauthUser.getPrincipalId();
+        }
+
         TokenResponseDto response = new TokenResponseDto();
         response.setToken(token);
-        response.setUserId(loginName);
+        response.setUserId(userId);
         if (decoded != null && decoded.expiration() != null)
         {
-            response.setExpireTime(Long.toString(decoded.expiration().getTime()));
+            long expireMs = decoded.expiration().getTime();
+            response.setExpireTime(Long.toString(expireMs));
+            response.setRenewTime(Long.toString(expireMs - RENEWAL_WINDOW.toMillis()));
         }
 
         return ResponseEntity.ok(response);

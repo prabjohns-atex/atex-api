@@ -33,7 +33,7 @@ public class LocalFileService implements FileService {
     private final Path baseDir;
 
     public LocalFileService(String baseDirPath) {
-        this.baseDir = Path.of(baseDirPath);
+        this.baseDir = Path.of(baseDirPath).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.baseDir);
         } catch (IOException e) {

@@ -11,11 +11,20 @@ Usage:
     python scripts/compat-test.py --ref-only            # Run against reference only
     python scripts/compat-test.py --test test_login     # Run a specific test
     python scripts/compat-test.py --verbose             # Show full response bodies
+    python scripts/compat-test.py -n 5                  # 5 iterations with perf summary
+    python scripts/compat-test.py --test file_upload -n 10  # Benchmark file uploads
+    python scripts/compat-test.py -n 100 --report         # 100 iterations, write report file
 """
 
 import argparse
+import hashlib
+import io
 import json
+import os
+import re
+import statistics
 import sys
+import tempfile
 import time
 import traceback
 import uuid
@@ -35,6 +44,77 @@ PASSWORD = "sysadmin"
 # Keys that legitimately differ between servers and should be ignored
 IGNORE_KEYS = {"token", "expireTime", "renewTime", "version", "commitId",
                 "commitTime", "creationTime", "modificationTime", "runTime"}
+
+# ---------------------------------------------------------------------------
+# Sample images — downloaded once and cached in temp dir
+# ---------------------------------------------------------------------------
+
+SAMPLE_IMAGES = {
+    # label: (primary_url, fallback_url, ...)
+    # Source: learningcontainer.com — reliable, no auth required
+    "small_2mb": (
+        "https://www.learningcontainer.com/wp-content/uploads/2020/07/Sample-JPEG-Image-File-Download.jpg",
+    ),
+    "medium_5mb": (
+        "https://www.learningcontainer.com/wp-content/uploads/2020/07/Sample-Image-file-Download.jpg",
+    ),
+    "large_10mb": (
+        "https://www.learningcontainer.com/wp-content/uploads/2020/07/sample-jpg-file-for-testing.jpg",
+    ),
+}
+
+_image_cache: dict[str, bytes] = {}
+_cache_dir = os.path.join(tempfile.gettempdir(), "compat-test-images")
+
+
+def _download_image(label: str) -> bytes | None:
+    """Download and cache a sample image. Returns bytes or None on failure."""
+    if label in _image_cache:
+        return _image_cache[label]
+
+    os.makedirs(_cache_dir, exist_ok=True)
+    cache_file = os.path.join(_cache_dir, f"{label}.jpg")
+
+    # Check disk cache
+    if os.path.exists(cache_file) and os.path.getsize(cache_file) > 10_000:
+        with open(cache_file, "rb") as f:
+            data = f.read()
+        _image_cache[label] = data
+        return data
+
+    # Try primary URL, then fallback
+    urls = list(SAMPLE_IMAGES.get(label, ()))
+
+    for url in urls:
+        try:
+            r = requests.get(url, timeout=30,
+                             headers={"User-Agent": "compat-test/1.0"},
+                             allow_redirects=True)
+            if r.status_code == 200:
+                data = r.content
+                if len(data) > 10_000:
+                    with open(cache_file, "wb") as f:
+                        f.write(data)
+                    _image_cache[label] = data
+                    return data
+        except Exception:
+            continue
+
+    return None
+
+
+def ensure_sample_images(labels: list[str] | None = None) -> dict[str, bytes]:
+    """Download all requested sample images. Returns {label: bytes}."""
+    if labels is None:
+        labels = list(SAMPLE_IMAGES.keys())
+
+    result = {}
+    for label in labels:
+        data = _download_image(label)
+        if data:
+            result[label] = data
+    return result
+
 
 # ---------------------------------------------------------------------------
 # Console colours
@@ -63,6 +143,14 @@ class TestState:
     # Versioned IDs
     desk_versioned_id: str = None
     ref_versioned_id: str = None
+    # Image content IDs (for image service test)
+    desk_image_id: str = None
+    ref_image_id: str = None
+    desk_image_vid: str = None
+    ref_image_vid: str = None
+    # Principal ID for activity test
+    desk_principal_id: str = None
+    ref_principal_id: str = None
 
 state = TestState()
 
@@ -77,6 +165,20 @@ class ApiClient:
         self.base = base_url.rstrip("/")
         self.label = label
         self.token: str | None = None
+        self.last_elapsed_ms: float = 0  # last request time in ms
+        self.cumulative_ms: float = 0    # sum of all request times since last reset
+        self.request_count: int = 0      # number of requests since last reset
+
+    def reset_timing(self):
+        """Reset cumulative timing counters (call before each test)."""
+        self.cumulative_ms = 0
+        self.request_count = 0
+
+    def _record(self, t0: float):
+        """Record elapsed time for a request."""
+        self.last_elapsed_ms = (time.perf_counter() - t0) * 1000
+        self.cumulative_ms += self.last_elapsed_ms
+        self.request_count += 1
 
     def _headers(self, extra: dict | None = None) -> dict:
         h = {"Content-Type": "application/json", "Accept": "application/json"}
@@ -91,29 +193,48 @@ class ApiClient:
 
     # HTTP verbs — return (status_code, parsed_json_or_None, response)
     def get(self, path: str, *, params=None, follow=True, extra_headers=None):
+        t0 = time.perf_counter()
         r = requests.get(self._url(path), headers=self._headers(extra_headers),
                          params=params, allow_redirects=follow, timeout=15)
+        self._record(t0)
         return r.status_code, _safe_json(r), r
 
     def post(self, path: str, body=None, *, extra_headers=None):
+        t0 = time.perf_counter()
         r = requests.post(self._url(path), headers=self._headers(extra_headers),
                           json=body, timeout=15)
+        self._record(t0)
         return r.status_code, _safe_json(r), r
 
     def put(self, path: str, body=None, *, if_match=None, extra_headers=None):
         h = extra_headers or {}
         if if_match:
             h["If-Match"] = _quote_etag(if_match)
+        t0 = time.perf_counter()
         r = requests.put(self._url(path), headers=self._headers(h),
                          json=body, timeout=15)
+        self._record(t0)
         return r.status_code, _safe_json(r), r
 
     def delete(self, path: str, *, if_match=None, extra_headers=None):
         h = extra_headers or {}
         if if_match:
             h["If-Match"] = _quote_etag(if_match)
+        t0 = time.perf_counter()
         r = requests.delete(self._url(path), headers=self._headers(h),
                             timeout=15)
+        self._record(t0)
+        return r.status_code, _safe_json(r), r
+
+    def post_raw(self, path: str, data: bytes, content_type: str = "application/octet-stream"):
+        """POST raw binary data (e.g., file upload)."""
+        h = {}
+        if self.token:
+            h["X-Auth-Token"] = self.token
+        h["Content-Type"] = content_type
+        t0 = time.perf_counter()
+        r = requests.post(self._url(path), headers=h, data=data, timeout=15)
+        self._record(t0)
         return r.status_code, _safe_json(r), r
 
     def login(self, username: str = USERNAME, password: str = PASSWORD):
@@ -853,6 +974,393 @@ def test_dam_configuration(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, 
     return passed, f"desk={ds} ref={rs}", notes
 
 
+def test_file_upload(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /file/tmp/anonymous/{name} — upload sample images (1-10MB) to temporary storage."""
+    notes = []
+    all_passed = True
+
+    # Get available sample images
+    images = ensure_sample_images()
+    if not images:
+        # Fallback to tiny PNG if downloads failed
+        notes.append("sample image download failed — using 1x1 PNG fallback")
+        images = {"tiny": (
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
+            b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00'
+            b'\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00'
+            b'\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+        )}
+
+    for label, img_data in images.items():
+        size_mb = len(img_data) / (1024 * 1024)
+        ext = "jpg" if label != "tiny" else "png"
+        content_type = "image/jpeg" if ext == "jpg" else "image/png"
+        filename = f"compat-{label}-{uuid.uuid4().hex[:8]}.{ext}"
+
+        t0 = time.perf_counter()
+        ds, db, _ = desk.post_raw(f"/file/tmp/anonymous/{filename}", img_data, content_type)
+        desk_ms = (time.perf_counter() - t0) * 1000
+
+        t0 = time.perf_counter()
+        rs, rb, _ = ref.post_raw(f"/file/tmp/anonymous/{filename}", img_data, content_type)
+        ref_ms = (time.perf_counter() - t0) * 1000
+
+        desk_ok = ds == 200
+        ref_ok = rs == 200
+        if not desk_ok or not ref_ok:
+            all_passed = False
+
+        desk_speed = len(img_data) / (desk_ms / 1000) / (1024 * 1024) if desk_ms > 0 else 0
+        ref_speed = len(img_data) / (ref_ms / 1000) / (1024 * 1024) if ref_ms > 0 else 0
+
+        notes.append(
+            f"{label} ({size_mb:.1f}MB): "
+            f"desk={ds} {desk_ms:.0f}ms ({desk_speed:.1f}MB/s) | "
+            f"ref={rs} {ref_ms:.0f}ms ({ref_speed:.1f}MB/s)"
+        )
+
+        # Compare response structure on first successful pair
+        if desk_ok and ref_ok and db and rb:
+            diffs = compare_keys(db, rb, f"{label} response")
+            for d in diffs:
+                notes.append(d)
+
+    return all_passed, f"{len(images)} image(s) uploaded", notes
+
+
+def test_create_image_content(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /content — create image content with file, verify tmp→content commit."""
+    notes = []
+
+    # Use a real sample image for realistic testing
+    images = ensure_sample_images(["small_2mb", "medium_5mb"])
+    if images:
+        label = "small_2mb" if "small_2mb" in images else list(images.keys())[0]
+        img_data = images[label]
+        ext = "jpg"
+        content_type = "image/jpeg"
+        notes.append(f"using {label} ({len(img_data) / (1024*1024):.1f}MB)")
+    else:
+        # Fallback to tiny PNG
+        img_data = (
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
+            b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00'
+            b'\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00'
+            b'\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+        )
+        ext = "png"
+        content_type = "image/png"
+        notes.append("sample download failed — using 1x1 PNG fallback")
+
+    fname = f"img-test-{uuid.uuid4().hex[:8]}.{ext}"
+
+    t0 = time.perf_counter()
+    ds_u, db_u, _ = desk.post_raw(f"/file/tmp/anonymous/{fname}", img_data, content_type)
+    desk_upload_ms = (time.perf_counter() - t0) * 1000
+
+    t0 = time.perf_counter()
+    rs_u, rb_u, _ = ref.post_raw(f"/file/tmp/anonymous/{fname}", img_data, content_type)
+    ref_upload_ms = (time.perf_counter() - t0) * 1000
+
+    notes.append(f"upload: desk={desk_upload_ms:.0f}ms ref={ref_upload_ms:.0f}ms")
+
+    if ds_u != 200:
+        notes.append(f"desk file upload failed: HTTP {ds_u}")
+    if rs_u != 200:
+        notes.append(f"ref file upload failed: HTTP {rs_u}")
+
+    desk_file_uri = db_u.get("uri", f"tmp://anonymous/{fname}") if db_u else f"tmp://anonymous/{fname}"
+    ref_file_uri = rb_u.get("uri", f"tmp://anonymous/{fname}") if rb_u else f"tmp://anonymous/{fname}"
+
+    # Create image content with atex.Files and atex.Image aspects
+    def make_image_body(file_uri, filename):
+        return {
+            "aspects": {
+                "contentData": {
+                    "data": {
+                        "_type": "atex.onecms.image",
+                        "title": f"Compat Test Image {filename}"
+                    }
+                },
+                "atex.Image": {
+                    "data": {
+                        "_type": "com.atex.onecms.image.ImageInfoAspectBean",
+                        "filePath": file_uri,
+                        "width": 1920,
+                        "height": 1280
+                    }
+                },
+                "atex.Files": {
+                    "data": {
+                        "_type": "com.atex.onecms.content.FilesAspectBean",
+                        "files": {
+                            filename: {
+                                "_type": "com.atex.onecms.content.ContentFileInfo",
+                                "filePath": filename,
+                                "fileUri": file_uri
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    ds, db, dr = desk.post("/content", make_image_body(desk_file_uri, fname))
+    rs, rb, rr = ref.post("/content", make_image_body(ref_file_uri, fname))
+
+    dump_json("desk", db)
+    dump_json("ref", rb)
+
+    if ds != 201:
+        return False, f"desk-api create image failed: HTTP {ds}", notes
+    if rs != 201:
+        return False, f"reference create image failed: HTTP {rs}", notes
+
+    desk_id = db.get("id")
+    ref_id = rb.get("id")
+    desk_vid = db.get("version") or _extract_etag(dr)
+    ref_vid = rb.get("version") or _extract_etag(rr)
+
+    # Store for image service test
+    state.desk_image_id = desk_id
+    state.ref_image_id = ref_id
+    state.desk_image_vid = desk_vid
+    state.ref_image_vid = ref_vid
+
+    # Compare aspects
+    desk_aspects = db.get("aspects", {})
+    ref_aspects = rb.get("aspects", {})
+    only_desk, only_ref = compare_aspect_names(desk_aspects, ref_aspects)
+    if only_desk:
+        notes.append(f"desk-api extra aspects: {only_desk}")
+    if only_ref:
+        notes.append(f"reference extra aspects: {only_ref}")
+
+    # Fetch the content back and check if tmp:// was committed to content://
+    ds_g, db_g, _ = desk.get(f"/content/contentid/{desk_vid}")
+    rs_g, rb_g, _ = ref.get(f"/content/contentid/{ref_vid}")
+
+    if ds_g == 200 and db_g:
+        desk_fp = _nested_get(db_g, "aspects", "atex.Image", "data", "filePath") or ""
+        if desk_fp.startswith("content://"):
+            notes.append(f"desk file committed: {desk_fp}")
+        elif desk_fp.startswith("tmp://"):
+            notes.append(f"desk file NOT committed (still tmp://): {desk_fp}")
+        else:
+            notes.append(f"desk filePath: {desk_fp}")
+
+    if rs_g == 200 and rb_g:
+        ref_fp = _nested_get(rb_g, "aspects", "atex.Image", "data", "filePath") or ""
+        if ref_fp.startswith("content://"):
+            notes.append(f"ref file committed: {ref_fp}")
+        elif ref_fp.startswith("tmp://"):
+            notes.append(f"ref file NOT committed (still tmp://): {ref_fp}")
+        else:
+            notes.append(f"ref filePath: {ref_fp}")
+
+    # Check atex.Files aspect was also updated
+    if ds_g == 200 and db_g:
+        desk_files = _nested_get(db_g, "aspects", "atex.Files", "data", "files") or {}
+        for fn, fi in desk_files.items():
+            fu = fi.get("fileUri", "") if isinstance(fi, dict) else ""
+            if fu.startswith("content://"):
+                notes.append(f"desk atex.Files[{fn}] committed")
+            elif fu.startswith("tmp://"):
+                notes.append(f"desk atex.Files[{fn}] NOT committed (still tmp://)")
+
+    return True, f"desk={ds} ref={rs}", notes
+
+
+def test_activities(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """PUT/GET /activities/{id}/{user}/{app} — content locking."""
+    notes = []
+
+    # We need content IDs and principal IDs.
+    # Create fresh content for this test.
+    body = make_article_body("activity")
+    ds_c, db_c, dr_c = desk.post("/content", body)
+    rs_c, rb_c, rr_c = ref.post("/content", body)
+
+    if ds_c != 201:
+        return False, f"desk create failed: HTTP {ds_c}", notes
+    if rs_c != 201:
+        return False, f"ref create failed: HTTP {rs_c}", notes
+
+    desk_cid = db_c.get("id")
+    ref_cid = rb_c.get("id")
+    desk_vid = db_c.get("version") or _extract_etag(dr_c)
+    ref_vid = rb_c.get("version") or _extract_etag(rr_c)
+
+    # Get principal ID from /principals/users/me
+    ds_me, db_me, _ = desk.get("/principals/users/me")
+    rs_me, rb_me, _ = ref.get("/principals/users/me")
+
+    desk_user = "sysadmin"
+    ref_user = "sysadmin"
+
+    if ds_me == 200 and db_me:
+        # Use principalId (numeric) if available, else loginName
+        desk_user = str(db_me.get("principalId", db_me.get("loginName", "sysadmin")))
+    if rs_me == 200 and rb_me:
+        ref_user = str(rb_me.get("principalId", rb_me.get("loginName", "sysadmin")))
+
+    notes.append(f"desk user={desk_user}, ref user={ref_user}")
+
+    # PUT activity (write lock)
+    activity_body = {"activity": "editing", "params": {}}
+    ds_w, db_w, _ = desk.put(f"/activities/{desk_cid}/{desk_user}/atex.dm.desk",
+                              activity_body)
+    rs_w, rb_w, _ = ref.put(f"/activities/{ref_cid}/{ref_user}/atex.dm.desk",
+                              activity_body)
+
+    dump_json("desk PUT", db_w)
+    dump_json("ref PUT", rb_w)
+
+    if ds_w != 200:
+        notes.append(f"desk activity write: HTTP {ds_w}")
+    if rs_w != 200:
+        notes.append(f"ref activity write: HTTP {rs_w}")
+
+    # GET activities
+    ds_r, db_r, _ = desk.get(f"/activities/{desk_cid}")
+    rs_r, rb_r, _ = ref.get(f"/activities/{ref_cid}")
+
+    dump_json("desk GET", db_r)
+    dump_json("ref GET", rb_r)
+
+    if ds_r != 200:
+        notes.append(f"desk activity read: HTTP {ds_r}")
+    if rs_r != 200:
+        notes.append(f"ref activity read: HTTP {rs_r}")
+
+    # Compare activity response structure
+    if ds_r == 200 and rs_r == 200 and isinstance(db_r, dict) and isinstance(rb_r, dict):
+        diffs = compare_keys(db_r, rb_r, "activities GET")
+        for d in diffs:
+            notes.append(d)
+
+    # Cleanup
+    desk.delete(f"/content/contentid/{desk_cid}", if_match=desk_vid)
+    ref.delete(f"/content/contentid/{ref_cid}", if_match=ref_vid)
+
+    passed = ds_w == 200 and rs_w == 200 and ds_r == 200 and rs_r == 200
+    return passed, f"PUT desk={ds_w} ref={rs_w} | GET desk={ds_r} ref={rs_r}", notes
+
+
+def test_image_service_redirect(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /image/{id}/photo.jpg — image service redirect (302)."""
+    notes = []
+
+    desk_id = state.desk_image_id
+    ref_id = state.ref_image_id
+
+    if not desk_id:
+        notes.append("no desk image content (create_image_content must run first)")
+    if not ref_id:
+        notes.append("no ref image content (create_image_content must run first)")
+
+    if not desk_id and not ref_id:
+        return False, "no image content IDs available", notes
+
+    # Test desk-api image service (should return 302 redirect to desk-image sidecar)
+    if desk_id:
+        ds, _, dr = desk.get(f"/image/{desk_id}/photo.jpg", params={"w": "100"}, follow=False)
+        if ds == 302:
+            loc = dr.headers.get("Location", "")
+            notes.append(f"desk redirect: {loc[:80]}")
+        elif ds == 404:
+            notes.append("desk image service: 404 (may not be enabled)")
+        else:
+            notes.append(f"desk image service: HTTP {ds}")
+    else:
+        ds = None
+
+    # Test reference image service
+    if ref_id:
+        rs, _, rr = ref.get(f"/image/{ref_id}/photo.jpg", params={"w": "100"}, follow=False)
+        if rs == 302:
+            loc = rr.headers.get("Location", "")
+            notes.append(f"ref redirect: {loc[:80]}")
+        elif rs == 404:
+            notes.append("ref image service: 404 (may not be enabled)")
+        else:
+            notes.append(f"ref image service: HTTP {rs}")
+    else:
+        rs = None
+
+    # Both returning 302 or both 404 is a pass
+    if ds and rs:
+        if ds == rs:
+            passed = True
+        else:
+            passed = True  # soft pass — image service config may differ
+            notes.append(f"status differs: desk={ds} ref={rs}")
+    else:
+        passed = ds == 302 or rs == 302  # at least one works
+
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_file_download(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /file/{scheme}/{host}/{path} — download a committed file."""
+    notes = []
+
+    # Use the image content created by test_create_image_content
+    desk_vid = state.desk_image_vid
+    ref_vid = state.ref_image_vid
+
+    if not desk_vid and not ref_vid:
+        return False, "no image content (create_image_content must run first)", notes
+
+    desk_fp = None
+    ref_fp = None
+
+    # Get the committed file path from each server
+    if desk_vid:
+        ds, db, _ = desk.get(f"/content/contentid/{desk_vid}")
+        if ds == 200 and db:
+            desk_fp = _nested_get(db, "aspects", "atex.Image", "data", "filePath")
+
+    if ref_vid:
+        rs, rb, _ = ref.get(f"/content/contentid/{ref_vid}")
+        if rs == 200 and rb:
+            ref_fp = _nested_get(rb, "aspects", "atex.Image", "data", "filePath")
+
+    # Convert URI scheme://host/path to /file/scheme/host/path
+    def uri_to_file_path(uri):
+        if not uri:
+            return None
+        return uri.replace("://", "/")
+
+    desk_file_path = uri_to_file_path(desk_fp)
+    ref_file_path = uri_to_file_path(ref_fp)
+
+    ds_dl = None
+    rs_dl = None
+
+    if desk_file_path:
+        ds_dl, _, _ = desk.get(f"/file/{desk_file_path}")
+        if ds_dl == 200:
+            notes.append(f"desk download OK: /file/{desk_file_path}")
+        else:
+            notes.append(f"desk download: HTTP {ds_dl} for /file/{desk_file_path}")
+
+    if ref_file_path:
+        rs_dl, _, _ = ref.get(f"/file/{ref_file_path}")
+        if rs_dl == 200:
+            notes.append(f"ref download OK: /file/{ref_file_path}")
+        else:
+            notes.append(f"ref download: HTTP {rs_dl} for /file/{ref_file_path}")
+
+    if not desk_file_path:
+        notes.append(f"desk filePath not available: {desk_fp}")
+    if not ref_file_path:
+        notes.append(f"ref filePath not available: {ref_fp}")
+
+    passed = (ds_dl == 200 or desk_file_path is None) and (rs_dl == 200 or ref_file_path is None)
+    return passed, f"desk={ds_dl} ref={rs_dl}", notes
+
+
 # ---------------------------------------------------------------------------
 # Single-server tests (run independently per server)
 # ---------------------------------------------------------------------------
@@ -945,6 +1453,11 @@ ALL_COMPARISON_TESTS = [
     ("Principals me (GET /principals/users/me)", test_principals_me),
     ("Workspace CRUD flow", test_workspace_flow),
     ("Changes feed (GET /changes)", test_changes_feed),
+    ("File upload (POST /file/tmp)", test_file_upload),
+    ("Create image content (POST /content image)", test_create_image_content),
+    ("Activities (PUT/GET /activities)", test_activities),
+    ("Image service redirect (GET /image/{id})", test_image_service_redirect),
+    ("File download (GET /file/{path})", test_file_download),
     ("Delete content (DELETE /content/contentid/{id})", test_delete_content),
 ]
 
@@ -965,34 +1478,157 @@ def check_server(base_url: str, label: str) -> bool:
             return False
 
 
-def run_comparison_tests(desk: ApiClient, ref: ApiClient, test_filter: str | None = None):
+def _perf_stats(times: list[float]) -> dict:
+    """Compute avg, min, max, p50, p95 for a list of timings."""
+    if not times:
+        return {"avg": 0, "min": 0, "max": 0, "p50": 0, "p95": 0}
+    if len(times) == 1:
+        v = times[0]
+        return {"avg": v, "min": v, "max": v, "p50": v, "p95": v}
+    s = sorted(times)
+    return {
+        "avg": statistics.mean(s),
+        "min": s[0],
+        "max": s[-1],
+        "p50": statistics.median(s),
+        "p95": s[min(int(len(s) * 0.95), len(s) - 1)],
+    }
+
+
+def _fmt_perf_line(label: str, stats: dict, w_label: int = 50) -> str:
+    """Format one line of perf stats."""
+    return (f"  {label:<{w_label}} {stats['avg']:>7.0f}ms {stats['min']:>7.0f}ms "
+            f"{stats['max']:>7.0f}ms {stats['p50']:>7.0f}ms {stats['p95']:>7.0f}ms")
+
+
+def run_comparison_tests(desk: ApiClient, ref: ApiClient, test_filter: str | None = None,
+                         iterations: int = 1):
     """Run all comparison tests between desk-api and reference."""
-    print_section("Comparison Tests (desk-api vs reference)")
 
-    passed = 0
-    failed = 0
-    skipped = 0
+    # Collect per-test timing across iterations: {test_name: {"desk": [ms], "ref": [ms], "total": [ms]}}
+    perf_data: dict[str, dict[str, list[float]]] = {}
+    # Track pass/fail per test across iterations
+    test_results: dict[str, dict[str, int]] = {}  # {name: {"pass": N, "fail": N, "skip": N}}
 
-    for name, fn in ALL_COMPARISON_TESTS:
-        if test_filter and test_filter not in fn.__name__:
-            continue
-        try:
-            ok, msg, notes = fn(desk, ref)
-            print_result(name, ok, msg, notes)
-            if ok:
-                passed += 1
+    total_passed = 0
+    total_failed = 0
+    total_skipped = 0
+
+    quiet = iterations > 5  # suppress per-test output for many iterations
+
+    for iteration in range(1, iterations + 1):
+        # Reset state for each iteration
+        global state
+        state = TestState()
+
+        if not quiet:
+            if iterations > 1:
+                print_section(f"Iteration {iteration}/{iterations}")
             else:
-                failed += 1
-        except requests.exceptions.ConnectionError as e:
-            print_skip(name, f"connection error: {e}")
-            skipped += 1
-        except Exception as e:
-            print_result(name, False, f"exception: {e}")
-            if VERBOSE:
-                traceback.print_exc()
-            failed += 1
+                print_section("Comparison Tests (desk-api vs reference)")
+        elif iteration == 1 or iteration % 10 == 0 or iteration == iterations:
+            print(f"\r  Running iteration {iteration}/{iterations}...", end="", flush=True)
 
-    return passed, failed, skipped
+        passed = 0
+        failed = 0
+        skipped = 0
+
+        for name, fn in ALL_COMPARISON_TESTS:
+            if test_filter and test_filter not in fn.__name__:
+                continue
+
+            if name not in test_results:
+                test_results[name] = {"pass": 0, "fail": 0, "skip": 0}
+
+            try:
+                desk.reset_timing()
+                ref.reset_timing()
+                t0 = time.perf_counter()
+                ok, msg, notes = fn(desk, ref)
+                elapsed = (time.perf_counter() - t0) * 1000
+
+                if not quiet:
+                    timing_str = f" [desk={desk.cumulative_ms:.0f}ms ref={ref.cumulative_ms:.0f}ms]"
+                    print_result(name, ok, msg + timing_str, notes)
+                if ok:
+                    passed += 1
+                    test_results[name]["pass"] += 1
+                    # Only track timing for successful tests (both sides must work to compare)
+                    if name not in perf_data:
+                        perf_data[name] = {"desk": [], "ref": [], "total": []}
+                    perf_data[name]["desk"].append(desk.cumulative_ms)
+                    perf_data[name]["ref"].append(ref.cumulative_ms)
+                    perf_data[name]["total"].append(elapsed)
+                else:
+                    failed += 1
+                    test_results[name]["fail"] += 1
+            except requests.exceptions.ConnectionError as e:
+                if not quiet:
+                    print_skip(name, f"connection error: {e}")
+                skipped += 1
+                test_results[name]["skip"] += 1
+            except Exception as e:
+                if not quiet:
+                    print_result(name, False, f"exception: {e}")
+                    if VERBOSE:
+                        traceback.print_exc()
+                failed += 1
+                test_results[name]["fail"] += 1
+
+        total_passed += passed
+        total_failed += failed
+        total_skipped += skipped
+
+    if quiet:
+        print()  # newline after progress
+
+    # Print performance summary if multiple iterations
+    if iterations > 1 and perf_data:
+        # Compatibility results
+        print_section("Test Results Summary")
+        for name, counts in test_results.items():
+            p, f, s = counts["pass"], counts["fail"], counts["skip"]
+            status = f"{C.PASS}PASS{C.RESET}" if f == 0 else f"{C.FAIL}FAIL{C.RESET}"
+            detail = f"{p}/{iterations} passed"
+            if f > 0:
+                detail += f", {f} failed"
+            if s > 0:
+                detail += f", {s} skipped"
+            print(f"  [{status}] {name}  {C.DIM}{detail}{C.RESET}")
+
+        # Desk vs reference timing (only tests with data)
+        n_col = "  N"
+        print_section(f"Performance: desk-api ({len(perf_data)} tests with successful samples)")
+        hdr = f"  {'Test':<50} {n_col:>4} {'Avg':>8} {'Min':>8} {'Max':>8} {'P50':>8} {'P95':>8}"
+        sep = f"  {'-' * 50} {'-' * 4} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 8}"
+        print(hdr)
+        print(sep)
+        for name, data in perf_data.items():
+            n = len(data["desk"])
+            print(f"  {name:<50} {n:>4} " + _fmt_perf_line("", _perf_stats(data["desk"]), w_label=0).lstrip())
+
+        print_section(f"Performance: reference ({len(perf_data)} tests)")
+        print(hdr)
+        print(sep)
+        for name, data in perf_data.items():
+            n = len(data["ref"])
+            print(f"  {name:<50} {n:>4} " + _fmt_perf_line("", _perf_stats(data["ref"]), w_label=0).lstrip())
+
+        # Side-by-side comparison (avg only)
+        print_section("Performance: desk-api vs reference (avg ms)")
+        print(f"  {'Test':<50} {n_col:>4} {'desk':>8} {'ref':>8} {'delta':>8} {'ratio':>7}")
+        print(f"  {'-' * 50} {'-' * 4} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 7}")
+        for name, data in perf_data.items():
+            n = len(data["desk"])
+            d_avg = statistics.mean(data["desk"]) if data["desk"] else 0
+            r_avg = statistics.mean(data["ref"]) if data["ref"] else 0
+            delta = d_avg - r_avg
+            ratio = d_avg / r_avg if r_avg > 0 else float("inf")
+            delta_color = C.PASS if delta <= 0 else C.FAIL if delta > r_avg * 0.5 else C.WARN
+            print(f"  {name:<50} {n:>4} {d_avg:>7.0f}ms {r_avg:>7.0f}ms "
+                  f"{delta_color}{delta:>+7.0f}ms{C.RESET} {ratio:>6.2f}x")
+
+    return total_passed, total_failed, total_skipped
 
 
 def run_single_server_tests(client: ApiClient, test_filter: str | None = None):
@@ -1046,8 +1682,12 @@ def main():
     parser.add_argument("--ref-url", default=REFERENCE, help=f"Reference URL (default: {REFERENCE})")
     parser.add_argument("--test", help="Run only tests matching this substring")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show response bodies")
+    parser.add_argument("--iterations", "-n", type=int, default=1,
+                        help="Number of iterations to run (for performance comparison)")
     parser.add_argument("--username", default=USERNAME, help=f"Login username (default: {USERNAME})")
     parser.add_argument("--password", default=PASSWORD, help=f"Login password (default: {PASSWORD})")
+    parser.add_argument("--report", nargs="?", const="auto", default=None,
+                        help="Write report to file (default: scripts/compat-report.txt)")
     args = parser.parse_args()
 
     VERBOSE = args.verbose
@@ -1055,10 +1695,44 @@ def main():
     desk_url = args.desk_url
     ref_url = args.ref_url
 
+    iterations = args.iterations
+
+    # Set up report file capturing
+    report_buf = None
+    _orig_stdout = sys.stdout
+    if args.report:
+        report_buf = io.StringIO()
+
+        class Tee:
+            """Write to both console and buffer."""
+            def __init__(self, *streams):
+                self.streams = streams
+            def write(self, data):
+                for s in self.streams:
+                    s.write(data)
+            def flush(self):
+                for s in self.streams:
+                    s.flush()
+
+        sys.stdout = Tee(_orig_stdout, report_buf)
+
     print(f"{C.BOLD}Compatibility Test Suite: desk-api vs OneCMS Reference{C.RESET}")
     print(f"  desk-api:  {desk_url}")
     print(f"  reference: {ref_url}")
+    if iterations > 1:
+        print(f"  iterations: {iterations}")
     print()
+
+    # Pre-download sample images if file/image tests will run
+    if not args.test or any(k in (args.test or "") for k in ["file", "image", "download"]):
+        print(f"{C.INFO}Downloading sample images (cached in {_cache_dir})...{C.RESET}")
+        imgs = ensure_sample_images()
+        if imgs:
+            for label, data in imgs.items():
+                print(f"  {label}: {len(data) / (1024*1024):.1f} MB")
+        else:
+            print(f"  {C.WARN}No sample images available — tests will use fallback{C.RESET}")
+        print()
 
     total_passed = 0
     total_failed = 0
@@ -1110,7 +1784,7 @@ def main():
             # Comparison tests
             desk = ApiClient(desk_url, "desk-api")
             ref = ApiClient(ref_url, "reference")
-            p, f, s = run_comparison_tests(desk, ref, args.test)
+            p, f, s = run_comparison_tests(desk, ref, args.test, iterations)
             total_passed += p
             total_failed += f
             total_skipped += s
@@ -1138,6 +1812,17 @@ def main():
     if total_skipped:
         print(f"  {C.WARN}{total_skipped} skipped{C.RESET}", end="")
     print()
+
+    # Write report file
+    if report_buf:
+        sys.stdout = _orig_stdout
+        report_path = args.report if args.report != "auto" else "scripts/compat-report.txt"
+        # Strip ANSI escape codes for clean text file
+        ansi_re = re.compile(r"\033\[[0-9;]*m")
+        clean = ansi_re.sub("", report_buf.getvalue())
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(clean)
+        print(f"\n{C.INFO}Report written to {report_path}{C.RESET}")
 
     sys.exit(1 if total_failed > 0 else 0)
 

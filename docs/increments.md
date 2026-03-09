@@ -670,3 +670,32 @@ Compared against `polopoly/plugins/image-plugin` and `gong/desk` image handling:
 - Original image redirect to file service (`/file/` path)
 - 404 when content exists but has no `atex.Image` aspect
 - Edit info passthrough (rotation, flip in redirect URL)
+
+## Increment 34: Auth compatibility, aspect contentId format, compat-test expansion
+
+### Auth response compatibility
+- **`userId` field**: Changed from login name (`"sysadmin"`) to numeric `principalId` (`"98"`) to match reference server
+- **`renewTime` field**: Now populated as `expireTime - 12 hours` (reference uses `expireTime - sessionKeyRenewalTime`)
+- Applied to all auth endpoints: `POST /security/token`, `GET /security/token`, `POST /security/oauth/callback`
+- Fallback: if `principalId` is NULL in DB, falls back to login name
+
+### Aspect contentId format fix (cross-system DB compatibility)
+- **Bug**: `aspects.contentid` stored a random Camflake ID (e.g., `1hopxmd0zf8v2kq8yie`)
+- **Fix**: Now stores versioned content ID string `"onecms:key:version"` matching reference format
+- **Why**: Reference's `CmsAspectInfoMapper` calls `CmsIdUtil.fromVersionedString()` which expects exactly 3 colon-separated parts — bare IDs caused `IllegalArgumentException`
+- Critical for shared-DB deployments where both desk-api and reference OneCMS read the same content
+
+### Compat-test expansion (`scripts/compat-test.py`)
+- Added workflow rule: every new/modified endpoint must get a compat-test comparison test
+- **New tests**: file upload (with 2-10MB sample images), image content creation (tmp→content commit verification), activities (locking), image service redirect, file download
+- **Performance monitoring**: per-test timing, `--iterations N` for benchmarking, summary table with Avg/Min/Max/P50/P95
+- **Sample images**: downloaded from learningcontainer.com (2MB, 5MB, 10MB), cached on disk
+- **smoke-test.sh**: Added `_type` fields to `atex.Image` and `atex.Files` aspects for reference server compatibility
+
+### Files changed
+- `SecurityController.java` — userId→principalId, renewTime, RENEWAL_WINDOW constant
+- `ContentService.java` — aspect contentId now uses `delegation:key:version` format
+- `SecurityIntegrationTest.java` — updated assertions for new response format
+- `scripts/compat-test.py` — 5 new comparison tests, performance monitoring, sample images
+- `scripts/smoke-test.sh` — added `_type` on atex.Image/atex.Files aspects
+- `CLAUDE.md` — added compat-test step to workflow rules

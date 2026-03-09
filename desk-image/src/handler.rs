@@ -38,19 +38,6 @@ pub async fn handle_image(
         None => return (StatusCode::BAD_REQUEST, "Invalid path").into_response(),
     };
 
-    // Check cache first
-    let cache_key = format!("{}?{}", path, query_to_sorted_string(&query));
-    if let Some(ref cache) = state.cache {
-        if let Some((data, content_type)) = cache.get(&cache_key) {
-            let mut headers = HeaderMap::new();
-            headers.insert(header::CONTENT_TYPE, content_type.parse().unwrap());
-            headers.insert(header::CACHE_CONTROL, "public, max-age=31536000".parse().unwrap());
-            headers.insert(header::ETAG, format!("\"{}\"", &cache_key[..cache_key.len().min(64)]).parse().unwrap());
-            headers.insert("X-Cache", "HIT".parse().unwrap());
-            return (StatusCode::OK, headers, data).into_response();
-        }
-    }
-
     // Fetch original image from storage
     let raw_bytes = match state.storage.get_file(file_uri).await {
         Ok(bytes) => bytes,
@@ -116,16 +103,9 @@ pub async fn handle_image(
         }
     };
 
-    // Store in cache
-    if let Some(ref cache) = state.cache {
-        cache.put(cache_key.clone(), output_bytes.clone(), format.content_type().to_string());
-    }
-
     let mut headers = HeaderMap::new();
     headers.insert(header::CONTENT_TYPE, format.content_type().parse().unwrap());
     headers.insert(header::CACHE_CONTROL, "public, max-age=31536000".parse().unwrap());
-    headers.insert(header::ETAG, format!("\"{}\"", &cache_key[..cache_key.len().min(64)]).parse().unwrap());
-    headers.insert("X-Cache", "MISS".parse().unwrap());
 
     // Original image dimensions (from desk-api)
     if let Some(w) = orig_width {
@@ -185,14 +165,4 @@ fn parse_focal_point(value: Option<&str>) -> Option<FocalPointParam> {
     } else {
         None
     }
-}
-
-fn query_to_sorted_string(query: &HashMap<String, String>) -> String {
-    let mut pairs: Vec<_> = query.iter().collect();
-    pairs.sort_by_key(|(k, _)| k.as_str());
-    pairs
-        .iter()
-        .map(|(k, v)| format!("{}={}", k, v))
-        .collect::<Vec<_>>()
-        .join("&")
 }

@@ -22,8 +22,10 @@ class SecurityIntegrationTest extends BaseIntegrationTest {
 
         assertNotNull(response);
         assertNotNull(response.get("token"));
-        assertEquals("sysadmin", response.get("userId"));
+        // userId is numeric principalId (matching reference server format), not login name
+        assertNotNull(response.get("userId"));
         assertNotNull(response.get("expireTime"));
+        assertNotNull(response.get("renewTime"));
     }
 
     @Test
@@ -51,7 +53,9 @@ class SecurityIntegrationTest extends BaseIntegrationTest {
 
         assertNotNull(response);
         assertEquals(token, response.get("token"));
-        assertEquals("sysadmin", response.get("userId"));
+        // userId is numeric principalId (matching reference server format)
+        assertNotNull(response.get("userId"));
+        assertNotNull(response.get("renewTime"));
     }
 
     @Test

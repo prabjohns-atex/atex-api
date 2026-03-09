@@ -1,5 +1,7 @@
 package com.atex.onecms.ws.activity;
 
+import com.atex.desk.api.repository.AppUserRepository;
+import com.atex.desk.api.entity.AppUser;
 import com.atex.onecms.content.Status;
 import com.atex.onecms.content.Subject;
 import org.springframework.stereotype.Component;
@@ -8,9 +10,12 @@ import org.springframework.stereotype.Component;
 public class ActivityServiceSecured {
 
     private final ActivityService activityService;
+    private final AppUserRepository appUserRepository;
 
-    public ActivityServiceSecured(ActivityService activityService) {
+    public ActivityServiceSecured(ActivityService activityService,
+                                   AppUserRepository appUserRepository) {
         this.activityService = activityService;
+        this.appUserRepository = appUserRepository;
     }
 
     public ActivityInfo get(Subject subject, String activityId) throws ActivityException {
@@ -40,10 +45,19 @@ public class ActivityServiceSecured {
         if (userName == null) {
             throw new ActivityException(Status.BAD_REQUEST, "User name may not be null.");
         }
-        if (!subject.getPrincipalId().equals(userName)) {
-            throw new ActivityException(Status.NOT_AUTHENTICATED,
-                    String.format("%s is not allowed to modify activity belonging to %s.",
-                            subject.getPrincipalId(), userName));
+        String loginName = subject.getPrincipalId();
+        if (!loginName.equals(userName)) {
+            // The client may send the numeric principalId (from registeredusers table)
+            // while the JWT subject is the login name — accept either
+            boolean matches = appUserRepository.findByLoginName(loginName)
+                    .map(AppUser::getPrincipalId)
+                    .map(pid -> pid.equals(userName))
+                    .orElse(false);
+            if (!matches) {
+                throw new ActivityException(Status.NOT_AUTHENTICATED,
+                        String.format("%s is not allowed to modify activity belonging to %s.",
+                                loginName, userName));
+            }
         }
     }
 

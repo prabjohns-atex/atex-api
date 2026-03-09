@@ -24,7 +24,6 @@ struct Cli {
 pub struct AppState {
     pub config: config::Config,
     pub storage: storage::StorageBackend,
-    pub cache: Option<processing::ImageCache>,
 }
 
 #[tokio::main]
@@ -59,39 +58,15 @@ async fn main() -> anyhow::Result<()> {
     if let Ok(v) = std::env::var("DESK_IMAGE_S3_SECRET_KEY") {
         if let Some(s3) = config.storage.s3.as_mut() { s3.secret_key = Some(v); }
     }
-    if let Ok(v) = std::env::var("DESK_IMAGE_CACHE_ENABLED") {
-        config.cache.enabled = v == "true" || v == "1";
-    }
-    if let Ok(v) = std::env::var("DESK_IMAGE_CACHE_MAX_ENTRIES") {
-        config.cache.max_entries = v.parse().unwrap_or(config.cache.max_entries);
-    }
-    if let Ok(v) = std::env::var("DESK_IMAGE_CACHE_MAX_SIZE") {
-        config.cache.max_size_bytes = v.parse().unwrap_or(config.cache.max_size_bytes);
-    }
 
     let bind_addr = format!("{}:{}", config.server.host, config.server.port);
     tracing::info!("Starting desk-image on {}", bind_addr);
 
     let storage = storage::StorageBackend::new(&config.storage).await?;
 
-    let cache = if config.cache.enabled {
-        tracing::info!(
-            "Image cache enabled: max_entries={}, max_size={}MB",
-            config.cache.max_entries,
-            config.cache.max_size_bytes / 1024 / 1024
-        );
-        Some(processing::ImageCache::new(
-            config.cache.max_entries,
-            config.cache.max_size_bytes,
-        ))
-    } else {
-        None
-    };
-
     let state = Arc::new(AppState {
         config,
         storage,
-        cache,
     });
 
     let app = Router::new()

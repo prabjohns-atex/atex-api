@@ -1,13 +1,23 @@
 services:
-  mysql:
-    image: 'mysql:8.0'
-    environment:
-      - 'MYSQL_DATABASE=adm'
-      - 'MYSQL_USER=adm'
-      - 'MYSQL_PASSWORD=adm'
-      - 'MYSQL_ROOT_PASSWORD=root'
+  desk-api:
+    image: eclipse-temurin:25-jre
     ports:
-      - '3306:3306'
+      - '8081:8081'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:33306/desk?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=desk
+      - SPRING_DATASOURCE_PASSWORD=Lmj4mOIJQNSsEiqPuSDN8yN
+      - DESK_SOLR_URL=http://host.docker.internal:38984/solr
+      - DESK_FILE_SERVICE_BASE_DIR=/data/files
+      - DESK_IMAGE_SERVICE_URL=http://desk-image:8090
+    volumes:
+      - ./build/libs:/app/libs:ro
+      - adm-mpp_file-data:/data/files
+    working_dir: /app
+    command: java -jar libs/desk-api-0.0.1-SNAPSHOT.jar
+    restart: unless-stopped
 
   desk-image:
     build:
@@ -22,11 +32,8 @@ services:
       - DESK_IMAGE_SECRET=changeme
       - DESK_IMAGE_STORAGE_BACKEND=local
       - DESK_IMAGE_LOCAL_DIR=/data/files
-      - DESK_IMAGE_CACHE_ENABLED=true
-      - DESK_IMAGE_CACHE_MAX_ENTRIES=1000
-      - DESK_IMAGE_CACHE_MAX_SIZE=268435456
     volumes:
-      - ./files:/data/files:ro
+      - adm-mpp_file-data:/data/files:ro
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:8090/health']
       interval: 10s
@@ -34,3 +41,7 @@ services:
       retries: 3
       start_period: 5s
     restart: unless-stopped
+
+volumes:
+  adm-mpp_file-data:
+    external: true

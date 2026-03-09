@@ -20,8 +20,10 @@ import com.atex.onecms.content.ContentResultBuilder;
 import com.atex.onecms.content.ContentVersionId;
 import com.atex.onecms.content.ContentVersionInfo;
 import com.atex.onecms.content.ContentWrite;
+import com.atex.onecms.content.ContentFileInfo;
 import com.atex.onecms.content.ContentWriteBuilder;
 import com.atex.onecms.content.DeleteResult;
+import com.atex.onecms.content.FilesAspectBean;
 import com.atex.onecms.content.IdUtil;
 import com.atex.onecms.content.SetAliasOperation;
 import com.atex.onecms.content.Status;
@@ -30,6 +32,7 @@ import com.atex.onecms.content.WorkspaceResult;
 import com.atex.onecms.content.WorkspaceResultBuilder;
 import com.atex.onecms.content.aspects.Aspect;
 import com.atex.onecms.content.callback.CallbackException;
+import com.atex.onecms.content.files.FileInfo;
 import com.atex.onecms.content.files.FileService;
 import com.atex.onecms.content.lifecycle.LifecycleContextPreStore;
 import com.atex.onecms.content.lifecycle.LifecyclePreStore;
@@ -45,6 +48,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -269,6 +273,9 @@ public class LocalContentManager implements ContentManager {
             // Run pre-store hooks
             ContentWrite<IN> processed = runPreStoreHooks(content, null, subject);
 
+            // Move temporary files to permanent storage
+            processed = commitTemporaryFiles(processed, subject);
+
             ContentWriteDto writeDto = contentWriteToDto(processed);
             String userId = subject != null ? subject.getPrincipalId() : "system";
 
@@ -314,6 +321,9 @@ public class LocalContentManager implements ContentManager {
 
             // Run pre-store hooks
             ContentWrite<IN> processed = runPreStoreHooks(data, existingContent, subject);
+
+            // Move temporary files to permanent storage
+            processed = commitTemporaryFiles(processed, subject);
 
             ContentWriteDto writeDto = contentWriteToDto(processed);
             String userId = subject != null ? subject.getPrincipalId() : "system";
@@ -561,6 +571,9 @@ public class LocalContentManager implements ContentManager {
         // Run pre-store hooks (this is the whole point)
         ContentWrite<Object> processed = runPreStoreHooks(write, null, subject);
 
+        // Move temporary files to permanent storage
+        processed = commitTemporaryFiles(processed, subject);
+
         // Convert back to DTO and delegate to ContentService
         ContentWriteDto processedDto = contentWriteToDto(processed);
         ContentResultDto result = contentService.createContent(processedDto, userId);
@@ -625,6 +638,9 @@ public class LocalContentManager implements ContentManager {
 
         // Run pre-store hooks
         ContentWrite<Object> processed = runPreStoreHooks(write, existing, subject);
+
+        // Move temporary files to permanent storage
+        processed = commitTemporaryFiles(processed, subject);
 
         // Convert back to DTO and delegate to ContentService (with optimistic locking)
         ContentWriteDto processedDto = contentWriteToDto(processed);
@@ -913,6 +929,122 @@ public class LocalContentManager implements ContentManager {
             current = typedHook.preStore(current, existing, ctx);
         }
         return current;
+    }
+
+    /**
+     * Move temporary files (tmp://) to permanent storage (content://).
+     * Mirrors Polopoly's SystemAspectProcessorImpl.processFilesAspect() →
+     * FilesAspectBeanUtil.commitTemporaryFiles().
+     *
+     * Handles both typed FilesAspectBean and raw Map representations of the
+     * atex.Files aspect.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> ContentWrite<T> commitTemporaryFiles(ContentWrite<T> write, Subject subject) {
+        if (fileService == null) return write;
+
+        Object filesObj = write.getAspect("atex.Files");
+        if (filesObj == null) return write;
+
+        Map<String, ContentFileInfo> files;
+        boolean isTypedBean = filesObj instanceof FilesAspectBean;
+
+        if (isTypedBean) {
+            files = ((FilesAspectBean) filesObj).getFiles();
+        } else if (filesObj instanceof Map<?, ?> rawMap) {
+            // Raw map from DTO layer: { "files": { "path": { "filePath": "...", "fileUri": "tmp://..." } } }
+            Object filesField = rawMap.get("files");
+            if (!(filesField instanceof Map<?, ?> filesMap)) return write;
+            files = new java.util.HashMap<>();
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) filesMap).entrySet()) {
+                String path = entry.getKey().toString();
+                if (entry.getValue() instanceof Map<?, ?> fileMap) {
+                    ContentFileInfo cfi = new ContentFileInfo();
+                    if (fileMap.get("filePath") != null) cfi.setFilePath(fileMap.get("filePath").toString());
+                    if (fileMap.get("fileUri") != null) cfi.setFileUri(fileMap.get("fileUri").toString());
+                    files.put(path, cfi);
+                }
+            }
+        } else {
+            return write;
+        }
+
+        if (files == null || files.isEmpty()) return write;
+
+        boolean changed = false;
+        Map<String, ContentFileInfo> updatedFiles = new java.util.HashMap<>();
+        for (Map.Entry<String, ContentFileInfo> entry : files.entrySet()) {
+            ContentFileInfo cfi = entry.getValue();
+            String fileUri = cfi.getFileUri();
+            if (fileUri != null && fileUri.startsWith("tmp://")) {
+                try {
+                    // Extract host from the source tmp:// URI (e.g., "anonymous" from "tmp://anonymous/file.jpg")
+                    String srcHost = null;
+                    try {
+                        srcHost = URI.create(fileUri).getHost();
+                    } catch (Exception ignored) {}
+                    FileInfo moved = fileService.moveFile(fileUri, "content", srcHost, subject);
+                    if (moved != null && moved.getUri() != null) {
+                        updatedFiles.put(entry.getKey(),
+                                new ContentFileInfo(entry.getKey(), moved.getUri()));
+                        changed = true;
+                        LOG.fine(() -> "Committed temporary file: " + fileUri + " → " + moved.getUri());
+                        continue;
+                    }
+                } catch (Exception e) {
+                    LOG.log(Level.WARNING, "Failed to commit temporary file: " + fileUri, e);
+                }
+            }
+            updatedFiles.put(entry.getKey(), cfi);
+        }
+
+        if (!changed) return write;
+
+        // Rebuild the ContentWrite with updated atex.Files aspect
+        FilesAspectBean updatedBean = new FilesAspectBean();
+        updatedBean.setFiles(updatedFiles);
+
+        ContentWriteBuilder<T> builder = ContentWriteBuilder.from(write);
+        builder.aspect("atex.Files", updatedBean);
+
+        // Also update atex.Image filePath if it points to a tmp:// URI that was moved
+        updateImageAspectFilePath(builder, write, updatedFiles);
+
+        return builder.build();
+    }
+
+    /**
+     * Update the atex.Image aspect's filePath if it was a tmp:// URI that got committed.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> void updateImageAspectFilePath(ContentWriteBuilder<T> builder,
+                                                ContentWrite<T> write,
+                                                Map<String, ContentFileInfo> updatedFiles) {
+        Object imageObj = write.getAspect("atex.Image");
+        if (imageObj == null) return;
+
+        Map<String, Object> imageData;
+        if (imageObj instanceof Map<?, ?> rawMap) {
+            imageData = new java.util.HashMap<>((Map<String, Object>) rawMap);
+        } else {
+            imageData = objectMapper.convertValue(imageObj,
+                    new tools.jackson.core.type.TypeReference<Map<String, Object>>() {});
+        }
+
+        Object filePath = imageData.get("filePath");
+        if (filePath == null) return;
+        String fp = filePath.toString();
+        if (!fp.startsWith("tmp://")) return;
+
+        // Find the matching committed file by URI
+        for (ContentFileInfo cfi : updatedFiles.values()) {
+            if (cfi.getFileUri() != null && !cfi.getFileUri().startsWith("tmp://")) {
+                // This is a moved file — update the image aspect filePath
+                imageData.put("filePath", cfi.getFileUri());
+                builder.aspect("atex.Image", (Object) imageData);
+                return;
+            }
+        }
     }
 
     /**

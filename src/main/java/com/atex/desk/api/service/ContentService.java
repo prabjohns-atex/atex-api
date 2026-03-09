@@ -925,8 +925,14 @@ public class ContentService
             return;
         }
 
-        // Different data — create a new aspect row
-        String aspectContentId = idGenerator.nextId();
+        // Build versioned content ID string matching reference format: "delegation:key:version"
+        // The reference (CmsAspectInfoMapper) parses this via CmsIdUtil.fromVersionedString()
+        // which expects exactly 3 colon-separated parts.
+        String delegationId = idTypeRepository.findById(cv.getIdtype())
+            .map(idType -> idType.getName())
+            .orElse("onecms");
+        String aspectContentId = delegationId + ":" + cv.getId() + ":" + cv.getVersion();
+
         Aspect aspect = new Aspect();
         aspect.setVersionId(cv.getVersionId());
         aspect.setContentId(aspectContentId);
