@@ -18,6 +18,7 @@ import com.atex.desk.api.repository.AppGroupRepository;
 import com.atex.desk.api.repository.AppUserRepository;
 import com.atex.desk.api.entity.AppUser;
 import com.atex.desk.api.service.ContentService;
+import com.atex.desk.api.service.ObjectCacheService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -38,6 +39,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.annotation.PostConstruct;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -48,23 +51,34 @@ import java.util.Map;
 @Tag(name = "Principals")
 public class PrincipalsController
 {
+    private static final String CACHE_USER_ME = "userMe";
+
     private final AppUserRepository userRepository;
     private final AppGroupRepository groupRepository;
     private final AppGroupMemberRepository groupMemberRepository;
     private final AppGroupOwnerRepository groupOwnerRepository;
     private final ContentService contentService;
+    private final ObjectCacheService cacheService;
 
     public PrincipalsController(AppUserRepository userRepository,
                                 AppGroupRepository groupRepository,
                                 AppGroupMemberRepository groupMemberRepository,
                                 AppGroupOwnerRepository groupOwnerRepository,
-                                ContentService contentService)
+                                ContentService contentService,
+                                ObjectCacheService cacheService)
     {
         this.userRepository = userRepository;
         this.groupRepository = groupRepository;
         this.groupMemberRepository = groupMemberRepository;
         this.groupOwnerRepository = groupOwnerRepository;
         this.contentService = contentService;
+        this.cacheService = cacheService;
+    }
+
+    @PostConstruct
+    void initCaches()
+    {
+        cacheService.configure(CACHE_USER_ME, 5 * 60 * 1000L, 200); // 5 min TTL, 200 entries
     }
 
     // ======== User endpoints ========
@@ -296,8 +310,13 @@ public class PrincipalsController
 
     private UserMeDto toUserMeDto(AppUser user)
     {
-        UserMeDto dto = new UserMeDto();
         String principalId = effectivePrincipalId(user);
+
+        // Check global cache first
+        UserMeDto cached = cacheService.get(CACHE_USER_ME, principalId);
+        if (cached != null) return cached;
+
+        UserMeDto dto = new UserMeDto();
         dto.setLoginName(user.getLoginName());
         dto.setFirstName(user.getLoginName());
         dto.setLastName("");
@@ -343,10 +362,13 @@ public class PrincipalsController
         if (dto.getWorkingSites() == null) dto.setWorkingSites(Collections.emptyList());
         if (dto.getUserData() == null) dto.setUserData(Map.of("relations", Collections.emptyMap()));
 
-        // Look up group memberships using the principal ID
+        // Look up group memberships — batch query instead of N+1
         List<AppGroupMember> memberships = groupMemberRepository.findByPrincipalId(principalId);
-        List<GroupRefDto> groups = memberships.stream()
-            .map(m -> groupRepository.findById(m.getGroupId()).orElse(null))
+        List<Integer> groupIds = memberships.stream().map(AppGroupMember::getGroupId).toList();
+        Map<Integer, AppGroup> groupMap = groupRepository.findAllById(groupIds).stream()
+            .collect(java.util.stream.Collectors.toMap(AppGroup::getGroupId, g -> g));
+        List<GroupRefDto> groups = groupIds.stream()
+            .map(groupMap::get)
             .filter(g -> g != null)
             .map(g -> {
                 GroupRefDto ref = new GroupRefDto();
@@ -360,6 +382,10 @@ public class PrincipalsController
         dto.setGroups(groups);
 
         dto.setHomeDepartmentId(null);
+
+        // Cache the result
+        cacheService.put(CACHE_USER_ME, principalId, dto);
+
         return dto;
     }
 

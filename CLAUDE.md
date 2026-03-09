@@ -53,6 +53,7 @@ desk-api (Spring Boot 4)
   ├─ WorkspaceController (/workspace/*)     — Draft workspaces
   ├─ ChangesController (/changes/*)         — Change feed
   ├─ ConfigurationController (/admin/config) — Config CRUD
+  ├─ CacheController (/admin/cache)        — Cache stats & clearing (Inc 35)
   ├─ ReindexController (/admin/reindex)     — Solr indexing management (Inc 6, 20)
   └─ dashboard.html                         — Admin UI (Inc 24)
 ```
@@ -63,7 +64,7 @@ desk-api (Spring Boot 4)
 | Entities (12) | `c.a.desk.api.entity` | `IdType`, `ContentId`, `ContentVersion`, `Content`, `Aspect`, `AspectLocation`, `View`, `ContentView`, `Alias`, `ContentAlias` |
 | Repositories (10) | `c.a.desk.api.repository` | Spring Data JPA with JPQL queries |
 | DTOs (7) | `c.a.desk.api.dto` | `ContentResultDto`, `AspectDto`, `ContentWriteDto`, `MetaDto`, `ErrorResponseDto` |
-| Service | `c.a.desk.api.service` | `ContentService` (CRUD, resolve, alias, purge), `IdGenerator` (Camflake), `TypeService` (type schema from annotations) |
+| Service | `c.a.desk.api.service` | `ContentService` (CRUD, resolve, alias, purge), `IdGenerator` (Camflake), `TypeService` (type schema from annotations), `ObjectCacheService` (global TTL/LRU cache) |
 | OneCMS Compat | `c.a.desk.api.onecms` | `LocalContentManager`, `LocalPolicyCMServer`, `LocalCmClient`, `LocalFileService` |
 | Auth | `c.a.desk.api.auth` | `TokenService`, `AuthFilter`, `AuthConfig` (RS256 JWT) |
 | Plugins | `c.a.desk.api.plugin` | PF4J 3.15.0, `DeskPreStoreHook`, `DeskContentComposer` |

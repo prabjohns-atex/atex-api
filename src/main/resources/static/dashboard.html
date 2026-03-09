@@ -197,6 +197,13 @@
             <div class="card" id="config-summary-card"><h2>Configuration</h2><div class="loading">Loading...</div></div>
             <div class="card" id="metrics-card"><h2>Request Metrics</h2><div class="loading">Loading...</div></div>
             <div class="card" id="jvm-card"><h2>JVM</h2><div class="loading">Loading...</div></div>
+            <div class="card" id="cache-card">
+                <h2>Object Cache</h2>
+                <div id="cache-stats"><div class="loading">Loading...</div></div>
+                <div style="margin-top:0.8rem" class="btn-group">
+                    <button class="btn btn-danger btn-sm" onclick="clearAllCaches()">Clear All Caches</button>
+                </div>
+            </div>
         </div>
         <div class="refresh-note">Auto-refreshes every 30 seconds</div>
     </div>
@@ -545,8 +552,41 @@ async function loadJvm() {
     document.getElementById('jvm-card').innerHTML = html;
 }
 
+async function loadCacheStats() {
+    try {
+        const stats = await authJson('/admin/cache');
+        const el = document.getElementById('cache-stats');
+        if (!stats || Object.keys(stats).length === 0) {
+            el.innerHTML = '<div class="stat"><span class="stat-label">No caches registered</span></div>';
+            return;
+        }
+        let html = '';
+        for (const [name, s] of Object.entries(stats)) {
+            html += `<div class="stat"><span class="stat-label">${name}</span>` +
+                `<span class="stat-value">${s.activeEntries}/${s.maxSize} entries` +
+                ` <span style="color:#999;font-size:0.75rem">(TTL ${Math.round(s.ttlMs/1000)}s)</span>` +
+                ` <button class="btn btn-outline btn-sm" style="margin-left:6px" onclick="clearCache('${name}')">Clear</button>` +
+                `</span></div>`;
+        }
+        el.innerHTML = html;
+    } catch(e) { document.getElementById('cache-stats').innerHTML = '<div class="stat"><span class="stat-label">Error loading cache stats</span></div>'; }
+}
+
+async function clearAllCaches() {
+    if (!confirm('Clear all caches?')) return;
+    await authFetch('/admin/cache', { method: 'DELETE' });
+    toast('All caches cleared', 'success');
+    loadCacheStats();
+}
+
+async function clearCache(name) {
+    await authFetch('/admin/cache/' + name, { method: 'DELETE' });
+    toast('Cache "' + name + '" cleared', 'success');
+    loadCacheStats();
+}
+
 async function loadOverview() {
-    await Promise.all([loadStatus(), loadHealth(), loadMetrics(), loadJvm()]);
+    await Promise.all([loadStatus(), loadHealth(), loadMetrics(), loadJvm(), loadCacheStats()]);
 }
 
 // ============================================================

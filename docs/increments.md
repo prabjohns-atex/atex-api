@@ -716,3 +716,39 @@ Compared against `polopoly/plugins/image-plugin` and `gong/desk` image handling:
 - `compose.yaml` — desk-api container, shared file volume, removed cache config
 - `desk-image/` — removed LRU cache layer
 - `CLAUDE.md` — Docker Compose docs, compat-test workflow rule
+
+## Increment 35 — Global Object Cache Service
+
+### Summary
+Introduced a centralized `ObjectCacheService` for application-wide caching with per-type configurable TTL and max size. Replaces inline caching in `PrincipalsController` and provides a single place for future cache busting.
+
+### Design
+- **`ObjectCacheService`** (`c.a.desk.api.service`): Spring `@Service`, named caches with configurable TTL and max size
+- LRU eviction via access-ordered `LinkedHashMap` with `removeEldestEntry`
+- Passive TTL expiration on `get()`
+- Thread-safe via `ConcurrentHashMap` + `Collections.synchronizedMap`
+- API: `configure(name, ttl, maxSize)`, `get(name, key)`, `put(name, key, value)`, `evict(name, key)`, `clear(name)`, `clearAll()`, `getStats()`
+- `CacheStats` record for monitoring: `totalEntries`, `activeEntries`, `maxSize`, `ttlMs`
+
+### Cache endpoint
+- **`CacheController`** at `/admin/cache`:
+  - `GET /admin/cache` — cache statistics for all registered caches
+  - `DELETE /admin/cache` — clear all caches
+  - `DELETE /admin/cache/{cacheName}` — clear a specific cache
+- Protected by existing `/admin/*` auth filter
+
+### Dashboard integration
+- Added **Object Cache** card to Overview tab showing per-cache stats (active/max entries, TTL)
+- Per-cache "Clear" button and global "Clear All Caches" button
+- Stats auto-refresh with overview tab (every 30s)
+
+### PrincipalsController refactoring
+- Removed inline `CachedUserMe` record and `ConcurrentHashMap` cache
+- Injects `ObjectCacheService`, configures `"userMe"` cache via `@PostConstruct` (5 min TTL, 200 entries)
+- Kept N+1 fix: batch `findAllById` for group lookups instead of per-group queries
+
+### Files changed
+- `ObjectCacheService.java` — new global cache service
+- `CacheController.java` — new admin REST endpoint for cache management
+- `PrincipalsController.java` — refactored to use ObjectCacheService
+- `dashboard.html` — cache stats card with clear buttons
