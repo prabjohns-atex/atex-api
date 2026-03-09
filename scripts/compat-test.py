@@ -1073,9 +1073,11 @@ def test_create_image_content(desk: ApiClient, ref: ApiClient) -> tuple[bool, st
     desk_file_uri = (db_u.get("URI") or db_u.get("uri") or f"tmp://anonymous/{fname}") if db_u else f"tmp://anonymous/{fname}"
     ref_file_uri = (rb_u.get("URI") or rb_u.get("uri") or f"tmp://anonymous/{fname}") if rb_u else f"tmp://anonymous/{fname}"
 
-    # Create image content with atex.Files aspect.
-    # Note: atex.Image has storeWithMainAspect=true, so width/height go in contentData.
-    # The reference uses CustomImageBean which includes width/height on the main bean.
+    # Create image content matching reference format:
+    # - contentData has width/height (duplicated from atex.Image)
+    # - atex.Image is a SEPARATE aspect with _type "atex.Image" (aspect name, not class name)
+    # - atex.Image.filePath is just the filename (not the full URI)
+    # - atex.Files has the full file URI
     def make_image_body(file_uri, filename):
         return {
             "aspects": {
@@ -1083,6 +1085,14 @@ def test_create_image_content(desk: ApiClient, ref: ApiClient) -> tuple[bool, st
                     "data": {
                         "_type": "atex.onecms.image",
                         "title": f"Compat Test Image {filename}",
+                        "width": 1920,
+                        "height": 1280
+                    }
+                },
+                "atex.Image": {
+                    "data": {
+                        "_type": "atex.Image",
+                        "filePath": filename,
                         "width": 1920,
                         "height": 1280
                     }
