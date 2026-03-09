@@ -52,6 +52,10 @@ public class ChangeListService
     private final Map<String, Integer> attributeCache = new ConcurrentHashMap<>();
     private final Map<String, Integer> idTypeCache = new ConcurrentHashMap<>();
 
+    /** Pre-computed reverse maps (built once at startup). */
+    private volatile Map<Integer, String> attrIdToNameMap = Map.of();
+    private volatile Map<Integer, String> idTypeIdToNameMap = Map.of();
+
     public ChangeListService(ChangeListRepository changeListRepository,
                              ChangeListAttributeRepository changeListAttributeRepository,
                              EventQueueRepository eventQueueRepository,
@@ -89,6 +93,23 @@ public class ChangeListService
         for (IdType it : idTypeRepository.findAll()) {
             idTypeCache.put(it.getName(), it.getId());
         }
+
+        // Pre-compute reverse maps
+        rebuildReverseMaps();
+    }
+
+    private void rebuildReverseMaps() {
+        Map<Integer, String> attrReverse = new HashMap<>();
+        for (Map.Entry<String, Integer> e : attributeCache.entrySet()) {
+            attrReverse.put(e.getValue(), e.getKey());
+        }
+        attrIdToNameMap = Map.copyOf(attrReverse);
+
+        Map<Integer, String> idTypeReverse = new HashMap<>();
+        for (Map.Entry<String, Integer> e : idTypeCache.entrySet()) {
+            idTypeReverse.put(e.getValue(), e.getKey());
+        }
+        idTypeIdToNameMap = Map.copyOf(idTypeReverse);
     }
 
     /**
@@ -320,17 +341,8 @@ public class ChangeListService
         // Bulk load attributes for all results
         Map<Integer, Map<String, String>> attrMap = loadAttributes(changeIds);
 
-        // Reverse attribute ID → name map
-        Map<Integer, String> attrIdToName = new HashMap<>();
-        for (Map.Entry<String, Integer> e : attributeCache.entrySet()) {
-            attrIdToName.put(e.getValue(), e.getKey());
-        }
-
-        // Reverse idtype ID → name map
-        Map<Integer, String> idTypeIdToName = new HashMap<>();
-        for (Map.Entry<String, Integer> e : idTypeCache.entrySet()) {
-            idTypeIdToName.put(e.getValue(), e.getKey());
-        }
+        Map<Integer, String> attrIdToName = attrIdToNameMap;
+        Map<Integer, String> idTypeIdToName = idTypeIdToNameMap;
 
         // Build DTOs
         List<ChangeEventDto> events = new ArrayList<>();
@@ -442,11 +454,7 @@ public class ChangeListService
 
         List<ChangeListAttribute> attrs = changeListAttributeRepository.findByIdIn(changeIds);
 
-        // Reverse attribute ID → name map
-        Map<Integer, String> attrIdToName = new HashMap<>();
-        for (Map.Entry<String, Integer> e : attributeCache.entrySet()) {
-            attrIdToName.put(e.getValue(), e.getKey());
-        }
+        Map<Integer, String> attrIdToName = attrIdToNameMap;
 
         for (ChangeListAttribute a : attrs) {
             String name = attrIdToName.get(a.getAttrId());

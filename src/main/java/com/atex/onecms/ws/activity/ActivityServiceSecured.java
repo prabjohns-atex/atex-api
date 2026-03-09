@@ -2,20 +2,32 @@ package com.atex.onecms.ws.activity;
 
 import com.atex.desk.api.repository.AppUserRepository;
 import com.atex.desk.api.entity.AppUser;
+import com.atex.desk.api.service.ObjectCacheService;
 import com.atex.onecms.content.Status;
 import com.atex.onecms.content.Subject;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ActivityServiceSecured {
 
+    private static final String CACHE_PRINCIPAL_MAP = "principalMap";
+
     private final ActivityService activityService;
     private final AppUserRepository appUserRepository;
+    private final ObjectCacheService cacheService;
 
     public ActivityServiceSecured(ActivityService activityService,
-                                   AppUserRepository appUserRepository) {
+                                   AppUserRepository appUserRepository,
+                                   ObjectCacheService cacheService) {
         this.activityService = activityService;
         this.appUserRepository = appUserRepository;
+        this.cacheService = cacheService;
+    }
+
+    @PostConstruct
+    void initCaches() {
+        cacheService.configure(CACHE_PRINCIPAL_MAP, 5 * 60 * 1000L, 200);
     }
 
     public ActivityInfo get(Subject subject, String activityId) throws ActivityException {
@@ -49,10 +61,16 @@ public class ActivityServiceSecured {
         if (!loginName.equals(userName)) {
             // The client may send the numeric principalId (from registeredusers table)
             // while the JWT subject is the login name — accept either
-            boolean matches = appUserRepository.findByLoginName(loginName)
-                    .map(AppUser::getPrincipalId)
-                    .map(pid -> pid.equals(userName))
-                    .orElse(false);
+            String cachedPid = cacheService.get(CACHE_PRINCIPAL_MAP, loginName);
+            if (cachedPid == null) {
+                cachedPid = appUserRepository.findByLoginName(loginName)
+                        .map(AppUser::getPrincipalId)
+                        .orElse(null);
+                if (cachedPid != null) {
+                    cacheService.put(CACHE_PRINCIPAL_MAP, loginName, cachedPid);
+                }
+            }
+            boolean matches = userName.equals(cachedPid);
             if (!matches) {
                 throw new ActivityException(Status.NOT_AUTHENTICATED,
                         String.format("%s is not allowed to modify activity belonging to %s.",
