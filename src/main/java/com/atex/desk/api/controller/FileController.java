@@ -130,6 +130,37 @@ public class FileController {
     public ResponseEntity<StreamingResponseBody> getFile(@PathVariable("space") String space,
                                                           @PathVariable("host") String host,
                                                           @PathVariable("path") String path) {
+        // Fast path: resolve directly to filesystem for LocalFileService (single pass)
+        java.nio.file.Path filePath = null;
+        if (fileService instanceof com.atex.desk.api.onecms.LocalFileService localFs) {
+            filePath = localFs.resolveToPath(space, host, path);
+        }
+
+        if (filePath != null && Files.exists(filePath)) {
+            HttpHeaders headers = new HttpHeaders();
+            addCacheHeaders(headers);
+            try {
+                headers.setContentLength(Files.size(filePath));
+                long modified = Files.getLastModifiedTime(filePath).toMillis();
+                if (modified > 0) headers.setLastModified(modified);
+                String mimeType = Files.probeContentType(filePath);
+                if (mimeType != null) {
+                    headers.setContentType(MediaType.parseMediaType(mimeType));
+                }
+            } catch (java.io.IOException e) {
+                throw ContentApiException.internal("Error reading file metadata", e);
+            }
+
+            final java.nio.file.Path fp = filePath;
+            StreamingResponseBody stream = output -> {
+                try (InputStream is = Files.newInputStream(fp)) {
+                    is.transferTo(output);
+                }
+            };
+            return ResponseEntity.ok().headers(headers).body(stream);
+        }
+
+        // Fallback: standard two-call approach via FileService interface (S3, etc.)
         String uri = buildUri(space, host, path);
         FileInfo fileInfo = fileService.getFileInfo(uri, Subject.NOBODY_CALLER);
         if (fileInfo == null) {
@@ -145,24 +176,16 @@ public class FileController {
         addFileInfoHeaders(fileInfo, headers);
         addCacheHeaders(headers);
         headers.setContentLength(fileInfo.getLength());
-
         if (fileInfo.getMimeType() != null) {
             headers.setContentType(MediaType.parseMediaType(fileInfo.getMimeType()));
         }
 
         StreamingResponseBody stream = output -> {
             try (inputStream) {
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    output.write(buffer, 0, bytesRead);
-                }
+                inputStream.transferTo(output);
             }
         };
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(stream);
+        return ResponseEntity.ok().headers(headers).body(stream);
     }
 
     @DeleteMapping("/{space}/{host}/{path:.*}")

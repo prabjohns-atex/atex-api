@@ -163,6 +163,19 @@ public class LocalFileService implements FileService {
     }
 
     /**
+     * Resolve space/host/path components directly to a filesystem Path.
+     * Used by FileController for single-pass file downloads.
+     */
+    public Path resolveToPath(String space, String host, String filename) {
+        Path resolved = baseDir.resolve(space).resolve(host).resolve(filename).normalize();
+        if (!resolved.startsWith(baseDir)) {
+            LOG.warn("Path traversal attempt detected: {}/{}/{}", space, host, filename);
+            return null;
+        }
+        return resolved;
+    }
+
+    /**
      * Resolve a URI to a filesystem path.
      * URI format: {space}://{host}/{filename}
      */
