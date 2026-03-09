@@ -11,8 +11,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -98,10 +96,10 @@ public class LocalFileService implements FileService {
             Files.createDirectories(dir);
             long length = Files.copy(data, filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            byte[] checksum = computeMd5(filePath);
             long now = System.currentTimeMillis();
 
-            return new FileInfo(uri, path, mimeType, checksum, length, now, now, now);
+            // Reference implementation does not compute checksums — FileInfo.checksum is always null
+            return new FileInfo(uri, path, mimeType, null, length, now, now, now);
         } catch (IOException e) {
             LOG.error("Failed to upload file: {}", uri, e);
             return null;
@@ -204,23 +202,13 @@ public class LocalFileService implements FileService {
         try {
             long length = Files.size(filePath);
             long modified = Files.getLastModifiedTime(filePath).toMillis();
-            byte[] checksum = computeMd5(filePath);
             String mimeType = Files.probeContentType(filePath);
             return new FileInfo(uri, filePath.getFileName().toString(),
-                              mimeType, checksum, length, modified, modified, modified);
+                              mimeType, null, length, modified, modified, modified);
         } catch (IOException e) {
             LOG.error("Failed to build FileInfo for: {}", uri, e);
             return new FileInfo(uri, null, null, null, 0, -1, -1, -1);
         }
     }
 
-    private byte[] computeMd5(Path filePath) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] data = Files.readAllBytes(filePath);
-            return md.digest(data);
-        } catch (NoSuchAlgorithmException | IOException e) {
-            return null;
-        }
-    }
 }
