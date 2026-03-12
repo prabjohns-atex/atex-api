@@ -752,3 +752,86 @@ Introduced a centralized `ObjectCacheService` for application-wide caching with 
 - `CacheController.java` — new admin REST endpoint for cache management
 - `PrincipalsController.java` — refactored to use ObjectCacheService
 - `dashboard.html` — cache stats card with clear buttons
+
+## Increment 35b — Search Permission Filter Fix
+
+### Problem
+Search with `permission=write` (used by mytype-new) returned 0 results. The old filter used a positive match
+(`content_writers_ss:"sysadmin"`) which required the field to exist and match — but most Solr documents
+don't have `content_writers_ss` at all (they're public content).
+
+### Solution — Double-negation pattern (matching reference ContentAccessDecorator)
+Changed `LocalSearchClient` to use the same double-negation filter as the reference:
+```
+-(content_private_b:* -content_private_b:false -content_writers_ss:(98 OR group\:7 OR group\:all))
+```
+This means: exclude documents that are private AND where the user is NOT in the permission list.
+Public documents (no `content_private_b` field, or `content_private_b:false`) pass through automatically.
+
+### Principal resolution
+- Maps JWT `loginName` → numeric `principalId` via `AppUserRepository`
+- Resolves group memberships via `AppGroupMemberRepository.findByPrincipalId()`
+- Formats groups as `group:X` (matching reference `GroupId.PREFIX_STRING`)
+- Adds `group:all` (matching reference `AllPrincipalsId.ID_STRING`)
+- Escapes Solr special chars via `ClientUtils.escapeQueryChars()` (`:` in `group:X` → `group\:X`)
+- Results cached in `ObjectCacheService` ("searchPrincipals", 5 min TTL, 200 entries)
+
+### Files changed
+- `LocalSearchClient.java` — double-negation permission filter, principal resolution with caching
+- `scripts/compat-test.py` — added `test_search_permission` for `permission=write` queries
+
+## Increment 35c — Request Metrics Dashboard
+
+### Feature
+Added live request metrics capture and visualization to the admin dashboard for debugging API requests.
+
+### Backend
+- **`RequestMetricsService`** — ring buffer (500 entries) capturing every HTTP request: method, URI, query string, status, duration, user, content type, response size. Per-URI aggregate stats (count, avg, max, last) with pattern normalization (collapses UUIDs and content IDs).
+- **`RequestMetricsFilter`** — servlet filter at order -1 (before auth), captures timing for all non-static requests. Excludes actuator, swagger, static assets.
+- **`RequestMetricsController`** at `/admin/requests` — `GET` returns recent requests (up to 500), `GET /stats` returns per-URI aggregates, `DELETE` clears all metrics.
+
+### Dashboard
+- New **Requests** tab with two sections:
+  - **URI Stats** — aggregated table showing request pattern, count, avg/max/last latency
+  - **Recent Requests** — live scrolling table with method badges, status code badges (color-coded 2xx/3xx/4xx/5xx), duration highlighting (green <50ms, amber <200ms, red >200ms), user, and click-to-expand detail panel showing query parameters
+- Text filter for quick search across method, URI, status, user
+- Auto-refreshes every 3 seconds when active
+- Clear all button to reset metrics
+
+### Files changed
+- `RequestMetricsService.java` — new service with ring buffer and aggregate stats
+- `RequestMetricsFilter.java` — new servlet filter for timing capture
+- `RequestMetricsController.java` — new admin REST controller
+- `AuthConfig.java` — registers RequestMetricsFilter at order -1
+- `dashboard.html` — new Requests tab with live metrics visualization
+
+## Increment 35d — Search Serialization Fix + Parallel Content Inlining
+
+### Search JSON serialization bug
+`SearchServiceUtil.createChild` was appending child elements to their parent BEFORE populating them with values.
+The JSON factory's `extractValue()` creates copies, so parents received empty `{}` for every doc field and nested structure.
+
+**Root cause**: The `ChildFactoryJSON.appendChild(parent, child)` calls `extractValue(child)` which strips metadata
+and returns a NEW object. But `createChild` was calling `appendChild(parent, child)` before setting values on the child.
+
+**Fix**: Reordered all `createChild` branches to populate children fully before appending to parent:
+- NamedList, SolrDocumentList, Map, List, Object[] — populate contents first, then `appendChild`
+- Primitives (String, Integer, Long, etc.) — set `_value` first, then `appendChild`
+
+### Parallel content inlining (variant=list)
+`inlineContentData` was resolving content for each search doc sequentially (2 DB queries per doc).
+With 50 rows: ~15ms × 50 = 783ms.
+
+**Fix**: Uses Java 25 virtual threads (`Executors.newVirtualThreadPerTaskExecutor()`) to resolve all docs concurrently.
+Result: 783ms → ~120ms for 50 rows with `variant=list`.
+
+### Response size tracking
+`RequestMetricsFilter` now wraps the response with `CountingResponseWrapper` that counts bytes written through
+both `ServletOutputStream` and `PrintWriter`, giving accurate response sizes in the dashboard.
+
+### Files changed
+- `SearchServiceUtil.java` — fixed child-before-parent ordering for all container/primitive types
+- `SearchController.java` — parallel content inlining via virtual threads
+- `RequestMetricsFilter.java` — `CountingResponseWrapper` for response size tracking, excluded dashboard polling endpoints
+- `RequestMetricsService.java` — changed `responseSize` from `Long` to `long`
+- `scripts/compat-test.py` — added `test_search_variant_list` for variant=list with 50 rows

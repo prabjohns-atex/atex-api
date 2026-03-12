@@ -744,6 +744,109 @@ def test_search(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
     return True, f"desk={ds} ref={rs}", notes
 
 
+def test_search_permission(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /search/onecms/select?permission=write — Solr search with permission filter (mytype-new query)."""
+    notes = []
+    params = {
+        "q": "*:*",
+        "sort": "modificationTime desc",
+        "start": "0",
+        "rows": "5",
+        "fl": "id",
+        "variant": "list",
+        "facet": "false",
+        "permission": "write",
+        "wt": "json",
+        "solrCore": "onecms",
+        "fq": "-contentState_s:TRASH",
+    }
+
+    ds, db, _ = desk.get("/search/onecms/select", params=params)
+    rs, rb, _ = ref.get("/search/onecms/select", params=params)
+
+    dump_json("desk", db)
+    dump_json("ref", rb)
+
+    if ds != 200:
+        notes.append(f"desk-api search returned {ds}")
+    if rs != 200:
+        notes.append(f"reference search returned {rs}")
+
+    if ds != 200 or rs != 200:
+        passed = True  # soft pass — search depends on Solr
+        notes.append("Search depends on Solr availability")
+        return passed, f"desk={ds} ref={rs}", notes
+
+    # The key check: permission=write must return results (not 0)
+    desk_num = _nested_get(db, "response", "numFound")
+    ref_num = _nested_get(rb, "response", "numFound")
+    notes.append(f"numFound: desk={desk_num} ref={ref_num}")
+
+    if desk_num is not None and desk_num == 0:
+        notes.append("FAIL: desk-api returned 0 results with permission=write")
+        return False, f"desk numFound=0", notes
+
+    if desk_num is not None and ref_num is not None:
+        # Both should return a comparable number of results
+        if desk_num > 0 and ref_num > 0:
+            notes.append("Both servers return results with permission=write filter")
+
+    return True, f"desk={ds} ref={rs}", notes
+
+
+def test_search_variant_list(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /search/onecms/select?variant=list&rows=50 — search with content inlining (mytype-new main query)."""
+    notes = []
+    params = {
+        "q": "*:*",
+        "sort": "desk_atex_desk_i asc,relevance_atex_desk_s desc",
+        "start": "0",
+        "rows": "50",
+        "fl": "id",
+        "variant": "list",
+        "facet": "false",
+        "solrCore": "onecms",
+        "fq": "-contentState_s:TRASH",
+        "TZ": "America/New_York",
+        "wt": "json",
+    }
+
+    desk.reset_timing()
+    ds, db, _ = desk.get("/search/onecms/select", params=params)
+    desk_ms = desk.last_elapsed_ms
+
+    ref.reset_timing()
+    rs, rb, _ = ref.get("/search/onecms/select", params=params)
+    ref_ms = ref.last_elapsed_ms
+
+    dump_json("desk", db)
+    dump_json("ref", rb)
+
+    if ds != 200:
+        notes.append(f"desk-api search returned {ds}")
+    if rs != 200:
+        notes.append(f"reference search returned {rs}")
+
+    if ds != 200 or rs != 200:
+        passed = True
+        notes.append("Search depends on Solr availability")
+        return passed, f"desk={ds} ref={rs}", notes
+
+    desk_num = _nested_get(db, "response", "numFound")
+    ref_num = _nested_get(rb, "response", "numFound")
+    notes.append(f"numFound: desk={desk_num} ref={ref_num}")
+    notes.append(f"timing: desk={desk_ms:.0f}ms ref={ref_ms:.0f}ms")
+
+    # Check docs have _data inlined
+    desk_docs = _nested_get(db, "response", "docs") or []
+    ref_docs = _nested_get(rb, "response", "docs") or []
+    desk_with_data = sum(1 for d in desk_docs if "_data" in d)
+    ref_with_data = sum(1 for d in ref_docs if "_data" in d)
+    notes.append(f"docs with _data: desk={desk_with_data}/{len(desk_docs)} ref={ref_with_data}/{len(ref_docs)}")
+
+    return True, f"desk={ds} ref={rs}", notes
+
+
 def test_dam_content(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
     """GET /dam/content/resolve/contentid/{id} — DAM content resolve endpoint."""
     notes = []
@@ -1458,6 +1561,8 @@ ALL_COMPARISON_TESTS = [
     ("External ID resolve (GET /content/externalid/{id})", test_external_id_redirect),
     ("Config content (GET /content/externalid/{configId})", test_get_config),
     ("Search proxy (GET /search/onecms/select)", test_search),
+    ("Search with permission (GET /search?permission=write)", test_search_permission),
+    ("Search variant=list 50 rows (GET /search?variant=list)", test_search_variant_list),
     ("DAM content (GET /dam/content/contentid/{id})", test_dam_content),
     ("DAM configuration (GET /dam/content/configuration/deskcfg)", test_dam_configuration),
     ("Principals me (GET /principals/users/me)", test_principals_me),

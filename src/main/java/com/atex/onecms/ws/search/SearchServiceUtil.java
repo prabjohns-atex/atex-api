@@ -227,8 +227,8 @@ public class SearchServiceUtil {
 
         if (value instanceof NamedList) {
             E child = factory.createElement(name, "lst");
-            factory.appendChild(parent, child);
             parseNamedList((NamedList<Object>) value, child, factory);
+            factory.appendChild(parent, child);
             return;
         }
 
@@ -239,93 +239,95 @@ public class SearchServiceUtil {
             if (docList.getMaxScore() != null) {
                 factory.setAttribute(child, "maxScore", Float.toString(docList.getMaxScore()));
             }
-            factory.appendChild(parent, child);
 
             for (org.apache.solr.common.SolrDocument doc : docList) {
                 E docElement = factory.createElement(null, "doc");
-                factory.appendChild(child, docElement);
+                // Populate fields BEFORE appending to result (JSON factory copies on append)
                 for (Map.Entry<String, Object> entry : doc) {
                     createChild(entry.getKey(), entry.getValue(), docElement, factory);
                 }
+                factory.appendChild(child, docElement);
             }
+            factory.appendChild(parent, child);
             return;
         }
 
         if (value instanceof Map) {
             E child = factory.createElement(name, "lst");
-            factory.appendChild(parent, child);
             for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
                 createChild(String.valueOf(entry.getKey()), entry.getValue(), child, factory);
             }
+            factory.appendChild(parent, child);
             return;
         }
 
         if (value instanceof List) {
             E child = factory.createElement(name, "arr");
-            factory.appendChild(parent, child);
             for (Object item : (List<?>) value) {
                 createChild(null, item, child, factory);
             }
+            factory.appendChild(parent, child);
             return;
         }
 
         if (value instanceof Object[]) {
             E child = factory.createElement(name, "arr");
-            factory.appendChild(parent, child);
             for (Object item : (Object[]) value) {
                 createChild(null, item, child, factory);
             }
+            factory.appendChild(parent, child);
             return;
         }
 
-        // Primitive types
+        // Primitive types — set value on child BEFORE appending to parent,
+        // because JSON factory's extractValue() copies the child object
         if (value instanceof String str) {
             E child = factory.createElement(name, "str");
-            factory.appendChild(parent, child);
             factory.appendChild(child, str);
+            factory.appendChild(parent, child);
             return;
         }
         if (value instanceof Integer intVal) {
             E child = factory.createElement(name, "int");
-            factory.appendChild(parent, child);
             factory.appendChild(child, intVal);
+            factory.appendChild(parent, child);
             return;
         }
         if (value instanceof Long longVal) {
             E child = factory.createElement(name, "long");
-            factory.appendChild(parent, child);
             factory.appendChild(child, longVal);
+            factory.appendChild(parent, child);
             return;
         }
         if (value instanceof Float floatVal) {
             E child = factory.createElement(name, "float");
-            factory.appendChild(parent, child);
             factory.appendChild(child, floatVal);
+            factory.appendChild(parent, child);
             return;
         }
         if (value instanceof Double doubleVal) {
             E child = factory.createElement(name, "double");
-            factory.appendChild(parent, child);
             factory.appendChild(child, doubleVal);
+            factory.appendChild(parent, child);
             return;
         }
         if (value instanceof Boolean boolVal) {
             E child = factory.createElement(name, "bool");
-            factory.appendChild(parent, child);
             factory.appendChild(child, boolVal.toString());
+            factory.appendChild(parent, child);
             return;
         }
         if (value instanceof Date dateVal) {
             E child = factory.createElement(name, "date");
-            factory.appendChild(parent, child);
             factory.appendChild(child, formatDate(dateVal));
+            factory.appendChild(parent, child);
             return;
         }
 
         // Fallback: toString
         E child = factory.createElement(name, "str");
-        factory.appendChild(parent, child);
         factory.appendChild(child, value.toString());
+        factory.appendChild(parent, child);
     }
 
     private static String formatDate(final Date date) {

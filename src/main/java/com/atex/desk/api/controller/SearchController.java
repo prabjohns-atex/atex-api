@@ -34,6 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -163,26 +165,43 @@ public class SearchController {
     private void inlineContentData(NamedList<Object> response, String variant) {
         Object responseObj = response.get("response");
         if (!(responseObj instanceof SolrDocumentList docList)) return;
+        if (docList.isEmpty()) return;
 
+        // Collect docs that need inlining
+        record DocTask(SolrDocument doc, String contentId) {}
+        List<DocTask> tasks = new ArrayList<>();
         for (SolrDocument doc : docList) {
             Object idObj = doc.getFieldValue("id");
-            if (idObj == null) continue;
-            String contentId = idObj.toString();
+            if (idObj != null) {
+                tasks.add(new DocTask(doc, idObj.toString()));
+            }
+        }
+        if (tasks.isEmpty()) return;
 
-            try {
-                var cid = com.atex.onecms.content.IdUtil.fromString(contentId);
-                if (cid == null) continue;
-                var vid = contentManager.resolve(cid, Subject.NOBODY_CALLER);
-                if (vid == null) continue;
-                var result = contentManager.get(vid, variant, Object.class, null, Subject.NOBODY_CALLER);
-                if (result != null && result.getContent() != null) {
-                    // Serialize content as JSON and add as _data field
-                    com.google.gson.Gson gson = new com.google.gson.Gson();
-                    String json = gson.toJson(result.getContent().getContentData());
-                    doc.setField("_data", json);
+        // Resolve all content in parallel using virtual threads
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            var futures = tasks.stream().map(task -> executor.submit(() -> {
+                try {
+                    var cid = com.atex.onecms.content.IdUtil.fromString(task.contentId());
+                    if (cid == null) return;
+                    var vid = contentManager.resolve(cid, Subject.NOBODY_CALLER);
+                    if (vid == null) return;
+                    var result = contentManager.get(vid, variant, Object.class, null, Subject.NOBODY_CALLER);
+                    if (result != null && result.getContent() != null) {
+                        String json = gson.toJson(result.getContent().getContentData());
+                        task.doc().setField("_data", json);
+                    }
+                } catch (Exception e) {
+                    LOG.log(Level.FINE, "Failed to inline content for " + task.contentId(), e);
                 }
-            } catch (Exception e) {
-                LOG.log(Level.FINE, "Failed to inline content for " + contentId, e);
+            })).toList();
+
+            // Wait for all to complete
+            for (var future : futures) {
+                try { future.get(); } catch (Exception e) {
+                    LOG.log(Level.FINE, "Content inline task failed", e);
+                }
             }
         }
     }

@@ -54,8 +54,9 @@ desk-api (Spring Boot 4)
   ├─ ChangesController (/changes/*)         — Change feed
   ├─ ConfigurationController (/admin/config) — Config CRUD
   ├─ CacheController (/admin/cache)        — Cache stats & clearing (Inc 35)
+  ├─ RequestMetricsController (/admin/requests) — Live request metrics (Inc 35c)
   ├─ ReindexController (/admin/reindex)     — Solr indexing management (Inc 6, 20)
-  └─ dashboard.html                         — Admin UI (Inc 24)
+  └─ dashboard.html                         — Admin UI (Inc 24, 35c)
 ```
 
 ### Core Layers

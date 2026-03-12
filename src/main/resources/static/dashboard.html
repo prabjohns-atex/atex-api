@@ -59,6 +59,13 @@
         .badge-product { background: #e2e3e5; color: #555; }
         .badge-project { background: #cce5ff; color: #004085; }
         .badge-live { background: #d4edda; color: #155724; }
+        .badge-2xx { background: #d4edda; color: #155724; }
+        .badge-3xx { background: #cce5ff; color: #004085; }
+        .badge-4xx { background: #fff3cd; color: #856404; }
+        .badge-5xx { background: #f8d7da; color: #721c24; }
+        .duration-fast { color: #155724; }
+        .duration-medium { color: #856404; }
+        .duration-slow { color: #dc3545; font-weight: 600; }
 
         /* Tables */
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -183,6 +190,7 @@
     <button class="tab-btn" data-tab="indexing">Indexing</button>
     <button class="tab-btn" data-tab="users">Users &amp; Groups</button>
     <button class="tab-btn" data-tab="config">Configuration</button>
+    <button class="tab-btn" data-tab="requests">Requests</button>
     <button class="tab-btn" data-tab="explorer">API Explorer</button>
 </div>
 
@@ -290,6 +298,36 @@
             <div id="config-group-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:0.8rem"></div>
             <div id="config-table"><div class="loading">Loading...</div></div>
         </div>
+    </div>
+
+    <!-- Requests Tab -->
+    <div class="tab-content" id="tab-requests">
+        <div class="grid">
+            <div class="card card-wide">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+                    <h2 style="margin-bottom:0">URI Stats</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-outline btn-sm" onclick="loadRequestStats()">Refresh</button>
+                        <button class="btn btn-danger btn-sm" onclick="clearRequestMetrics()">Clear All</button>
+                    </div>
+                </div>
+                <div id="uri-stats-table"><div class="loading">Loading...</div></div>
+            </div>
+        </div>
+        <div class="card" style="margin-top:1.2rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+                <h2 style="margin-bottom:0">Recent Requests</h2>
+                <div class="btn-group">
+                    <div class="form-field" style="flex-direction:row;align-items:center;gap:0.4rem">
+                        <label style="text-transform:none;font-size:0.82rem">Filter:</label>
+                        <input type="text" id="request-filter" placeholder="URI, method, status..." style="width:200px;padding:4px 8px;font-size:0.82rem" oninput="filterRequests()">
+                    </div>
+                    <button class="btn btn-outline btn-sm" onclick="loadRecentRequests()">Refresh</button>
+                </div>
+            </div>
+            <div id="recent-requests-table"><div class="loading">Loading...</div></div>
+        </div>
+        <div class="refresh-note">Auto-refreshes every 3 seconds</div>
     </div>
 
     <!-- API Explorer Tab -->
@@ -460,10 +498,12 @@ document.getElementById('tab-bar').addEventListener('click', e => {
     if (tab === 'indexing') loadIndexing();
     else if (tab === 'users') loadUsers();
     else if (tab === 'config') loadConfig();
+    else if (tab === 'requests') loadRequestsTab();
     else if (tab === 'explorer') loadEndpoints();
 
-    // Manage indexing auto-refresh
+    // Manage auto-refresh intervals
     startIndexingRefresh();
+    startRequestsRefresh();
 });
 
 function startIndexingRefresh() {
@@ -997,6 +1037,136 @@ async function loadEndpoints() {
 }
 
 // ============================================================
+// Requests Tab
+// ============================================================
+let recentRequestsData = [];
+
+async function loadRequestStats() {
+    const data = await authJson('/admin/requests/stats');
+    const el = document.getElementById('uri-stats-table');
+    if (!data || data.length === 0) {
+        el.innerHTML = '<div class="empty-state">No request data yet</div>';
+        return;
+    }
+    let html = '<table><thead><tr><th>Pattern</th><th style="text-align:right">Count</th><th style="text-align:right">Avg</th><th style="text-align:right">Max</th><th style="text-align:right">Last</th></tr></thead><tbody>';
+    for (const s of data) {
+        html += '<tr>';
+        html += '<td class="mono">' + esc(s.pattern) + '</td>';
+        html += '<td style="text-align:right">' + s.count + '</td>';
+        html += '<td style="text-align:right">' + durationSpan(s.avgMs) + '</td>';
+        html += '<td style="text-align:right">' + durationSpan(s.maxMs) + '</td>';
+        html += '<td style="text-align:right">' + durationSpan(s.lastMs) + '</td>';
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+async function loadRecentRequests() {
+    const data = await authJson('/admin/requests?limit=200');
+    if (!data) { document.getElementById('recent-requests-table').innerHTML = '<div class="empty-state">No data</div>'; return; }
+    recentRequestsData = data;
+    renderRequests(data);
+}
+
+function filterRequests() {
+    const q = (document.getElementById('request-filter').value || '').toLowerCase();
+    if (!q) { renderRequests(recentRequestsData); return; }
+    const filtered = recentRequestsData.filter(r =>
+        (r.method + ' ' + r.uri + ' ' + (r.queryString || '') + ' ' + r.status + ' ' + (r.user || '')).toLowerCase().includes(q)
+    );
+    renderRequests(filtered);
+}
+
+function renderRequests(data) {
+    const el = document.getElementById('recent-requests-table');
+    if (!data || data.length === 0) {
+        el.innerHTML = '<div class="empty-state">No requests' + (document.getElementById('request-filter').value ? ' matching filter' : '') + '</div>';
+        return;
+    }
+    let html = '<table><thead><tr><th>Time</th><th>Method</th><th>URI</th><th>Query</th><th style="text-align:right">Status</th><th style="text-align:right">Duration</th><th>User</th></tr></thead><tbody>';
+    for (const r of data) {
+        const ts = r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : '';
+        const qs = r.queryString ? decodeURIComponent(r.queryString) : '';
+        const qsShort = qs.length > 80 ? qs.substring(0, 80) + '...' : qs;
+        html += '<tr style="cursor:pointer" onclick="showRequestDetail(' + r.id + ')">';
+        html += '<td style="white-space:nowrap;font-size:0.8rem;color:#777">' + ts + '</td>';
+        html += '<td>' + methodBadge(r.method) + '</td>';
+        html += '<td class="mono" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.uri) + '</td>';
+        html += '<td class="mono" style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.78rem;color:#777" title="' + esc(qs) + '">' + esc(qsShort) + '</td>';
+        html += '<td style="text-align:right">' + statusCodeBadge(r.status) + '</td>';
+        html += '<td style="text-align:right">' + durationSpan(r.durationMs) + '</td>';
+        html += '<td style="font-size:0.8rem;color:#777">' + esc(r.user || '') + '</td>';
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+function showRequestDetail(id) {
+    const r = recentRequestsData.find(e => e.id === id);
+    if (!r) return;
+    let html = '<h3>Request #' + r.id + '</h3>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:1rem">';
+    html += '<div>' + stat('Method', methodBadge(r.method)) + stat('Status', statusCodeBadge(r.status)) + stat('Duration', durationSpan(r.durationMs)) + stat('User', esc(r.user || 'anonymous')) + '</div>';
+    html += '<div>' + stat('Time', r.timestamp) + stat('Content-Type', esc(r.contentType || 'N/A')) + stat('Response Size', formatBytes(r.responseSize)) + '</div>';
+    html += '</div>';
+    html += stat('URI', '<span class="mono">' + esc(r.uri) + '</span>');
+    if (r.queryString) {
+        html += '<div class="section-title">Query Parameters</div>';
+        html += '<pre class="json" style="max-height:30vh">';
+        try {
+            const params = new URLSearchParams(r.queryString);
+            for (const [k, v] of params.entries()) {
+                html += esc(k) + ' = ' + esc(v) + '\n';
+            }
+        } catch {
+            html += esc(r.queryString);
+        }
+        html += '</pre>';
+    }
+    showPanel(html);
+}
+
+function statusCodeBadge(code) {
+    if (code >= 500) return badge('5xx', code);
+    if (code >= 400) return badge('4xx', code);
+    if (code >= 300) return badge('3xx', code);
+    return badge('2xx', code);
+}
+
+function durationSpan(ms) {
+    if (ms == null) return '-';
+    const cls = ms < 50 ? 'duration-fast' : ms < 200 ? 'duration-medium' : 'duration-slow';
+    return '<span class="' + cls + '">' + ms + 'ms</span>';
+}
+
+function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+}
+
+async function loadRequestsTab() {
+    await Promise.all([loadRequestStats(), loadRecentRequests()]);
+}
+
+async function clearRequestMetrics() {
+    if (!confirm('Clear all request metrics?')) return;
+    await authFetch('/admin/requests', { method: 'DELETE' });
+    toast('Request metrics cleared', 'success');
+    loadRequestsTab();
+}
+
+let requestsInterval = null;
+function startRequestsRefresh() {
+    if (requestsInterval) { clearInterval(requestsInterval); requestsInterval = null; }
+    if (activeTab === 'requests') {
+        requestsInterval = setInterval(loadRequestsTab, 3000);
+    }
+}
+
+// ============================================================
 // Init
 // ============================================================
 async function refreshAll() {
@@ -1005,6 +1175,7 @@ async function refreshAll() {
     if (activeTab === 'indexing') loadIndexing();
     else if (activeTab === 'users') loadUsers();
     else if (activeTab === 'config') loadConfig();
+    else if (activeTab === 'requests') loadRequestsTab();
     else if (activeTab === 'explorer') loadEndpoints();
 }
 
