@@ -136,23 +136,28 @@ CREATE TABLE IF NOT EXISTS `eventsqueue` (
     KEY `eventsqueue_versionid` (`versionid`)
 ) ENGINE = INNODB;
 
-CREATE TABLE IF NOT EXISTS `changelist` (
-    `id`          INTEGER PRIMARY KEY NOT NULL,
-    `eventtype`   INTEGER NOT NULL,
-    `idtype`      INTEGER NOT NULL,
-    `contentid`   VARCHAR(255) NOT NULL,
-    `version`     VARCHAR(255) NOT NULL,
-    `contenttype` VARCHAR(255) NOT NULL,
-    `created_at`  TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
-    `created_by`  VARCHAR(255) NOT NULL,
-    `modified_at` TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
-    `modified_by` VARCHAR(255) NOT NULL,
-    `commit_at`   TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
-    UNIQUE KEY `changelist_UNIQUE` (`idtype`, `contentid`, `version`),
-    UNIQUE KEY `changelist_contentid_UNIQUE` (`contentid`),
-    KEY `changelist_contenttype` (`contenttype`),
-    KEY `changelist_eventtype` (`eventtype`),
-    KEY `changelist_commit_at` (`commit_at`)
+CREATE TABLE IF NOT EXISTS `adm_changelist` (
+    `id`                     INTEGER PRIMARY KEY NOT NULL,
+    `eventtype`              INTEGER NOT NULL,
+    `idtype`                 INTEGER NOT NULL,
+    `contentid`              VARCHAR(255) NOT NULL,
+    `version`                VARCHAR(255) NOT NULL,
+    `contenttype`            VARCHAR(255) NOT NULL,
+    `created_at`             TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
+    `created_by`             VARCHAR(255) NOT NULL,
+    `modified_at`            TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
+    `modified_by`            VARCHAR(255) NOT NULL,
+    `commit_at`              TIMESTAMP(3) DEFAULT NOW(3) NOT NULL,
+    `attr_insertParentId`    VARCHAR(255),
+    `attr_securityParentId`  VARCHAR(255),
+    `attr_objectType`        VARCHAR(255),
+    `attr_inputTemplate`     VARCHAR(255),
+    `attr_partition`         VARCHAR(255),
+    UNIQUE KEY `adm_changelist_UNIQUE` (`idtype`, `contentid`, `version`),
+    UNIQUE KEY `adm_changelist_contentid_UNIQUE` (`contentid`),
+    KEY `adm_changelist_contenttype` (`contenttype`),
+    KEY `adm_changelist_eventtype` (`eventtype`),
+    KEY `adm_changelist_commit_at` (`commit_at`)
 ) ENGINE = INNODB;
 
 CREATE TABLE IF NOT EXISTS `changelistattributes` (

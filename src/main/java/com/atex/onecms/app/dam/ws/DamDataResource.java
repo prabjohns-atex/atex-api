@@ -98,6 +98,8 @@ import com.atex.onecms.app.dam.solr.SolrPrintPageService;
 import com.atex.onecms.app.dam.solr.SolrService;
 import com.atex.onecms.app.dam.solr.SolrUtils;
 import com.atex.onecms.app.dam.standard.aspects.DamArticleAspectBean;
+import com.atex.onecms.app.dam.standard.aspects.OneContentBean;
+import com.atex.onecms.app.dam.standard.aspects.PrestigeItemStateAspectBean;
 import com.atex.onecms.app.dam.standard.aspects.DamCollectionAspectBean;
 import com.atex.onecms.app.dam.standard.aspects.DamImageAspectBean;
 import com.atex.onecms.app.dam.standard.aspects.DamPubleventsAspectBean;
@@ -572,6 +574,26 @@ public class DamDataResource {
     }
 
     // ======== Content operations ========
+
+    @PostMapping("duplicate")
+    public ResponseEntity<String> duplicatePost(HttpServletRequest request,
+                                                @RequestBody String body) {
+        DamUserContext ctx = DamUserContext.from(request);
+        ctx.assertLoggedIn();
+        Subject subject = ctx.getSubject();
+
+        // mytype-new sends a JSON array of content IDs: ["id1", "id2"]
+        JsonArray entries = GSON.fromJson(body, JsonArray.class);
+        if (entries != null && !entries.isEmpty()) {
+            ContentOperationUtils utils = ContentOperationUtils.getInstance();
+            utils.configure(contentManager, null);
+            List<ContentId> contentIds = utils.duplicate(utils.extract(entries), subject, ctx.getCaller().getLoginName());
+            JsonArray duplicated = JsonUtil.toJsonArray(utils.extract(contentIds));
+            return ResponseEntity.ok(GSON.toJson(duplicated));
+        } else {
+            throw ContentApiException.badRequest("CONTENT IDS LIST IS EMPTY");
+        }
+    }
 
     @PutMapping("duplicate")
     public ResponseEntity<String> duplicate(HttpServletRequest request,
@@ -1321,6 +1343,12 @@ public class DamDataResource {
 
     // ======== Engagement endpoints ========
 
+    @PostMapping(value = "clearengage/{id}", produces = MediaType.TEXT_PLAIN_VALUE)
+    public String clearEngageByPath(HttpServletRequest request,
+                                    @PathVariable("id") String contentIdStr) {
+        return clearEngage(request, contentIdStr);
+    }
+
     @GetMapping(value = "clearEngage", produces = MediaType.TEXT_PLAIN_VALUE)
     public String clearEngage(HttpServletRequest request,
                               @RequestParam("contentId") String contentIdStr) {
@@ -1417,6 +1445,12 @@ public class DamDataResource {
             LOGGER.log(Level.SEVERE, "cannot publish " + contentIdString + ": " + e.getMessage(), e);
             throw ContentApiException.internal(e.getMessage(), e);
         }
+    }
+
+    @PostMapping(value = "unpublish/{id}", produces = MediaType.TEXT_PLAIN_VALUE)
+    public String unpublishByPath(HttpServletRequest request,
+                                  @PathVariable("id") String contentIdString) {
+        return unpublish(request, contentIdString);
     }
 
     @PostMapping(value = "unpublish", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -1904,6 +1938,113 @@ public class DamDataResource {
     public ResponseEntity<String> canUnRestrictContent(HttpServletRequest request,
                                                         @PathVariable("id") String id) {
         return canRestrictUnRestrictContent(request, id, false);
+    }
+
+    // ======== Trash/Untrash/Archive endpoints ========
+
+    @PostMapping("trash/{id}")
+    public ResponseEntity<String> trashContent(HttpServletRequest request,
+                                                @PathVariable("id") String id) {
+        DamUserContext ctx = DamUserContext.from(request);
+        Subject subject = ctx.assertLoggedIn().getSubject();
+        assertParameter(id, "id");
+        ContentId contentId = IdUtil.fromString(id);
+        return updateItemState(contentId, PrestigeItemStateAspectBean.ItemState.SPIKED, subject);
+    }
+
+    @PostMapping("untrash/{id}")
+    public ResponseEntity<String> untrashContent(HttpServletRequest request,
+                                                  @PathVariable("id") String id) {
+        DamUserContext ctx = DamUserContext.from(request);
+        Subject subject = ctx.assertLoggedIn().getSubject();
+        assertParameter(id, "id");
+        ContentId contentId = IdUtil.fromString(id);
+        return updateItemState(contentId, PrestigeItemStateAspectBean.ItemState.PRODUCTION, subject);
+    }
+
+    @PostMapping("archive/{id}")
+    public ResponseEntity<String> archiveContent(HttpServletRequest request,
+                                                  @PathVariable("id") String id) {
+        DamUserContext ctx = DamUserContext.from(request);
+        Subject subject = ctx.assertLoggedIn().getSubject();
+        assertParameter(id, "id");
+        ContentId contentId = IdUtil.fromString(id);
+
+        ContentVersionId vid = contentManager.resolve(contentId, subject);
+        if (vid == null) {
+            throw ContentApiException.notFound("Content not found: " + id);
+        }
+        ContentResult<Object> cr = contentManager.get(vid, null, Object.class, null, subject);
+        if (!cr.getStatus().isSuccess()) {
+            throw ContentApiException.error("Cannot get content: " + id, cr.getStatus());
+        }
+
+        // Move to archive partition via metadata dimension
+        ContentWriteBuilder<Object> cwb = new ContentWriteBuilder<Object>()
+            .origin(cr.getContent().getId())
+            .type(cr.getContent().getContentDataType())
+            .aspects(cr.getContent().getAspects())
+            .mainAspect(cr.getContent().getContentAspect());
+
+        Object metaObj = cr.getContent().getAspectData("p.Metadata");
+        Metadata metadata = metaObj instanceof Metadata m ? m : new Metadata();
+        Dimension archiveDim = new Dimension("dimension.partition", "partition", true);
+        archiveDim.addEntities(new com.polopoly.metadata.Entity("archive", "archive"));
+        metadata.replaceDimension(archiveDim);
+        cwb.aspect("p.Metadata", metadata);
+
+        ContentWrite<Object> update = cwb.buildUpdate();
+        try {
+            ContentResult<Object> result = contentManager.update(contentId, update, subject);
+            if (result.getStatus().isError()) {
+                throw ContentApiException.error("Cannot archive " + id, result.getStatus());
+            }
+            return ResponseEntity.ok(GSON.toJson(result));
+        } catch (ContentModifiedException e) {
+            throw ContentApiException.internal("Content " + id + " has been modified", e);
+        }
+    }
+
+    private ResponseEntity<String> updateItemState(ContentId contentId,
+                                                     PrestigeItemStateAspectBean.ItemState targetState,
+                                                     Subject subject) {
+        ContentVersionId vid = contentManager.resolve(contentId, subject);
+        if (vid == null) {
+            throw ContentApiException.notFound("Content not found: " + IdUtil.toIdString(contentId));
+        }
+        ContentResult<Object> cr = contentManager.get(vid, null, Object.class, null, subject);
+        if (!cr.getStatus().isSuccess()) {
+            throw ContentApiException.error("Cannot get content: " + IdUtil.toIdString(contentId), cr.getStatus());
+        }
+
+        ContentWriteBuilder<Object> cwb = new ContentWriteBuilder<Object>()
+            .origin(cr.getContent().getId())
+            .type(cr.getContent().getContentDataType())
+            .aspects(cr.getContent().getAspects())
+            .mainAspect(cr.getContent().getContentAspect());
+
+        PrestigeItemStateAspectBean stateBean;
+        Object existingState = cr.getContent().getAspectData(PrestigeItemStateAspectBean.ASPECT_NAME);
+        if (existingState instanceof PrestigeItemStateAspectBean existing) {
+            stateBean = existing;
+        } else {
+            stateBean = new PrestigeItemStateAspectBean();
+        }
+        stateBean.setItemState(targetState);
+        cwb.aspect(PrestigeItemStateAspectBean.ASPECT_NAME, stateBean);
+
+        ContentWrite<Object> update = cwb.buildUpdate();
+        try {
+            ContentResult<Object> result = contentManager.update(contentId, update, subject);
+            if (result.getStatus().isError()) {
+                throw ContentApiException.error(
+                    "Cannot update item state for " + IdUtil.toIdString(contentId), result.getStatus());
+            }
+            return ResponseEntity.ok(GSON.toJson(result));
+        } catch (ContentModifiedException e) {
+            throw ContentApiException.internal(
+                "Content " + IdUtil.toIdString(contentId) + " has been modified", e);
+        }
     }
 
     // ======== Private helpers ========

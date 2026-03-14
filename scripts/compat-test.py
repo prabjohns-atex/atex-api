@@ -1474,6 +1474,324 @@ def test_file_download(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list
     return passed, f"desk={ds_dl} ref={rs_dl}", notes
 
 
+def test_unpublish_path_variable(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /dam/content/unpublish/{id} — unpublish via path variable (new variant)."""
+    notes = []
+
+    # Create a fresh article to unpublish
+    body = make_article_body("unpublish-path")
+    ds_c, db_c, dr_c = desk.post("/content", body)
+    rs_c, rb_c, rr_c = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return False, f"create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+    desk_vid = db_c.get("version") or _extract_etag(dr_c)
+    ref_vid = rb_c.get("version") or _extract_etag(rr_c)
+
+    # Test unpublish via path variable (new variant)
+    ds, db, _ = desk.post(f"/dam/content/unpublish/{desk_id}")
+    rs, rb, _ = ref.post(f"/dam/content/unpublish/{ref_id}")
+
+    dump_json("desk unpublish path", db)
+    dump_json("ref unpublish path", rb)
+
+    if ds != 200:
+        notes.append(f"desk unpublish (path) returned {ds}")
+    if rs != 200:
+        notes.append(f"ref unpublish (path) returned {rs}")
+
+    # Compare response structure if both 200
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "unpublish-path response")
+        for d in diffs:
+            notes.append(d)
+
+    # Also test the existing query-param variant for backward compat
+    ds_q, db_q, _ = desk.post("/dam/content/unpublish", extra_headers={"Content-Type": "application/json"})
+    rs_q, rb_q, _ = ref.post("/dam/content/unpublish", extra_headers={"Content-Type": "application/json"})
+
+    # Without an id param or path, should return an error (400 or 404)
+    if ds_q in (400, 404, 500):
+        notes.append(f"desk unpublish (no id): {ds_q} (expected error)")
+    if rs_q in (400, 404, 500):
+        notes.append(f"ref unpublish (no id): {rs_q} (expected error)")
+
+    # Test with nonexistent id — expect 404 or error
+    fake_id = "onecms:nonexistent-" + uuid.uuid4().hex[:8]
+    ds_404, db_404, _ = desk.post(f"/dam/content/unpublish/{fake_id}")
+    rs_404, rb_404, _ = ref.post(f"/dam/content/unpublish/{fake_id}")
+    notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
+
+    # Cleanup
+    desk.delete(f"/content/contentid/{desk_id}", if_match=desk_vid)
+    ref.delete(f"/content/contentid/{ref_id}", if_match=ref_vid)
+
+    passed = ds == 200 and rs == 200
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_duplicate_post(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /dam/content/duplicate — duplicate via POST with JSON array [contentId]."""
+    notes = []
+
+    # Create a fresh article to duplicate
+    body = make_article_body("duplicate-src")
+    ds_c, db_c, dr_c = desk.post("/content", body)
+    rs_c, rb_c, rr_c = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return False, f"create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+    desk_vid = db_c.get("version") or _extract_etag(dr_c)
+    ref_vid = rb_c.get("version") or _extract_etag(rr_c)
+
+    # Test POST /dam/content/duplicate with JSON array body [contentId]
+    ds, db, _ = desk.post("/dam/content/duplicate", [desk_id])
+    rs, rb, _ = ref.post("/dam/content/duplicate", [ref_id])
+
+    dump_json("desk duplicate POST", db)
+    dump_json("ref duplicate POST", rb)
+
+    if ds != 200:
+        notes.append(f"desk duplicate POST returned {ds}")
+    if rs != 200:
+        notes.append(f"ref duplicate POST returned {rs}")
+
+    # Response should be a list of new content IDs or result objects
+    if ds == 200 and rs == 200:
+        desk_is_list = isinstance(db, list)
+        ref_is_list = isinstance(rb, list)
+        if desk_is_list != ref_is_list:
+            notes.append(f"response type differs: desk={'list' if desk_is_list else type(db).__name__} "
+                         f"ref={'list' if ref_is_list else type(rb).__name__}")
+        elif desk_is_list:
+            notes.append(f"result count: desk={len(db)} ref={len(rb)}")
+        elif isinstance(db, dict) and isinstance(rb, dict):
+            diffs = compare_keys(db, rb, "duplicate POST response")
+            for d in diffs:
+                notes.append(d)
+
+    # Also verify existing PUT variant still works: PUT /dam/content/duplicate with {entries:[...]}
+    ds_put, db_put, _ = desk.put(f"/dam/content/duplicate", {"entries": [desk_id]})
+    rs_put, rb_put, _ = ref.put(f"/dam/content/duplicate", {"entries": [ref_id]})
+
+    dump_json("desk duplicate PUT", db_put)
+    dump_json("ref duplicate PUT", rb_put)
+
+    notes.append(f"PUT variant: desk={ds_put} ref={rs_put}")
+
+    # Test error case: empty array
+    ds_empty, db_empty, _ = desk.post("/dam/content/duplicate", [])
+    rs_empty, rb_empty, _ = ref.post("/dam/content/duplicate", [])
+    notes.append(f"empty array: desk={ds_empty} ref={rs_empty}")
+
+    # Cleanup source content
+    desk.delete(f"/content/contentid/{desk_id}", if_match=desk_vid)
+    ref.delete(f"/content/contentid/{ref_id}", if_match=ref_vid)
+
+    passed = ds == 200 and rs == 200
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_metadata_structure(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /metadata/structure/{id}?depth=N — taxonomy structure."""
+    notes = []
+
+    # Use a well-known taxonomy ID that should exist on both servers
+    # "iptc" is a common taxonomy; fall back to testing with an arbitrary ID
+    test_ids = ["iptc", "dimension.Tag"]
+
+    for tax_id in test_ids:
+        ds, db, _ = desk.get(f"/metadata/structure/{tax_id}", params={"depth": "2"})
+        rs, rb, _ = ref.get(f"/metadata/structure/{tax_id}", params={"depth": "2"})
+
+        dump_json(f"desk structure {tax_id}", db)
+        dump_json(f"ref structure {tax_id}", rb)
+
+        notes.append(f"{tax_id}: desk={ds} ref={rs}")
+
+        if ds == 200 and rs == 200:
+            if isinstance(db, dict) and isinstance(rb, dict):
+                diffs = compare_keys(db, rb, f"structure({tax_id})")
+                for d in diffs:
+                    notes.append(d)
+            elif isinstance(db, list) and isinstance(rb, list):
+                notes.append(f"{tax_id} result count: desk={len(db)} ref={len(rb)}")
+            break  # one successful test is enough
+        elif ds == 200 or rs == 200:
+            # One returned data, the other didn't — note but continue trying
+            notes.append(f"{tax_id}: status mismatch desk={ds} ref={rs}")
+
+    # Test with depth=0 (just root)
+    ds_d0, db_d0, _ = desk.get(f"/metadata/structure/{test_ids[0]}", params={"depth": "0"})
+    rs_d0, rb_d0, _ = ref.get(f"/metadata/structure/{test_ids[0]}", params={"depth": "0"})
+    notes.append(f"depth=0: desk={ds_d0} ref={rs_d0}")
+
+    # Test with nonexistent taxonomy — should return 404 or empty
+    fake_tax = "nonexistent-taxonomy-" + uuid.uuid4().hex[:8]
+    ds_404, _, _ = desk.get(f"/metadata/structure/{fake_tax}", params={"depth": "1"})
+    rs_404, _, _ = ref.get(f"/metadata/structure/{fake_tax}", params={"depth": "1"})
+    notes.append(f"nonexistent taxonomy: desk={ds_404} ref={rs_404}")
+
+    # Pass if at least one taxonomy test returned matching status
+    passed = any(
+        desk.get(f"/metadata/structure/{tid}", params={"depth": "1"})[0] ==
+        ref.get(f"/metadata/structure/{tid}", params={"depth": "1"})[0]
+        for tid in test_ids[:1]
+    )
+    return passed, f"tested {len(test_ids)} taxonomy IDs", notes
+
+
+def test_metadata_autocomplete(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /metadata/complete/{dimId}/{prefix}?format=json — autocomplete."""
+    notes = []
+
+    # Test with a common dimension and prefix
+    dim_id = "dimension.Tag"
+    prefix = "test"
+
+    ds, db, _ = desk.get(f"/metadata/complete/{dim_id}/{prefix}", params={"format": "json"})
+    rs, rb, _ = ref.get(f"/metadata/complete/{dim_id}/{prefix}", params={"format": "json"})
+
+    dump_json("desk autocomplete", db)
+    dump_json("ref autocomplete", rb)
+
+    if ds != 200:
+        notes.append(f"desk autocomplete returned {ds}")
+    if rs != 200:
+        notes.append(f"ref autocomplete returned {rs}")
+
+    if ds == 200 and rs == 200:
+        # Response is typically a list of completions or an object with results
+        if isinstance(db, list) and isinstance(rb, list):
+            notes.append(f"results: desk={len(db)} ref={len(rb)}")
+        elif isinstance(db, dict) and isinstance(rb, dict):
+            diffs = compare_keys(db, rb, "autocomplete response")
+            for d in diffs:
+                notes.append(d)
+        else:
+            notes.append(f"response types: desk={type(db).__name__} ref={type(rb).__name__}")
+
+    # Test with empty prefix
+    ds_e, db_e, _ = desk.get(f"/metadata/complete/{dim_id}/", params={"format": "json"})
+    rs_e, rb_e, _ = ref.get(f"/metadata/complete/{dim_id}/", params={"format": "json"})
+    notes.append(f"empty prefix: desk={ds_e} ref={rs_e}")
+
+    # Test with nonexistent dimension
+    fake_dim = "nonexistent.dim." + uuid.uuid4().hex[:8]
+    ds_bad, _, _ = desk.get(f"/metadata/complete/{fake_dim}/test", params={"format": "json"})
+    rs_bad, _, _ = ref.get(f"/metadata/complete/{fake_dim}/test", params={"format": "json"})
+    notes.append(f"nonexistent dim: desk={ds_bad} ref={rs_bad}")
+
+    # Accept 200 or 404 on both — taxonomy data may differ
+    desk_ok = ds in (200, 404)
+    ref_ok = rs in (200, 404)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_metadata_annotate(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /metadata/annotate — text annotation with taxonomy."""
+    notes = []
+
+    annotate_body = {
+        "taxonomyId": "iptc",
+        "annotationString": "The president visited the United Nations headquarters in New York."
+    }
+
+    ds, db, _ = desk.post("/metadata/annotate", annotate_body)
+    rs, rb, _ = ref.post("/metadata/annotate", annotate_body)
+
+    dump_json("desk annotate", db)
+    dump_json("ref annotate", rb)
+
+    if ds != 200:
+        notes.append(f"desk annotate returned {ds}")
+    if rs != 200:
+        notes.append(f"ref annotate returned {rs}")
+
+    if ds == 200 and rs == 200:
+        if isinstance(db, dict) and isinstance(rb, dict):
+            diffs = compare_keys(db, rb, "annotate response")
+            for d in diffs:
+                notes.append(d)
+        elif isinstance(db, list) and isinstance(rb, list):
+            notes.append(f"annotations: desk={len(db)} ref={len(rb)}")
+
+    # Test with empty annotation string
+    empty_body = {"taxonomyId": "iptc", "annotationString": ""}
+    ds_e, _, _ = desk.post("/metadata/annotate", empty_body)
+    rs_e, _, _ = ref.post("/metadata/annotate", empty_body)
+    notes.append(f"empty string: desk={ds_e} ref={rs_e}")
+
+    # Test with missing taxonomyId
+    bad_body = {"annotationString": "some text"}
+    ds_bad, _, _ = desk.post("/metadata/annotate", bad_body)
+    rs_bad, _, _ = ref.post("/metadata/annotate", bad_body)
+    notes.append(f"missing taxonomyId: desk={ds_bad} ref={rs_bad}")
+
+    # Accept 200, 400, or 404 (taxonomy may not be configured)
+    desk_ok = ds in (200, 400, 404, 501)
+    ref_ok = rs in (200, 400, 404, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_metadata_lookup(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /metadata/lookup — entity resolution with dimension data."""
+    notes = []
+
+    lookup_body = {
+        "data": {
+            "dimensions": [
+                {"dimension": "dimension.Tag", "entities": [{"name": "test"}]}
+            ]
+        }
+    }
+
+    ds, db, _ = desk.post("/metadata/lookup", lookup_body)
+    rs, rb, _ = ref.post("/metadata/lookup", lookup_body)
+
+    dump_json("desk lookup", db)
+    dump_json("ref lookup", rb)
+
+    if ds != 200:
+        notes.append(f"desk lookup returned {ds}")
+    if rs != 200:
+        notes.append(f"ref lookup returned {rs}")
+
+    if ds == 200 and rs == 200:
+        if isinstance(db, dict) and isinstance(rb, dict):
+            diffs = compare_keys(db, rb, "lookup response")
+            for d in diffs:
+                notes.append(d)
+        elif isinstance(db, list) and isinstance(rb, list):
+            notes.append(f"results: desk={len(db)} ref={len(rb)}")
+
+    # Test with empty dimensions
+    empty_body = {"data": {"dimensions": []}}
+    ds_e, _, _ = desk.post("/metadata/lookup", empty_body)
+    rs_e, _, _ = ref.post("/metadata/lookup", empty_body)
+    notes.append(f"empty dimensions: desk={ds_e} ref={rs_e}")
+
+    # Test with missing body fields
+    bad_body = {"data": {}}
+    ds_bad, _, _ = desk.post("/metadata/lookup", bad_body)
+    rs_bad, _, _ = ref.post("/metadata/lookup", bad_body)
+    notes.append(f"missing dimensions: desk={ds_bad} ref={rs_bad}")
+
+    # Accept 200, 400, or 404 (metadata service may not be fully configured)
+    desk_ok = ds in (200, 400, 404, 501)
+    ref_ok = rs in (200, 400, 404, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
 # ---------------------------------------------------------------------------
 # Single-server tests (run independently per server)
 # ---------------------------------------------------------------------------
@@ -1573,6 +1891,12 @@ ALL_COMPARISON_TESTS = [
     ("Activities (PUT/GET /activities)", test_activities),
     ("Image service redirect (GET /image/{id})", test_image_service_redirect),
     ("File download (GET /file/{path})", test_file_download),
+    ("Unpublish path variable (POST /dam/content/unpublish/{id})", test_unpublish_path_variable),
+    ("Duplicate POST (POST /dam/content/duplicate)", test_duplicate_post),
+    ("Metadata structure (GET /metadata/structure/{id})", test_metadata_structure),
+    ("Metadata autocomplete (GET /metadata/complete/{dim}/{prefix})", test_metadata_autocomplete),
+    ("Metadata annotate (POST /metadata/annotate)", test_metadata_annotate),
+    ("Metadata lookup (POST /metadata/lookup)", test_metadata_lookup),
     ("Delete content (DELETE /content/contentid/{id})", test_delete_content),
 ]
 

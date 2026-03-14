@@ -835,3 +835,65 @@ both `ServletOutputStream` and `PrintWriter`, giving accurate response sizes in 
 - `RequestMetricsFilter.java` — `CountingResponseWrapper` for response size tracking, excluded dashboard polling endpoints
 - `RequestMetricsService.java` — changed `responseSize` from `Long` to `long`
 - `scripts/compat-test.py` — added `test_search_variant_list` for variant=list with 50 rows
+
+## Increment 36 — Content Operations, Changelist Migration, Metadata Service
+
+### Content Operations (trash/untrash/archive)
+Ported from gong/desk. Three new endpoints on `DamDataResource`:
+- `POST /dam/content/trash/{id}` — sets item state to SPIKED via `PrestigeItemStateAspectBean`
+- `POST /dam/content/untrash/{id}` — sets item state back to PRODUCTION
+- `POST /dam/content/archive/{id}` — sets `dimension.partition` to `archive` in `p.Metadata`
+
+These trigger the existing `HandleItemStatePreStore` hook chain which handles security parent moves automatically.
+
+### mytype-new Routing Fixes
+- `POST /dam/content/unpublish/{id}` — path-variable variant (mytype-new sends contentId in path, not query param)
+- `POST /dam/content/duplicate` — accepts JSON array `[contentId]` (mytype-new format; existing `PUT` with `{entries:[...]}` preserved)
+- `POST /dam/content/clearengage/{id}` — path-variable variant delegating to existing query-param endpoint
+
+### Changelist Migration (changelist → adm_changelist)
+desk-api and the reference adm-content-service share the same MySQL database. The reference uses `adm_changelist` (V2 with denormalized columns); desk-api had its own `changelist` (V1). Migrated to use the shared table:
+- `ChangeListEntry.java` — `@Table(name = "adm_changelist")`, added 5 `attr_*` columns (insertParentId, securityParentId, objectType, inputTemplate, partition)
+- `ChangeListService.recordEvent()` — populates denormalized columns via `populateDenormalizedAttrs()` (objectType, inputTemplate, insertParentId, securityParentId, partition); partition is lowercased per reference behavior
+- `ChangeListService.queryChanges()` — reads from denormalized `attr_*` columns directly (no more JOIN to `changelistattributes` for objectType/partition filters)
+- `V1__baseline.sql` — `changelist` table replaced with `adm_changelist` including denormalized columns
+- Indexer (`SolrIndexProcessor`) uses JPQL so automatically picks up the table change
+
+### Metadata Service (new)
+4 endpoints for taxonomy/tag operations used by mytype-new's pTags widget:
+
+| Method | Path | Behaviour |
+|--------|------|-----------|
+| GET | `/metadata/structure/{id}?depth=N` | Taxonomy/dimension structure — queries Solr for tags in dimension |
+| GET | `/metadata/complete/{dim}/{prefix}?format=json` | Autocomplete — Solr faceted search on `tags_autocomplete_{dim}` field |
+| POST | `/metadata/annotate` | Text annotation — searches for matching tag names in text |
+| POST | `/metadata/lookup` | Content-backed entity resolution — resolves entity IDs via content manager |
+
+**Architecture**:
+- `MetadataController` at `/metadata` — REST endpoints, Gson serialization with `LOWER_CASE_WITH_DASHES` field naming
+- `MetadataService` — Solr-backed taxonomy queries, faceted autocomplete, annotation, entity resolution
+- `DamTag`, `DamTagMetadata` — ported from gong/onecms-common (content aspect `atex.onecms.metadata.Tag`)
+- `Entity` — enhanced with `entities` (children) and `localizations` fields for hierarchical taxonomy support
+- Auth filter updated to include `/metadata/*`
+- `SolrService` is `@Nullable` — metadata endpoints degrade gracefully without Solr
+
+### Image Metadata Service (Docker)
+Added `image-metadata` container to `compose.yaml`:
+- Pre-built image: `docker-registry.atex.com/atex/image-metadata-service:2.0.0`
+- Node.js service wrapping exiftool for EXIF/IPTC/XMP extraction and injection
+- `OneImagePreStore` updated to call `GET /extractor/image/{fileUri}` and populate `MetadataTagsAspectBean`
+- desk-api environment: `DESK_IMAGE_METADATA_SERVICE_URL`, `DESK_IMAGE_METADATA_SERVICE_ENABLED`
+
+### Files changed
+- `DamDataResource.java` — trash/untrash/archive/clearengage/unpublish/{id}/duplicate POST endpoints
+- `ChangeListEntry.java` — table + denormalized columns
+- `ChangeListService.java` — denormalized writes + reads
+- `V1__baseline.sql` — adm_changelist DDL
+- `MetadataController.java` — new controller (4 endpoints)
+- `MetadataService.java` — new service
+- `DamTag.java`, `DamTagMetadata.java` — new beans (ported)
+- `Entity.java` — enhanced with entities/localizations
+- `AuthConfig.java` — added /metadata/* to auth filter
+- `OneImagePreStore.java` — metadata extraction via HTTP
+- `compose.yaml` — image-metadata container + desk-api config
+- `ContentOpsIntegrationTest.java` — new (10 tests for trash/untrash/archive/clearengage)

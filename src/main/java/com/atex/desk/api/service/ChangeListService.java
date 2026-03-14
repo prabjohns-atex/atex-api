@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigInteger;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -154,9 +153,12 @@ public class ChangeListService
             entry.setModifiedAt(now);
             entry.setModifiedBy(userId);
             entry.setCommitAt(now);
+
+            // Populate denormalized attribute columns
+            populateDenormalizedAttrs(entry, result);
             changeListRepository.save(entry);
 
-            // Store attributes
+            // Store attributes in legacy table (for reference service compatibility)
             storeAttributes(commitId, result, userId, now);
 
             // Append-only audit log
@@ -213,6 +215,7 @@ public class ChangeListService
             entry.setModifiedAt(now);
             entry.setModifiedBy(userId);
             entry.setCommitAt(now);
+            // No denormalized attrs for DELETE — content is gone
             changeListRepository.save(entry);
 
             // Store modifier attribute
@@ -264,12 +267,14 @@ public class ChangeListService
         long runTime = System.currentTimeMillis();
         int currentMax = commitIdSequence.get();
 
-        // Build dynamic native query
+        // Build dynamic native query using denormalized attr_* columns
         StringBuilder sql = new StringBuilder(
             "SELECT c.id, c.eventtype, c.idtype, c.contentid, c.version, c.contenttype, "
             + "c.created_at, c.created_by, c.modified_at, c.modified_by, c.commit_at, "
-            + "et.name AS event_name "
-            + "FROM changelist c "
+            + "et.name AS event_name, "
+            + "c.attr_insertParentId, c.attr_securityParentId, c.attr_objectType, "
+            + "c.attr_inputTemplate, c.attr_partition "
+            + "FROM adm_changelist c "
             + "JOIN eventtypes et ON et.eventid = c.eventtype ");
 
         List<String> conditions = new ArrayList<>();
@@ -300,21 +305,15 @@ public class ChangeListService
             params.put("contentTypes", contentTypes);
         }
 
-        // Object type filter (requires join to attributes)
-        Integer objectTypeAttrId = attributeCache.get("objectType");
-        if (objectTypes != null && !objectTypes.isEmpty() && objectTypeAttrId != null) {
-            sql.append("JOIN changelistattributes ca_ot ON ca_ot.id = c.id AND ca_ot.attrid = :otAttrId ");
-            conditions.add("ca_ot.str_value IN :objectTypes");
-            params.put("otAttrId", objectTypeAttrId);
+        // Object type filter (denormalized column)
+        if (objectTypes != null && !objectTypes.isEmpty()) {
+            conditions.add("c.attr_objectType IN :objectTypes");
             params.put("objectTypes", objectTypes);
         }
 
-        // Partition filter (requires join to attributes)
-        Integer partitionAttrId = attributeCache.get("partition");
-        if (partitions != null && !partitions.isEmpty() && partitionAttrId != null) {
-            sql.append("JOIN changelistattributes ca_pt ON ca_pt.id = c.id AND ca_pt.attrid = :ptAttrId ");
-            conditions.add("ca_pt.str_value IN :partitions");
-            params.put("ptAttrId", partitionAttrId);
+        // Partition filter (denormalized column)
+        if (partitions != null && !partitions.isEmpty()) {
+            conditions.add("c.attr_partition IN :partitions");
             params.put("partitions", partitions);
         }
 
@@ -332,19 +331,9 @@ public class ChangeListService
 
         List<Object[]> rows = query.getResultList();
 
-        // Collect changelist IDs for bulk attribute loading
-        List<Integer> changeIds = new ArrayList<>();
-        for (Object[] row : rows) {
-            changeIds.add(((Number) row[0]).intValue());
-        }
-
-        // Bulk load attributes for all results
-        Map<Integer, Map<String, String>> attrMap = loadAttributes(changeIds);
-
-        Map<Integer, String> attrIdToName = attrIdToNameMap;
         Map<Integer, String> idTypeIdToName = idTypeIdToNameMap;
 
-        // Build DTOs
+        // Build DTOs using denormalized columns directly
         List<ChangeEventDto> events = new ArrayList<>();
         for (Object[] row : rows) {
             int id = ((Number) row[0]).intValue();
@@ -358,9 +347,13 @@ public class ChangeListService
             String modifiedBy = (String) row[9];
             Instant commitAt = toInstant(row[10]);
             String eventName = (String) row[11];
+            String insertParentId = (String) row[12];
+            String securityParentId = (String) row[13];
+            String objectType = (String) row[14];
+            // row[15] = inputTemplate (not used in DTO currently)
+            String partition = (String) row[16];
 
             String delegation = idTypeIdToName.getOrDefault(idtypeId, "onecms");
-            Map<String, String> attrs = attrMap.getOrDefault(id, Map.of());
 
             ChangeEventDto dto = new ChangeEventDto();
             dto.setContentId(delegation + ":" + contentid);
@@ -368,16 +361,15 @@ public class ChangeListService
             dto.setCommitId(id);
             dto.setCommitTime(commitAt != null ? commitAt.toEpochMilli() : 0);
             dto.setEventType(eventName);
-            dto.setObjectType(attrs.get("objectType"));
+            dto.setObjectType(objectType);
             dto.setContentType(ctype);
-            dto.setCreationTime(parseLong(attrs.get("creationTime"), createdAt != null ? createdAt.toEpochMilli() : 0));
-            dto.setCreator(attrs.getOrDefault("created_by", createdBy));
-            dto.setModificationTime(parseLong(attrs.get("modificationTime"), modifiedAt != null ? modifiedAt.toEpochMilli() : 0));
-            dto.setModifier(attrs.getOrDefault("modifier", modifiedBy));
-            dto.setSecurityParentId(attrs.get("securityParentId"));
-            dto.setInsertionParentId(attrs.get("insertParentId"));
+            dto.setCreationTime(createdAt != null ? createdAt.toEpochMilli() : 0);
+            dto.setCreator(createdBy);
+            dto.setModificationTime(modifiedAt != null ? modifiedAt.toEpochMilli() : 0);
+            dto.setModifier(modifiedBy);
+            dto.setSecurityParentId(securityParentId);
+            dto.setInsertionParentId(insertParentId);
 
-            String partition = attrs.get("partition");
             if (partition != null) {
                 dto.setPartitions(List.of(partition));
             } else {
@@ -397,6 +389,48 @@ public class ChangeListService
     }
 
     // --- Private helpers ---
+
+    /**
+     * Populate the denormalized attr_* columns on the ChangeListEntry from the content result.
+     * These columns mirror the changelistattributes rows for query performance.
+     */
+    private void populateDenormalizedAttrs(ChangeListEntry entry, ContentResultDto result) {
+        Map<String, AspectDto> aspects = result.getAspects();
+        if (aspects == null) return;
+
+        // objectType
+        entry.setAttrObjectType(extractObjectType(result));
+
+        // inputTemplate (same as contentType / _type)
+        entry.setAttrInputTemplate(extractContentType(result));
+
+        // Insertion info
+        AspectDto insertionInfo = aspects.get("atex.InsertionInfo");
+        if (insertionInfo != null && insertionInfo.getData() != null) {
+            Map<String, Object> data = insertionInfo.getData();
+            Object secParent = data.get("securityParentId");
+            if (secParent != null) {
+                entry.setAttrSecurityParentId(truncate(secParent.toString(), 255));
+            }
+            Object insertParent = data.get("insertParentId");
+            if (insertParent != null) {
+                entry.setAttrInsertParentId(truncate(insertParent.toString(), 255));
+            }
+        }
+
+        // Partition from contentData
+        AspectDto contentData = aspects.get("contentData");
+        if (contentData != null && contentData.getData() != null) {
+            Object partition = contentData.getData().get("partition");
+            if (partition != null) {
+                entry.setAttrPartition(truncate(partition.toString().toLowerCase(), 255));
+            }
+        }
+    }
+
+    private static String truncate(String value, int maxLen) {
+        return value != null && value.length() > maxLen ? value.substring(0, maxLen) : value;
+    }
 
     private void storeAttributes(int commitId, ContentResultDto result, String userId, Instant now) {
         Map<String, AspectDto> aspects = result.getAspects();
@@ -448,24 +482,6 @@ public class ChangeListService
         changeListAttributeRepository.save(attr);
     }
 
-    private Map<Integer, Map<String, String>> loadAttributes(List<Integer> changeIds) {
-        Map<Integer, Map<String, String>> result = new HashMap<>();
-        if (changeIds.isEmpty()) return result;
-
-        List<ChangeListAttribute> attrs = changeListAttributeRepository.findByIdIn(changeIds);
-
-        Map<Integer, String> attrIdToName = attrIdToNameMap;
-
-        for (ChangeListAttribute a : attrs) {
-            String name = attrIdToName.get(a.getAttrId());
-            if (name != null) {
-                result.computeIfAbsent(a.getId(), k -> new HashMap<>())
-                    .put(name, a.getStrValue());
-            }
-        }
-        return result;
-    }
-
     private String extractContentType(ContentResultDto result) {
         if (result.getAspects() == null) return null;
         AspectDto contentData = result.getAspects().get("contentData");
@@ -498,12 +514,4 @@ public class ChangeListService
         return null;
     }
 
-    private static long parseLong(String s, long defaultValue) {
-        if (s == null) return defaultValue;
-        try {
-            return Long.parseLong(s);
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
-    }
 }

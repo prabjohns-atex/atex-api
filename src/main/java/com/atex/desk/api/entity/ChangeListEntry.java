@@ -8,7 +8,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "changelist")
+@Table(name = "adm_changelist")
 public class ChangeListEntry
 {
     @Id
@@ -44,6 +44,22 @@ public class ChangeListEntry
     @Column(name = "commit_at", nullable = false)
     private Instant commitAt;
 
+    // Denormalized attribute columns (inlined for query performance)
+    @Column(name = "attr_insertParentId", length = 255)
+    private String attrInsertParentId;
+
+    @Column(name = "attr_securityParentId", length = 255)
+    private String attrSecurityParentId;
+
+    @Column(name = "attr_objectType", length = 255)
+    private String attrObjectType;
+
+    @Column(name = "attr_inputTemplate", length = 255)
+    private String attrInputTemplate;
+
+    @Column(name = "attr_partition", length = 255)
+    private String attrPartition;
+
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -76,4 +92,19 @@ public class ChangeListEntry
 
     public Instant getCommitAt() { return commitAt; }
     public void setCommitAt(Instant commitAt) { this.commitAt = commitAt; }
+
+    public String getAttrInsertParentId() { return attrInsertParentId; }
+    public void setAttrInsertParentId(String v) { this.attrInsertParentId = v; }
+
+    public String getAttrSecurityParentId() { return attrSecurityParentId; }
+    public void setAttrSecurityParentId(String v) { this.attrSecurityParentId = v; }
+
+    public String getAttrObjectType() { return attrObjectType; }
+    public void setAttrObjectType(String v) { this.attrObjectType = v; }
+
+    public String getAttrInputTemplate() { return attrInputTemplate; }
+    public void setAttrInputTemplate(String v) { this.attrInputTemplate = v; }
+
+    public String getAttrPartition() { return attrPartition; }
+    public void setAttrPartition(String v) { this.attrPartition = v; }
 }
