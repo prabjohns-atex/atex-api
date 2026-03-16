@@ -26,6 +26,7 @@ public class OneContentBean implements IDamBean, PropertyBag {
     private boolean markForArchive;
     private AceSlugInfo aceSlugInfo;
     private AceMigrationInfo aceMigrationInfo;
+    private String channel;
     private Map<String, Map<String, String>> propertyBag;
 
     public String get_type() { return _type; }
@@ -84,6 +85,9 @@ public class OneContentBean implements IDamBean, PropertyBag {
     public void setAceSlugInfo(AceSlugInfo aceSlugInfo) { this.aceSlugInfo = aceSlugInfo; }
     public AceMigrationInfo getAceMigrationInfo() { return aceMigrationInfo; }
     public void setAceMigrationInfo(AceMigrationInfo aceMigrationInfo) { this.aceMigrationInfo = aceMigrationInfo; }
+
+    public String getChannel() { return channel; }
+    public void setChannel(String channel) { this.channel = channel; }
 
     @Override
     public Map<String, Map<String, String>> getPropertyBag() { return propertyBag; }

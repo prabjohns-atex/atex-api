@@ -53,6 +53,10 @@ public class DamAudioAspectBean extends OneArchiveBean implements DigitalPublish
     private Boolean transcribeFlag;
     private String binaryUrl;
     private String publicationLink;
+    private String backendType;
+
+    public String getBackendType() { return backendType; }
+    public void setBackendType(String backendType) { this.backendType = backendType; }
 
     public String getUrgency() { return urgency; }
     public void setUrgency(String urgency) { this.urgency = urgency; }

@@ -1,6 +1,7 @@
 package com.atex.desk.api.plugin;
 
 import com.atex.desk.api.onecms.LocalContentManager;
+import com.atex.onecms.app.dam.lifecycle.article.MetadataCoercingPreStoreHook;
 import com.atex.onecms.app.dam.lifecycle.audio.DamAudioPreStoreHook;
 import com.atex.onecms.app.dam.lifecycle.charcount.OneCharCountPreStoreHook;
 import com.atex.onecms.app.dam.lifecycle.collection.CollectionPreStore;
@@ -93,6 +94,7 @@ public class BuiltInHookRegistrar {
         // These provide common initialization for all content
         contentManager.registerPreStoreHook(ALL_TYPES, new OneContentPreStore());
         contentManager.registerPreStoreHook(ALL_TYPES, new HandleItemStatePreStore());
+        contentManager.registerPreStoreHook(ALL_TYPES, new MetadataCoercingPreStoreHook());
 
         // --- Image types (matching callbacks.xml order) ---
         // damimage.prestore → dam.partition → dam.workflow → dam.secparent → dam.addengagement

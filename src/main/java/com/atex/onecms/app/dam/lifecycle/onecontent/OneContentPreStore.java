@@ -20,6 +20,7 @@ import com.google.gson.JsonObject;
 import com.polopoly.metadata.Metadata;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -73,6 +74,11 @@ public class OneContentPreStore implements LifecyclePreStore<Object, Object> {
             // Set author from subject for new content
             if (isCreate && (bean.getAuthor() == null || bean.getAuthor().isEmpty()) && subject != null) {
                 bean.setAuthor(subject.getPrincipalId());
+            }
+
+            // Initialize property bags if empty (from CustomOneContentPreStoreHook)
+            if (isCreate && bean.getPropertyBag() == null) {
+                bean.setPropertyBag(new HashMap<>());
             }
 
             // Derive name if empty

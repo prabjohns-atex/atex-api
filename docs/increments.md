@@ -897,3 +897,75 @@ Added `image-metadata` container to `compose.yaml`:
 - `OneImagePreStore.java` — metadata extraction via HTTP
 - `compose.yaml` — image-metadata container + desk-api config
 - `ContentOpsIntegrationTest.java` — new (10 tests for trash/untrash/archive/clearengage)
+
+## Increment 37 — Plugin Framework & Common Code Migration
+
+### Plugin Framework Enhancements
+
+- **Unified hook interface**: `LifecyclePreStore` now extends PF4J `ExtensionPoint`, serving as both the internal hook interface and the plugin extension point
+- **Inheritance-based replacement**: When a plugin hook extends a built-in hook class, the built-in is automatically removed from the chain. Plugin can call `super.preStore()` to extend or override completely
+- **`@Replaces` annotation**: For explicit replacement when inheritance isn't practical (e.g., replacing multiple hooks)
+- **`LocalContentManager`**: Added `unregisterPreStoreHook(Class<?>)` and `getRegisteredHookClasses()` for replacement detection
+- **Deleted `DeskPreStoreHook`**: No longer needed — plugins implement `LifecyclePreStore` directly
+
+### Common Fields Promoted to Parent Beans
+
+Fields from adm-starterkit Custom*Bean classes moved UP to parent beans so plugins don't need to redeclare them:
+
+| Field | Added To | Previously In |
+|---|---|---|
+| `channel` | `OneContentBean` | CustomArticleBean, CustomImageBean, CustomCollectionBean |
+| `backendType` | `DamVideoAspectBean`, `DamAudioAspectBean` | CustomVideoBean, CustomAudioBean |
+
+### Lifecycle Hooks Ported to Core
+
+| Hook | Action | Source |
+|---|---|---|
+| `OneContentPreStore` | Added property bag initialization on create | CustomOneContentPreStoreHook |
+| `SetStatusPreStoreHook` | Added `attr.offline` attribute for new content | CustomSetStatusPreStoreHook |
+| `CollectionPreStore` | Added field propagation to children (headline, description, caption, byline, reporter, credit) | CustomCollectionPreStore |
+| `MetadataCoercingPreStoreHook` | New wildcard hook: enforces single-tag categories from config | MetadataCoercingPreStoreHook |
+
+Skipped (no-ops or project-specific):
+- CustomSecParentPreStoreHook (just calls super)
+- Article2ImageChannelPreStore (all commented out)
+- VideoPreStore (deprecated, Dailymotion-specific)
+
+### Solr Indexing Fields Added to DamIndexComposer
+
+| Field | Source |
+|---|---|
+| `channel_atex_desk_s` | OneContentBean.channel |
+| `premiumtype_atex_desk_s` | PremiumTypeSupport.premiumType |
+| `name_atex_desk_ss` | OneContentBean.name |
+| `web_content_status_attribute_ss` | WFStatusBean.attributes |
+
+### WFStatusBean Enhanced
+
+Added `attributes` (List<String>), `addAttribute()`, `clearAttributes()` — needed for status attribute tracking.
+
+### Migration Guide Updated
+
+- Cross-project code analysis results (8 codebases, ~1,141 Java files)
+- desk-integration architecture (separate project depending on desk-api)
+- Plugin replacement mechanism documentation
+
+### Files Changed
+
+- `LifecyclePreStore.java` — extends ExtensionPoint, added contentTypes()
+- `PluginLoader.java` — discovers LifecyclePreStore, inheritance replacement
+- `LocalContentManager.java` — unregisterPreStoreHook, getRegisteredHookClasses
+- `Replaces.java` — new annotation
+- `DeskPreStoreHook.java` — deleted
+- `OneContentBean.java` — added channel field
+- `DamVideoAspectBean.java` — added backendType field
+- `DamAudioAspectBean.java` — added backendType field
+- `WFStatusBean.java` — added attributes list
+- `OneContentPreStore.java` — property bag initialization
+- `SetStatusPreStoreHook.java` — attr.offline on create
+- `CollectionPreStore.java` — field propagation to children
+- `MetadataCoercingPreStoreHook.java` — new hook
+- `BuiltInHookRegistrar.java` — register MetadataCoercingPreStoreHook
+- `DamIndexComposer.java` — custom field indexing
+- `implementation_status.md` — updated with migration summary
+- `docs/migration-guide.md` — cross-project analysis, desk-integration, plugin replacement

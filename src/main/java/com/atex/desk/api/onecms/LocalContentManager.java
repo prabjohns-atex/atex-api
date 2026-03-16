@@ -55,7 +55,9 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -123,6 +125,41 @@ public class LocalContentManager implements ContentManager {
      */
     public <T, C> void registerPreStoreHook(String contentType, LifecyclePreStore<T, C> hook) {
         preStoreHooks.computeIfAbsent(contentType, k -> new ArrayList<>()).add(hook);
+    }
+
+    /**
+     * Remove all pre-store hooks whose underlying class matches the given class.
+     * Used by {@link com.atex.desk.api.plugin.PluginLoader} to support {@code @Replaces}
+     * — a plugin hook annotated with {@code @Replaces(SomeHook.class)} causes all
+     * registrations of SomeHook to be removed before the plugin hook is added.
+     *
+     * @param hookClass the built-in hook class to remove
+     * @return the number of hook registrations removed
+     */
+    public int unregisterPreStoreHook(Class<?> hookClass) {
+        int removed = 0;
+        for (var entry : preStoreHooks.entrySet()) {
+            List<LifecyclePreStore<?, ?>> hooks = entry.getValue();
+            int before = hooks.size();
+            hooks.removeIf(h -> hookClass.isInstance(h));
+            removed += before - hooks.size();
+        }
+        return removed;
+    }
+
+    /**
+     * Returns the set of concrete classes of all currently registered hooks.
+     * Used by {@link com.atex.desk.api.plugin.PluginLoader} to detect when a plugin
+     * extends a built-in hook class (inheritance-based replacement).
+     */
+    public Set<Class<?>> getRegisteredHookClasses() {
+        Set<Class<?>> classes = new HashSet<>();
+        for (var hooks : preStoreHooks.values()) {
+            for (var hook : hooks) {
+                classes.add(hook.getClass());
+            }
+        }
+        return classes;
     }
 
     // --- Composer registration ---

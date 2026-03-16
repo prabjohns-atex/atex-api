@@ -1,6 +1,9 @@
 package com.atex.desk.api.indexing;
 
 import com.atex.onecms.app.dam.standard.aspects.OneContentBean;
+import com.atex.onecms.app.dam.standard.aspects.PremiumTypeSupport;
+import com.atex.onecms.app.dam.workflow.WebContentStatusAspectBean;
+import com.atex.onecms.app.dam.workflow.WFStatusBean;
 import com.atex.onecms.content.Content;
 import com.atex.onecms.content.ContentResult;
 import com.atex.onecms.content.ContentVersionId;
@@ -98,10 +101,17 @@ public class DamIndexComposer {
 
                     // Index searchable text fields
                     addTextField(doc, "name_t", bean.getName());
+                    addTextField(doc, "name_atex_desk_ss", bean.getName());
                     addTextField(doc, "author_t", bean.getAuthor());
                     addTextField(doc, "section_t", bean.getSection());
                     addTextField(doc, "source_t", bean.getSource());
                     addTextField(doc, "subject_t", bean.getSubject());
+                    addTextField(doc, "channel_atex_desk_s", bean.getChannel());
+
+                    // Premium type (from PremiumTypeSupport interface)
+                    if (mainData instanceof PremiumTypeSupport pts) {
+                        addTextField(doc, "premiumtype_atex_desk_s", pts.getPremiumType());
+                    }
                 }
             }
 
@@ -111,6 +121,19 @@ public class DamIndexComposer {
                 Object aspectData = aspect.getData();
                 if (aspectData != null) {
                     addAspectFields(doc, aspectName, aspectData);
+
+                    // Web content status attributes (from CustomWebContentStatusToSolrJsonMapper)
+                    if (aspectData instanceof WebContentStatusAspectBean wcsBean) {
+                        WFStatusBean status = wcsBean.getStatus();
+                        if (status != null && status.getStatusID() != null && !status.getStatusID().isEmpty()) {
+                            java.util.List<String> attrs = status.getAttributes();
+                            if (attrs != null && !attrs.isEmpty()) {
+                                JsonArray attrArray = new JsonArray();
+                                attrs.forEach(attrArray::add);
+                                doc.add("web_content_status_attribute_ss", attrArray);
+                            }
+                        }
+                    }
                 }
             }
 

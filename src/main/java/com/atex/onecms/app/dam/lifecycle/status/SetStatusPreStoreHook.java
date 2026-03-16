@@ -106,8 +106,11 @@ public class SetStatusPreStoreHook implements LifecyclePreStore<Object, Object> 
             ContentWriteBuilder<Object> builder = ContentWriteBuilder.from(input);
 
             if (initialStatus != null) {
-                builder.aspect(WFContentStatusAspectBean.ASPECT_NAME,
-                    new WFContentStatusAspectBean(initialStatus, null));
+                WFContentStatusAspectBean wfAspect = new WFContentStatusAspectBean(initialStatus, null);
+                // New content starts offline (never been published)
+                wfAspect.getStatus().clearAttributes();
+                wfAspect.getStatus().addAttribute("attr.offline");
+                builder.aspect(WFContentStatusAspectBean.ASPECT_NAME, wfAspect);
             }
             if (initialWebStatus != null) {
                 builder.aspect(WebContentStatusAspectBean.ASPECT_NAME,

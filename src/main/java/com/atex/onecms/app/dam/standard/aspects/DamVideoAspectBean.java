@@ -59,6 +59,10 @@ public class DamVideoAspectBean extends OneArchiveBean implements DigitalPublish
     private boolean transcribeFlag;
     private String binaryUrl;
     private String publicationLink;
+    private String backendType;
+
+    public String getBackendType() { return backendType; }
+    public void setBackendType(String backendType) { this.backendType = backendType; }
 
     public String getPolopolyUrl() { return polopolyUrl; }
     public void setPolopolyUrl(String polopolyUrl) { this.polopolyUrl = polopolyUrl; }
