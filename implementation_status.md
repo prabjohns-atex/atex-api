@@ -1,6 +1,6 @@
 # Desk API -- Implementation Status
 
-Last updated: 2026-03-16 (Increment 37).
+Last updated: 2026-03-16 (Increment 38).
 
 ---
 
@@ -224,3 +224,14 @@ See [docs/migration-guide.md](docs/migration-guide.md) for the full migration pl
 - ~120 classes should move to desk-api core (custom beans, hooks, Solr mappers, utilities)
 - Only 5-25 classes per project are truly unique (average plugin = ~6% of original codebase)
 - After porting core code, most projects need zero or near-zero plugin code
+
+## desk-integration Module
+
+Gradle submodule (`desk-integration/`) — separate Spring Boot app for content ingest, distribution,
+and scheduled processing. Depends on desk-api as a library (plain jar).
+
+| Component | Classes | Replaces |
+|---|---|---|
+| Wire feed framework | WireArticleParser, WireImageParser, FeedPoller, FeedContentCreator | Camel file routes, BaseFeedProcessor, AgencyFeedProcessor |
+| Scheduled jobs | WebStatusScheduler, PurgeScheduler, ChangeProcessor | Quartz2 routes, CustomPurgeProcessor |
+| Distribution | DistributionService, FileTransferHandler, EmailHandler | CamelEngine, SendContentHandler, FileTransferProcessor |

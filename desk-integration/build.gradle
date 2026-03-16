@@ -1,0 +1,65 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.3'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.atex.cloud'
+version = '0.0.1-SNAPSHOT'
+description = 'Desk Integration - Content ingest, distribution, and scheduled processing'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // desk-api as library (plain jar)
+    implementation project(':')
+
+    // Spring Boot starters
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Carried from desk-api (needed for beans, services)
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.google.guava:guava:33.4.0-jre'
+    implementation 'org.apache.solr:solr-solrj:9.8.0'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+
+    // Wire feed parsing
+    implementation 'org.jsoup:jsoup:1.18.3'
+
+    // File transfer (FTP/SFTP)
+    implementation 'commons-net:commons-net:3.11.1'
+    implementation 'com.jcraft:jsch:0.1.55'
+
+    // Email
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // JWT (for auth token generation)
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-gson:0.12.6'
+
+    // Database
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+    implementation 'org.flywaydb:flyway-mysql'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-mysql:2.0.3'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

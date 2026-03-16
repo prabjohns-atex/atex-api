@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: desk-integration
+
+  datasource:
+    url: jdbc:mysql://mysql:33306/desk?useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD:desk}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+
+  flyway:
+    enabled: true
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:25}
+
+server:
+  port: 8081
+
+# desk-api shared config (same as desk-api's application properties)
+desk:
+  solr:
+    url: ${SOLR_URL:http://solr:8983/solr}
+  file:
+    storage-type: ${FILE_STORAGE_TYPE:local}
+    local-base-path: ${FILE_LOCAL_BASE:/data/files}
+
+  # Integration-specific config
+  integration:
+    feed-base-dir: ${FEED_BASE_DIR:/data/feeds}
+    error-dir: ${FEED_ERROR_DIR:/data/feeds/error}
+    backup-dir: ${FEED_BACKUP_DIR:/data/feeds/backup}
+    poll-interval-ms: 10000
+    default-security-parent: dam.assets.production.d
+    default-insert-parent: p.siteengine.Sites.d
+
+    # Feed sources (configure per deployment)
+    feeds: {}
+    #  reuters-text:
+    #    directory: /data/feeds/reuters/text
+    #    type: article
+    #    parser-class: com.atex.desk.integration.feed.parser.ReutersArticleParser
+    #    encoding: UTF-8
+    #    partition: incoming
+    #  afp-images:
+    #    directory: /data/feeds/afp/images
+    #    type: image
+    #    encoding: UTF-8
+    #    partition: incoming
+
+    purge:
+      enabled: false
+      schedule: "0 0 3 * * *"
+      max-delete: 15000
+      trash-parent: dam.assets.trash.d
+
+    distribution:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

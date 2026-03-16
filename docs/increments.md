@@ -969,3 +969,122 @@ Added `attributes` (List<String>), `addAttribute()`, `clearAttributes()` — nee
 - `DamIndexComposer.java` — custom field indexing
 - `implementation_status.md` — updated with migration summary
 - `docs/migration-guide.md` — cross-project analysis, desk-integration, plugin replacement
+
+---
+
+## Increment 38 — desk-integration Module
+
+Created the desk-integration submodule: a separate Spring Boot application for content ingest,
+distribution, and scheduled processing. Runs as its own container alongside desk-api, sharing
+the same MySQL and Solr instances.
+
+### Architecture
+
+```
+desk-api (root Gradle project)
+  ├─ build.gradle              ← produces both bootJar + plain jar
+  ├─ settings.gradle           ← includes desk-integration
+  └─ desk-integration/
+       ├─ build.gradle         ← Spring Boot app, depends on project(':')
+       └─ src/main/java/com/atex/desk/integration/
+            ├─ DeskIntegrationApplication.java
+            ├─ config/
+            │    └─ IntegrationProperties.java
+            ├─ feed/
+            │    ├─ WireArticle.java
+            │    ├─ WireImage.java
+            │    ├─ FeedContentCreator.java
+            │    ├─ FeedPoller.java
+            │    └─ parser/
+            │         ├─ WireArticleParser.java
+            │         └─ WireImageParser.java
+            ├─ schedule/
+            │    ├─ WebStatusScheduler.java
+            │    ├─ PurgeScheduler.java
+            │    └─ ChangeProcessor.java
+            └─ distribution/
+                 ├─ DistributionRoute.java
+                 ├─ DistributionHandler.java
+                 ├─ DistributionException.java
+                 ├─ DistributionService.java
+                 ├─ FileTransferHandler.java
+                 └─ EmailHandler.java
+```
+
+### Gradle Multi-Module Setup
+
+- `settings.gradle` updated: `include 'desk-integration'`
+- desk-api `build.gradle`: `jar { enabled = true; archiveClassifier = 'plain' }` to produce
+  both bootJar (executable) and plain jar (library for desk-integration)
+- desk-integration depends on `project(':')` for all desk-api classes (entities, repos, services,
+  beans, ContentManager, FileService, SolrService)
+
+### Wire Feed Processing Framework
+
+Replaces the legacy Camel file-based routes and `BaseFeedProcessor`/`AgencyFeedProcessor`.
+
+| Class | Purpose | Replaces |
+|---|---|---|
+| `WireArticleParser` | Interface for agency-specific article parsers | `ITextParser` |
+| `WireImageParser` | Interface for agency-specific image parsers | Image parsing in `AgencyFeedProcessor` |
+| `WireArticle` | Parsed article data (unified intermediate representation) | `ReutersArticle`, `AFPArticle`, etc. |
+| `WireImage` | Parsed image data | Image metadata extraction result |
+| `FeedPoller` | `@Scheduled` file directory polling | Camel `file://` routes |
+| `FeedContentCreator` | Creates CMS content from parsed data | `ArticlesObjectGenerator` + `AgencyFeedProcessor` content creation |
+
+Feed sources configured via `desk.integration.feeds.*` in application.yml. Each feed specifies:
+directory, parser class, encoding, security parent, partition. FeedPoller checks file stability
+(size unchanged between polls) before processing.
+
+### Scheduled Jobs
+
+Replace Quartz2/Camel timer routes with Spring `@Scheduled`:
+
+| Class | Purpose | Replaces | Schedule |
+|---|---|---|---|
+| `WebStatusScheduler` | Embargo release + auto-unpublish | `webStatusOnlineProcessor`/`webStatusUnPublishProcessor` | Every 5 min |
+| `PurgeScheduler` | Content housekeeping (trash + Solr cleanup) | `CustomPurgeProcessor` | 3 AM daily |
+| `ChangeProcessor` | Polls changelist, dispatches to handlers | `ChangeProcessor` Camel route | Every 5 sec |
+
+All schedulers are `@ConditionalOnProperty` — disabled by default, enabled per deployment.
+
+### Content Distribution Framework
+
+Replaces the legacy CamelEngine + SendContentHandler + GenericRouteProcessor pattern:
+
+| Class | Purpose | Replaces |
+|---|---|---|
+| `DistributionRoute` | Route configuration bean | `DamSendContentConfiguration` |
+| `DistributionHandler` | Interface for delivery mechanisms | `SendContentHandler<T>` |
+| `FileTransferHandler` | FTP/SFTP file delivery | `FileTransferProcessor` |
+| `EmailHandler` | SMTP email with attachments | `MailAttacherProcessor`/`MailLinkerProcessor` |
+| `DistributionService` | Orchestrator matching content to routes | `CamelEngine` + `SendContentHandlerFinder` |
+
+### desk-api Changes
+
+- `ChangeListRepository`: added `findByIdGreaterThanOrderByIdAsc(int)` for change polling
+- `ChangeListEntry`: backtick-quoted camelCase column names (`attr_inputTemplate`, etc.)
+  to prevent Hibernate naming strategy from converting them to snake_case
+
+### Configuration (application.yml)
+
+```yaml
+desk.integration:
+  feed-base-dir: /data/feeds
+  poll-interval-ms: 10000
+  feeds:
+    reuters-text:
+      directory: /data/feeds/reuters/text
+      type: article
+      parser-class: com.example.ReutersArticleParser
+  web-status:
+    enabled: true
+    schedule: "0 */5 * * * *"
+  purge:
+    enabled: true
+    schedule: "0 0 3 * * *"
+  change-processing:
+    enabled: true
+  distribution:
+    enabled: true
+```

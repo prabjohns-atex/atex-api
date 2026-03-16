@@ -45,19 +45,19 @@ public class ChangeListEntry
     private Instant commitAt;
 
     // Denormalized attribute columns (inlined for query performance)
-    @Column(name = "attr_insertParentId", length = 255)
+    @Column(name = "`attr_insertParentId`", length = 255)
     private String attrInsertParentId;
 
-    @Column(name = "attr_securityParentId", length = 255)
+    @Column(name = "`attr_securityParentId`", length = 255)
     private String attrSecurityParentId;
 
-    @Column(name = "attr_objectType", length = 255)
+    @Column(name = "`attr_objectType`", length = 255)
     private String attrObjectType;
 
-    @Column(name = "attr_inputTemplate", length = 255)
+    @Column(name = "`attr_inputTemplate`", length = 255)
     private String attrInputTemplate;
 
-    @Column(name = "attr_partition", length = 255)
+    @Column(name = "`attr_partition`", length = 255)
     private String attrPartition;
 
     public Integer getId() { return id; }

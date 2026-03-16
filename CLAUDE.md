@@ -6,8 +6,9 @@ Spring Boot 4.0.3 API (Java 25) porting features from the Atex/Polopoly platform
 - **Group**: `com.atex.cloud` / **Package**: `com.atex.desk.api`
 - **Database**: MySQL 8.0 (port 33306, database `desk`)
 - **ORM**: Hibernate 7.2.4 with JPA, Flyway migrations
-- **Build**: Gradle, GraalVM native image support
+- **Build**: Gradle multi-module, GraalVM native image support
 - **Main class**: `DeskApiApplication`
+- **Submodule**: `desk-integration` — content ingest, distribution, scheduled processing (separate Spring Boot app)
 
 ## Key Technical Notes
 - **Jackson 3.0** in Spring Boot 4: packages `tools.jackson.core` / `tools.jackson.databind` (NOT `com.fasterxml.jackson`)

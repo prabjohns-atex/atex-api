@@ -72,6 +72,12 @@ hibernate {
     }
 }
 
+// Produce both bootJar (executable) and plain jar (for desk-integration dependency)
+tasks.named('jar') {
+    enabled = true
+    archiveClassifier = 'plain'
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }

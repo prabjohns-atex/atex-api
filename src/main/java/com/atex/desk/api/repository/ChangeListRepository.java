@@ -14,4 +14,6 @@ public interface ChangeListRepository extends JpaRepository<ChangeListEntry, Int
     Optional<ChangeListEntry> findByContentid(String contentid);
 
     void deleteByContentid(String contentid);
+
+    java.util.List<ChangeListEntry> findByIdGreaterThanOrderByIdAsc(int id);
 }
