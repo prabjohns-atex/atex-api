@@ -62,6 +62,32 @@ desk:
     distribution:
       enabled: false
 
+    # Web status scheduler (embargo release / auto-unpublish)
+    web-status:
+      enabled: false
+
+    # Publishing pipeline
+    publishing:
+      enabled: false
+      remote-url: ${PUBLISH_REMOTE_URL:}
+      remote-token: ${PUBLISH_REMOTE_TOKEN:}
+      max-image-width: 900
+      image-quality: 0.75
+
+    # Inbox processing
+    inbox:
+      enabled: false
+
+    # NGINX cache invalidation
+    nginx-cache:
+      enabled: false
+      purge-url: ${NGINX_PURGE_URL:http://localhost:80}
+      purge-paths: /content/,/api/
+
+    # Change processor
+    change-processor:
+      enabled: false
+
 management:
   endpoints:
     web:

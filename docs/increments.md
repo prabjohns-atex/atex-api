@@ -1088,3 +1088,64 @@ desk.integration:
   distribution:
     enabled: true
 ```
+
+## Increment 38b — desk-integration Expansion
+
+Expanded desk-integration with concrete implementations ported from gong/desk and adm-starterkit:
+image metadata extraction, wire feed parsers, publishing pipeline, and change-driven handlers.
+
+### New Packages
+
+#### `image/` — IPTC/EXIF Metadata Extraction
+
+| Class | Purpose | Ported From |
+|---|---|---|
+| `CustomMetadataTags` | Data container for extracted IPTC/EXIF metadata (byline, caption, credit, headline, location, keywords, source, dateCreated, copyright) | `gong/desk BaseImageProcessor` + `adm-starterkit CustomMetadataTags` |
+| `ImageMetadataExtractor` | Extracts metadata from image files using Drew Imaging's metadata-extractor library. Maps IPTC directory tags to CustomMetadataTags fields | `BaseImageProcessor.extract()` + `readIptcDirectoryTag()` |
+
+IPTC tag mapping: TAG_BY_LINE→byline, TAG_SOURCE→source, TAG_CAPTION→description+caption, TAG_HEADLINE→headline,
+TAG_CREDIT→credit, TAG_KEYWORDS→keywords, TAG_CATEGORY→subject, TAG_COPYRIGHT_NOTICE→copyright,
+TAG_DATE_CREATED→dateCreated, TAG_COUNTRY_OR_PRIMARY_LOCATION_NAME+TAG_SUB_LOCATION→location (semicolon-joined).
+
+#### `feed/parser/` — Concrete Wire Feed Parsers
+
+| Class | Purpose | Ported From |
+|---|---|---|
+| `AbstractXmlParser` | Base class with DOM utilities (getChildValue, getChildElement, getChildElements, getAttributeValue, parseDateAndTime) | `AbstractParser` from adm-starterkit |
+| `AFPArticleParser` | AFP NewsML XML parser (NewsEnvelope→NewsItem→NewsComponent→nitf→body) | `AFPArticleParser` from adm-starterkit |
+| `APArticleParser` | AP NewsML-G2 XML parser (header→itemSet→newsItem→contentMeta/contentSet→inlineXML→nitf) | `APArticleParser` from adm-starterkit |
+| `ReutersArticleParser` | Reuters/Thomson XML batch parser (articles→article→author/headline/cats/summary/content) | `ReutersArticleParser` from adm-starterkit |
+| `PTIArticleParser` | PTI plain text parser (line-based: header, 2 tag lines, body, footer; headline from filename) | `PTIArticleParser` from adm-starterkit |
+
+All parsers implement `WireArticleParser` interface, producing `List<WireArticle>`.
+
+#### `feed/` — Wire Article Utilities
+
+| Class | Purpose | Ported From |
+|---|---|---|
+| `WireUtils` | Wire follow-up threading: normalizes headlines (`getBaseHeadline`), builds Solr queries for related articles, concatenates follow-up body text | `WireUtils` from gong/desk |
+
+Headline normalization: strips leading `+`, trailing `=+?`, trailing `(digits)`, trailing `-digits-`.
+
+#### `publish/` — Publishing Pipeline
+
+| Class | Purpose | Ported From |
+|---|---|---|
+| `PublishingConfig` | Publishing configuration properties (remoteUrl, remoteToken, maxImageWidth, imageQuality, nonPublishableStatus, etc.) | `DamPublisherConfiguration` from gong/desk |
+| `RemoteContentPublisher` | HTTP client for remote CMS REST API (publishBinary, publishContent, publishContentUpdate, unpublish, resolve, getContent) | `ContentPublisher`/`ContentAPIPublisher` from gong/desk |
+| `PublishingService` | Main orchestrator: resolves content, checks publishability, serializes via Gson, publishes/updates remote, records engagement | `DamPublisherImpl`→`DamBeanPublisherImpl`→`BeanPublisher` pipeline from gong/desk |
+
+#### `schedule/` — Change-Driven Handlers
+
+| Class | Purpose | Ported From |
+|---|---|---|
+| `InboxChangeHandler` | Processes inbox events for wire articles on create/update | Inbox processing from gong/desk |
+| `PublishChangeHandler` | Triggers publishing when content is updated | Scheduled/change-driven publishing from gong/desk |
+| `NginxCacheInvalidator` | Sends HTTP PURGE requests to NGINX on update/delete | `NginxCacheHandler` from adm-starterkit |
+
+All handlers implement `ChangeProcessor.ChangeHandler`, auto-registered via `@Component`.
+
+### Build Changes
+
+- `build.gradle`: Added `metadata-extractor:2.19.0` (IPTC/EXIF) and `commons-text:1.12.0` (StringEscapeUtils for WireUtils)
+- `application.yml`: Added config sections for publishing, inbox, nginx-cache, change-processor

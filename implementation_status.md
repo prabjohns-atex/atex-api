@@ -1,6 +1,6 @@
 # Desk API -- Implementation Status
 
-Last updated: 2026-03-16 (Increment 38).
+Last updated: 2026-03-16 (Increment 38b).
 
 ---
 
@@ -233,5 +233,10 @@ and scheduled processing. Depends on desk-api as a library (plain jar).
 | Component | Classes | Replaces |
 |---|---|---|
 | Wire feed framework | WireArticleParser, WireImageParser, FeedPoller, FeedContentCreator | Camel file routes, BaseFeedProcessor, AgencyFeedProcessor |
+| Wire parsers | AFPArticleParser, APArticleParser, ReutersArticleParser, PTIArticleParser, AbstractXmlParser | Legacy agency parsers from adm-starterkit |
+| Wire utilities | WireUtils | WireUtils from gong/desk (follow-up threading) |
+| Image metadata | ImageMetadataExtractor, CustomMetadataTags | BaseImageProcessor.extract() from gong/desk |
 | Scheduled jobs | WebStatusScheduler, PurgeScheduler, ChangeProcessor | Quartz2 routes, CustomPurgeProcessor |
+| Change handlers | InboxChangeHandler, PublishChangeHandler, NginxCacheInvalidator | Inbox processing, publish triggers, NGINX cache purge |
+| Publishing pipeline | PublishingService, RemoteContentPublisher, PublishingConfig | DamPublisher → BeanPublisher → ContentPublisher from gong/desk |
 | Distribution | DistributionService, FileTransferHandler, EmailHandler | CamelEngine, SendContentHandler, FileTransferProcessor |
