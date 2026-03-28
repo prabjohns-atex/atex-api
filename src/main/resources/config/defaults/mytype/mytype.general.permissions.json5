@@ -1,0 +1,72 @@
+{
+  "_meta": {"name": "MyType Permissions", "group": "Permissions"},
+  "schemaVersion": "1.0",
+  "app": "mytype",
+  "revision": 1,
+  "updatedAt": "2026-01-17T00:00:00Z",
+  "updatedBy": "migration",
+  "groups": [
+    {
+      "name": "Contributors",
+      "grants": [],
+      "denies": [
+        {
+          "permissionId": "operation:publish",
+          "constraints": {
+            "conditions": ["any"]
+          }
+        },
+        {
+          "permissionId": "operation:delete",
+          "constraints": {
+            "conditions": ["aspects/contentData/data/objectType:article"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Editors",
+      "grants": [],
+      "denies": [
+        {
+          "permissionId": "operation:publish",
+          "constraints": {
+            "conditions": [
+              "aspects/atex.Metadata/data/metadata/dimensions/entities['dimension.partition']/entities[0]/id:incoming",
+              "aspects/contentData/data/printFirst:true"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Administrators",
+      "grants": [],
+      "denies": [
+        {
+          "permissionId": "operation:publish",
+          "constraints": {
+            "conditions": [
+              "aspects/atex.Metadata/data/metadata/dimensions/entities['dimension.partition']/entities[0]/id:incoming",
+              "aspects/contentData/data/printFirst:true"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "*",
+      "label": "All users",
+      "grants": [],
+      "denies": [
+        {
+          "permissionId": "operation:publish",
+          "constraints": {
+            "conditions": ["aspects/atex.WebContentStatus/data/status/id:deleted"]
+          }
+        }
+      ]
+    }
+  ],
+  "users": []
+}

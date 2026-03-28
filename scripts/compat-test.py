@@ -1792,6 +1792,151 @@ def test_metadata_lookup(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, li
     return passed, f"desk={ds} ref={rs}", notes
 
 
+def test_mytype_ping(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /dam/mytype/ping — health check endpoint."""
+    notes = []
+
+    ds, db, _ = desk.get("/dam/mytype/ping")
+    rs, rb, _ = ref.get("/dam/mytype/ping")
+
+    notes.append(f"desk={ds} body='{db}'" if isinstance(db, str) else f"desk={ds}")
+    notes.append(f"ref={rs} body='{rb}'" if isinstance(rb, str) else f"ref={rs}")
+
+    # Both should return 200 with text body
+    desk_ok = ds == 200
+    ref_ok = rs == 200
+
+    if ds == 200 and rs == 200:
+        if db == rb:
+            notes.append("bodies match")
+        else:
+            notes.append(f"body mismatch: desk='{db}' ref='{rb}'")
+
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_mytype_permissions(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /dam/mytype/permissions — flattened user permissions."""
+    notes = []
+
+    ds, db, _ = desk.get("/dam/mytype/permissions")
+    rs, rb, _ = ref.get("/dam/mytype/permissions")
+
+    dump_json("desk permissions", db)
+    dump_json("ref permissions", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    # Both could return 200 (permissions configured) or 404 (not configured)
+    if ds == 200 and rs == 200:
+        if isinstance(db, dict) and isinstance(rb, dict):
+            # Check structural keys match
+            for key in ("schemaVersion", "user", "permissions"):
+                d_has = key in db
+                r_has = key in rb
+                if d_has != r_has:
+                    notes.append(f"key '{key}': desk={d_has} ref={r_has}")
+
+            # Check user sub-structure
+            if "user" in db and "user" in rb:
+                d_user = db["user"]
+                r_user = rb["user"]
+                for field in ("id", "groups"):
+                    if (field in d_user) != (field in r_user):
+                        notes.append(f"user.{field}: desk={field in d_user} ref={field in r_user}")
+
+            # Check permissions array element structure
+            d_perms = db.get("permissions", [])
+            r_perms = rb.get("permissions", [])
+            notes.append(f"permission count: desk={len(d_perms)} ref={len(r_perms)}")
+
+            if d_perms and r_perms:
+                d_keys = set(d_perms[0].keys())
+                r_keys = set(r_perms[0].keys())
+                if d_keys != r_keys:
+                    notes.append(f"entry keys: desk={sorted(d_keys)} ref={sorted(r_keys)}")
+                else:
+                    notes.append(f"entry keys match: {sorted(d_keys)}")
+
+    elif ds == 404 and rs == 404:
+        notes.append("both returned 404 (permissions not configured) — OK")
+    elif ds == 200 and rs == 404:
+        notes.append("desk has permissions configured but ref does not")
+    elif ds == 404 and rs == 200:
+        notes.append("ref has permissions configured but desk does not")
+
+    # Accept 200 or 404 as valid responses
+    desk_ok = ds in (200, 404)
+    ref_ok = rs in (200, 404)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_audioai_search(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """Compare AudioAI search for nonexistent article — both should return 404."""
+    notes = []
+    fake_id = "onecms:audioai-test-nonexistent"
+    ds, db, _ = desk.get(f"/dam/audioai/search/{fake_id}")
+    rs, rb, _ = ref.get(f"/dam/audioai/search/{fake_id}")
+    notes.append(f"desk={ds} ref={rs}")
+    passed = ds == 404 and rs == 404
+    if ds != 404:
+        notes.append(f"desk returned {ds} instead of 404")
+    if rs != 404:
+        notes.append(f"ref returned {rs} instead of 404")
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_audioai_create(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """Compare AudioAI create+search round-trip on both servers."""
+    notes = []
+
+    # Create an article on each server first
+    article_body = make_article_body("audioai-compat-test")
+    d_cs, d_cb, _ = desk.post("/content", article_body)
+    r_cs, r_cb, _ = ref.post("/content", article_body)
+
+    if d_cs != 201 or r_cs != 201:
+        return False, f"article create: desk={d_cs} ref={r_cs}", ["cannot create articles"]
+
+    d_article_id = d_cb.get("id", "")
+    r_article_id = r_cb.get("id", "")
+
+    # Create audio on each
+    create_body = {"name": "AIAudio - compat test"}
+    d_as, d_ab, _ = desk.post(f"/dam/audioai/create/{d_article_id}", create_body)
+    r_as, r_ab, _ = ref.post(f"/dam/audioai/create/{r_article_id}", create_body)
+
+    notes.append(f"create: desk={d_as} ref={r_as}")
+
+    if d_as not in (200, 201) or r_as not in (200, 201):
+        return False, f"create: desk={d_as} ref={r_as}", notes
+
+    # Search for audio on each
+    d_ss, d_sb, _ = desk.get(f"/dam/audioai/search/{d_article_id}")
+    r_ss, r_sb, _ = ref.get(f"/dam/audioai/search/{r_article_id}")
+
+    notes.append(f"search: desk={d_ss} ref={r_ss}")
+
+    # Compare response structure
+    if d_ss == 200 and r_ss == 200:
+        d_keys = set(d_sb.keys()) if isinstance(d_sb, dict) else set()
+        r_keys = set(r_sb.keys()) if isinstance(r_sb, dict) else set()
+        if d_keys != r_keys:
+            notes.append(f"top-level keys: desk={sorted(d_keys)} ref={sorted(r_keys)}")
+        else:
+            notes.append(f"top-level keys match: {sorted(d_keys)}")
+
+        # Check contentData type
+        d_type = (d_sb.get("aspects", {}).get("contentData", {}).get("data", {}) or {}).get("_type")
+        r_type = (r_sb.get("aspects", {}).get("contentData", {}).get("data", {}) or {}).get("_type")
+        notes.append(f"contentData._type: desk={d_type} ref={r_type}")
+
+    passed = d_ss == 200 and r_ss == 200
+    return passed, f"create desk={d_as} ref={r_as}, search desk={d_ss} ref={r_ss}", notes
+
+
 # ---------------------------------------------------------------------------
 # Single-server tests (run independently per server)
 # ---------------------------------------------------------------------------
@@ -1898,6 +2043,10 @@ ALL_COMPARISON_TESTS = [
     ("Metadata annotate (POST /metadata/annotate)", test_metadata_annotate),
     ("Metadata lookup (POST /metadata/lookup)", test_metadata_lookup),
     ("Delete content (DELETE /content/contentid/{id})", test_delete_content),
+    ("AudioAI search 404 (GET /dam/audioai/search/nonexistent)", test_audioai_search),
+    ("AudioAI create+search (POST+GET /dam/audioai)", test_audioai_create),
+    ("MyType ping (GET /dam/mytype/ping)", test_mytype_ping),
+    ("MyType permissions (GET /dam/mytype/permissions)", test_mytype_permissions),
 ]
 
 

@@ -43,6 +43,8 @@ desk-api (Spring Boot 4)
   ├─ ContentResolveController (/content/*)  — External ID & view resolution (Inc 32)
   ├─ TypeController (/content/type/*)       — Content type schemas (Inc 31)
   ├─ DamDataResource (/dam/content)         — 68 endpoints from gong/desk (Inc 3)
+  ├─ MyTypeResource (/dam/mytype)           — Content CRUD, config, permissions (Inc 39)
+  ├─ DamAudioAIResource (/dam/audioai)     — TTS audio content (Inc 39b)
   ├─ SecurityController (/security/*)       — JWT auth (Inc 2)
   ├─ PrincipalsController (/principals/*)   — User management (Inc 18b)
   ├─ FileController (/file/*)               — File upload/download (Inc 16)
@@ -180,7 +182,7 @@ JAVA_HOME=C:/Users/peter/.jdks/openjdk-25.0.2 ./gradlew test --tests "*ContentCr
 python scripts/compat-test.py --desk-only
 ```
 
-74 integration tests (Testcontainers MySQL): Security, ContentCrud, ContentVersioning, Alias, FileService, Principals, Workspace, ErrorResponse, SiteStructure, TypeService.
+93 integration tests (Testcontainers MySQL): Security, ContentCrud, ContentVersioning, Alias, FileService, Principals, Workspace, ErrorResponse, SiteStructure, TypeService, MyTypePermissions, AudioAI.
 
 ## Remaining Stubs / Not Implemented
 - 501 endpoints: `create-page`, `sendcontent`, `assigncontent`, `mergeMultiplePdf`, `collectionpreview`

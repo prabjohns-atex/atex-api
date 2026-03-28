@@ -1149,3 +1149,95 @@ All handlers implement `ChangeProcessor.ChangeHandler`, auto-registered via `@Co
 
 - `build.gradle`: Added `metadata-extractor:2.19.0` (IPTC/EXIF) and `commons-text:1.12.0` (StringEscapeUtils for WireUtils)
 - `application.yml`: Added config sections for publishing, inbox, nginx-cache, change-processor
+
+## Increment 39 — MyType Permissions Endpoint
+
+Adds the MyType permissions endpoint used by mytype-new to evaluate per-operation grant/deny rules.
+
+### New Files
+
+| File | Purpose | Ported From |
+|---|---|---|
+| `MyTypeResource` (`c.a.onecms.app.dam.ws`) | Spring controller at `/dam/mytype` with `ping` and `permissions` endpoints | `MyTypeResource` from adm-starterkit/mytype-connector |
+| `mytype.general.permissions.json5` | Default permissions config (3-tier: product default) | `mytype-permissions.xml` from adm-starterkit content |
+
+### Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/dam/mytype/ping` | Health check, returns `"mytype connector service available"` |
+| GET | `/dam/mytype/permissions` | Returns flattened permissions for the authenticated user |
+
+### Permissions Response Format
+
+```json
+{
+  "schemaVersion": "1.0",
+  "user": { "id": "user-98", "groups": ["Editors", "Administrators"] },
+  "permissions": [
+    {
+      "permissionId": "operation:publish",
+      "effect": "deny",
+      "conditions": ["aspects/atex.WebContentStatus/data/status/id:deleted"],
+      "source": { "group": "*" }
+    }
+  ]
+}
+```
+
+### How It Works
+
+1. Fetches `mytype.general.permissions` config via `ConfigurationService` (3-tier: product defaults, project overrides, DB)
+2. Gets user's group memberships from the DB via `AppGroupMemberRepository` / `AppGroupRepository`
+3. Iterates config groups; includes group if user belongs to it or if group name is `*` (wildcard = all users)
+4. Flattens grant/deny rules into a flat permissions array with source attribution
+5. Returns 404 if permissions config is not found (mytype-new handles this gracefully with negative cache)
+
+### Reference Comparison
+
+All reference `MyTypeResource` endpoints have been ported:
+- `POST /dam/mytype/content` — create content with save-rule logic (auto-publish/unpublish)
+- `PUT /dam/mytype/content/contentid/{id}` — update with publish permission check
+- `GET /dam/mytype/content/contentid/{id}` — get with 303 redirect for unversioned IDs, collection aspect fix
+- `GET /dam/mytype/configuration/externalid/{id}` — configuration resolve via ConfigurationService
+- `PUT /dam/mytype/configuration/externalid/{id}` — PropertyBag config update with schema field validation
+- `GET /dam/mytype/remotePublicationUrl/contentid/{id}` — remote publication URL via DamPublisher
+
+Supporting classes: `MyTypeConfiguration` (save rules), `PropertyBagConfiguration`, `SchemaField`.
+
+### Tests
+
+- **Integration**: `MyTypePermissionsIntegrationTest` — 10 tests covering ping, permissions structure, wildcard group, entry format, group membership, auth enforcement, Cache-Control header, wildcard conditions content, and no-group-membership edge case
+- **Compat**: `test_mytype_ping`, `test_mytype_permissions` — comparison tests for both endpoints
+
+---
+
+## Increment 39b — AudioAI Resource
+
+### Summary
+
+Ported `DamAudioAIResource` from gong/desk to desk-api. Provides TTS (text-to-speech) audio content management linked to articles.
+
+### New Files
+- `src/main/java/com/atex/onecms/app/dam/ws/DamAudioAIResource.java` — Spring controller at `/dam/audioai`
+- `src/main/java/com/atex/onecms/app/dam/audioai/CreateOption.java` — Options DTO for audio creation
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/dam/audioai/search/{articleId}` | Find existing audio by article. Resolves external ID `audioai-{articleId}`. Returns 404 if not found. Cache-Control: no-store. |
+| POST | `/dam/audioai/create/{articleId}` | Create audio content. Sets external ID alias `audioai-{articleId}`. Returns 201. |
+
+### Implementation Details
+
+**Search**: Resolves external ID `"audioai-" + articleId` via `ContentService.resolveExternalId()`, then fetches full content. Handles the `audioai-` prefix passthrough (when called with already-prefixed ID).
+
+**Create**: Accepts JSON body with optional fields (name, contentType, inputTemplate, objectType, templateId, insertParentId, securityParentId). Builds `ContentWriteDto` with contentData, atex.onecms template, and p.InsertionInfo aspects. Creates via `LocalContentManager.createContentFromDto()` which runs pre-store hooks and persists the external ID alias.
+
+**Defaults**: contentType=`atex.dam.standard.Audio`, inputTemplate=`p.DamAudioAI`, objectType=`audio`, securityParentId=`dam.assets.production.d`.
+
+### Tests
+
+- **Integration**: `AudioAIIntegrationTest` — 9 tests covering search 404, search after create, audioai- prefix passthrough, create with/without name, default content type, invalid JSON, cross-article isolation, auth enforcement
+- **Compat**: `test_audioai_search`, `test_audioai_create` — comparison tests
