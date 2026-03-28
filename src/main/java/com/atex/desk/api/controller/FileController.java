@@ -1,5 +1,6 @@
 package com.atex.desk.api.controller;
 
+import com.atex.desk.api.file.FileUploadValidator;
 import com.atex.onecms.app.dam.ws.ContentApiException;
 import com.atex.onecms.content.Subject;
 import com.atex.onecms.content.files.FileInfo;
@@ -80,7 +81,12 @@ public class FileController {
             HttpServletRequest request) {
 
         String host = getUserId(request);
-        return doUpload(space, host, "unnamed_file", request);
+        // Anonymous uploads use a generated filename — skip extension/path validation
+        // but still validate host for path traversal
+        if (!FileUploadValidator.isSafeHost(host)) {
+            throw new ContentApiException("Invalid host", HttpStatus.BAD_REQUEST);
+        }
+        return doUploadUnchecked(space, host, "unnamed_file", request);
     }
 
     @PostMapping("/{space}/{host}/{path:.*}")
@@ -94,6 +100,19 @@ public class FileController {
 
     private ResponseEntity<FileInfoDTO> doUpload(String space, String host, String path,
                                                   HttpServletRequest request) {
+        String mimeType = request.getContentType();
+
+        // Validate upload parameters (CWE-434 / path traversal)
+        String validationError = FileUploadValidator.validate(space, host, path, mimeType);
+        if (validationError != null) {
+            throw new ContentApiException(validationError, HttpStatus.BAD_REQUEST);
+        }
+
+        return doUploadUnchecked(space, host, path, request);
+    }
+
+    private ResponseEntity<FileInfoDTO> doUploadUnchecked(String space, String host, String path,
+                                                            HttpServletRequest request) {
         String mimeType = request.getContentType();
         try (InputStream inputStream = request.getInputStream()) {
             FileInfo fileInfo = fileService.uploadFile(space, host, path, inputStream,
@@ -130,6 +149,11 @@ public class FileController {
     public ResponseEntity<StreamingResponseBody> getFile(@PathVariable("space") String space,
                                                           @PathVariable("host") String host,
                                                           @PathVariable("path") String path) {
+        // Path traversal guard on reads
+        if (!FileUploadValidator.isSafePathSegment(path) || !FileUploadValidator.isSafePathSegment(host)) {
+            throw new ContentApiException("Invalid path", HttpStatus.BAD_REQUEST);
+        }
+
         // Fast path: resolve directly to filesystem for LocalFileService (single pass)
         java.nio.file.Path filePath = null;
         if (fileService instanceof com.atex.desk.api.onecms.LocalFileService localFs) {
@@ -193,6 +217,9 @@ public class FileController {
     public ResponseEntity<Void> deleteFile(@PathVariable("space") String space,
                                             @PathVariable("host") String host,
                                             @PathVariable("path") String path) {
+        if (!FileUploadValidator.isSafePathSegment(path) || !FileUploadValidator.isSafePathSegment(host)) {
+            throw new ContentApiException("Invalid path", HttpStatus.BAD_REQUEST);
+        }
         String uri = buildUri(space, host, path);
         fileService.removeFile(uri, Subject.NOBODY_CALLER);
         return ResponseEntity.ok().build();
