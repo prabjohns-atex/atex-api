@@ -952,6 +952,65 @@ public class ContentService
     }
 
     /**
+     * Assign a versioned content ID to a named view (public API for ViewController).
+     * The versioned ID string must be in format "delegationId:key:version".
+     */
+    @Transactional
+    public void assignToView(String versionedIdStr, String viewName, String userId)
+    {
+        String[] parts = parseContentId(versionedIdStr);
+        if (parts.length < 3)
+            throw new IllegalArgumentException("Versioned content ID required: " + versionedIdStr);
+
+        String delegationId = parts[0];
+        String key = parts[1];
+        String version = parts[2];
+
+        Integer idtype = resolveIdType(delegationId);
+        if (idtype == null) throw new IllegalArgumentException("Unknown delegation ID: " + delegationId);
+
+        ContentVersion cv = contentVersionRepository.findByIdtypeAndIdAndVersion(idtype, key, version)
+            .orElseThrow(() -> new IllegalArgumentException("Content version not found: " + versionedIdStr));
+
+        assignViewExclusive(cv.getVersionId(), viewName, idtype, key, userId, Instant.now());
+    }
+
+    /**
+     * Remove a content from a named view (public API for ViewController).
+     * The content ID can be versioned or unversioned.
+     */
+    @Transactional
+    public void removeFromView(String contentIdStr, String viewName)
+    {
+        String[] parts = parseContentId(contentIdStr);
+        String delegationId = parts[0];
+        String key = parts[1];
+
+        Integer idtype = resolveIdType(delegationId);
+        if (idtype == null) throw new IllegalArgumentException("Unknown delegation ID: " + delegationId);
+
+        Integer viewId = resolveViewId(viewName);
+        if (viewId == null) return;
+
+        if (parts.length >= 3)
+        {
+            // Versioned — remove from specific version
+            String version = parts[2];
+            contentVersionRepository.findByIdtypeAndIdAndVersion(idtype, key, version)
+                .ifPresent(cv -> contentViewRepository.deleteByVersionIdAndViewId(cv.getVersionId(), viewId));
+        }
+        else
+        {
+            // Unversioned — remove from all versions
+            List<ContentVersion> versions = contentVersionRepository.findByIdtypeAndIdOrderByVersionIdDesc(idtype, key);
+            for (ContentVersion cv : versions)
+            {
+                contentViewRepository.deleteByVersionIdAndViewId(cv.getVersionId(), viewId);
+            }
+        }
+    }
+
+    /**
      * Assign a view to a version, removing it from all other versions of the same content first.
      * This ensures view exclusivity — a view can only be assigned to one version at a time.
      */
@@ -959,7 +1018,7 @@ public class ContentService
                                       Integer idtype, String contentKey,
                                       String userId, Instant now)
     {
-        Integer viewId = resolveViewId(viewName);
+        Integer viewId = resolveViewId(viewName, true);
         if (viewId == null) return;
 
         // Bulk remove from all other versions of this content
@@ -1031,12 +1090,27 @@ public class ContentService
 
     private Integer resolveViewId(String viewName)
     {
+        return resolveViewId(viewName, false);
+    }
+
+    private Integer resolveViewId(String viewName, boolean autoCreate)
+    {
         Integer cached = viewNameToIdCache.get(viewName);
         if (cached != null) return cached;
 
         Integer resolved = viewRepository.findByName(viewName)
             .map(View::getViewId)
             .orElse(null);
+
+        if (resolved == null && autoCreate)
+        {
+            View v = new View();
+            v.setName(viewName);
+            v.setCreatedAt(Instant.now());
+            v.setCreatedBy("system");
+            v = viewRepository.save(v);
+            resolved = v.getViewId();
+        }
 
         if (resolved != null)
         {
