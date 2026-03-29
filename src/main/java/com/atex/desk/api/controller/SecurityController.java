@@ -5,6 +5,7 @@ import com.atex.desk.api.auth.DecodedToken;
 import com.atex.desk.api.auth.LdapAuthService;
 import com.atex.desk.api.auth.InvalidTokenException;
 import com.atex.desk.api.auth.PasswordService;
+import com.atex.desk.api.auth.RateLimiter;
 import com.atex.desk.api.auth.TokenService;
 import com.atex.desk.api.dto.CredentialsDto;
 import com.atex.desk.api.dto.ErrorResponseDto;
@@ -17,9 +18,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,6 +46,9 @@ public class SecurityController
     /** How long before expiry the token can be renewed (matches Polopoly sessionKeyRenewalTime default). */
     private static final Duration RENEWAL_WINDOW = Duration.ofHours(12);
 
+    /** Rate limiter: login attempts per IP per minute (matches mytype-new default of 10). */
+    private final RateLimiter loginRateLimiter;
+
     private final TokenService tokenService;
     private final AppUserRepository userRepository;
     private final PasswordService passwordService;
@@ -52,8 +59,10 @@ public class SecurityController
                               AppUserRepository userRepository,
                               PasswordService passwordService,
                               @Nullable LdapAuthService ldapAuthService,
-                              @Nullable CognitoAuthService cognitoAuthService)
+                              @Nullable CognitoAuthService cognitoAuthService,
+                              @Value("${desk.security.login.rate-limit:10}") int loginRateLimit)
     {
+        this.loginRateLimiter = new RateLimiter(loginRateLimit, Duration.ofMinutes(1));
         this.tokenService = tokenService;
         this.userRepository = userRepository;
         this.passwordService = passwordService;
@@ -73,8 +82,18 @@ public class SecurityController
                  content = @Content(schema = @Schema(implementation = TokenResponseDto.class)))
     @ApiResponse(responseCode = "401", description = "Authentication failed",
                  content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
-    public ResponseEntity<?> acquireToken(@RequestBody CredentialsDto credentials)
+    public ResponseEntity<?> acquireToken(@RequestBody CredentialsDto credentials,
+                                            HttpServletRequest request)
     {
+        // Rate limit by IP
+        String clientIp = getClientIp(request);
+        if (!loginRateLimiter.tryAcquire(clientIp))
+        {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", "60")
+                .body(new ErrorResponseDto(HttpStatus.TOO_MANY_REQUESTS, "Too many login attempts. Try again later."));
+        }
+
         if (credentials.getUsername() == null || credentials.getUsername().isBlank())
         {
             return ResponseEntity.badRequest()
@@ -322,6 +341,22 @@ public class SecurityController
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    private String getClientIp(HttpServletRequest request)
+    {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank())
+        {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+
+    @Scheduled(fixedRate = 120_000)
+    void cleanupRateLimiter()
+    {
+        loginRateLimiter.cleanup();
     }
 
     private DecodedToken decodeTokenSafe(String token)

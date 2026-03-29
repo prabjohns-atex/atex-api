@@ -23,7 +23,8 @@ import java.util.Map;
  * Uses a single shared MySQL Testcontainer across all test classes (singleton pattern).
  * The container starts once and stays alive for the entire test suite.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "desk.security.login.rate-limit=10000")
 @ActiveProfiles("itest")
 public abstract class BaseIntegrationTest {
 
