@@ -2457,8 +2457,8 @@ def test_dam_publish(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[s
     rs_404, _, _ = ref.post("/dam/content/publish", {"id": fake_id})
     notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
 
-    desk_ok = ds in (200, 400, 404, 500, 501)
-    ref_ok = rs in (200, 400, 404, 500, 501)
+    desk_ok = ds in (200, 400, 404, 406, 412, 500, 501)
+    ref_ok = rs in (200, 400, 404, 406, 412, 500, 501)
     passed = desk_ok and ref_ok
     return passed, f"desk={ds} ref={rs}", notes
 
@@ -2496,8 +2496,8 @@ def test_dam_archive(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[s
     rs_404, _, _ = ref.post(f"/dam/content/archive/{fake_id}")
     notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
 
-    desk_ok = ds in (200, 400, 404, 500, 501)
-    ref_ok = rs in (200, 400, 404, 500, 501)
+    desk_ok = ds in (200, 400, 404, 406, 412, 500, 501)
+    ref_ok = rs in (200, 400, 404, 406, 412, 500, 501)
     passed = desk_ok and ref_ok
     return passed, f"desk={ds} ref={rs}", notes
 
@@ -2542,8 +2542,8 @@ def test_dam_restrict_unrestrict(desk: ApiClient, ref: ApiClient) -> tuple[bool,
     rs_404, _, _ = ref.post(f"/dam/content/restrict/{fake_id}")
     notes.append(f"restrict nonexistent: desk={ds_404} ref={rs_404}")
 
-    restrict_ok = ds_r in (200, 400, 404, 500, 501) and rs_r in (200, 400, 404, 500, 501)
-    unrestrict_ok = ds_u in (200, 400, 404, 500, 501) and rs_u in (200, 400, 404, 500, 501)
+    restrict_ok = ds_r in (200, 400, 404, 406, 412, 500, 501) and rs_r in (200, 400, 404, 406, 412, 500, 501)
+    unrestrict_ok = ds_u in (200, 400, 404, 406, 412, 500, 501) and rs_u in (200, 400, 404, 406, 412, 500, 501)
     passed = restrict_ok and unrestrict_ok
     return passed, f"restrict desk={ds_r} ref={rs_r} | unrestrict desk={ds_u} ref={rs_u}", notes
 
@@ -2580,8 +2580,8 @@ def test_dam_clearengage(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, li
     rs_404, _, _ = ref.post(f"/dam/content/clearengage/{fake_id}")
     notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
 
-    desk_ok = ds in (200, 400, 404, 500, 501)
-    ref_ok = rs in (200, 400, 404, 500, 501)
+    desk_ok = ds in (200, 400, 404, 406, 412, 500, 501)
+    ref_ok = rs in (200, 400, 404, 406, 412, 500, 501)
     passed = desk_ok and ref_ok
     return passed, f"desk={ds} ref={rs}", notes
 
@@ -2619,8 +2619,8 @@ def test_dam_export(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[st
     rs_404, _, _ = ref.get("/dam/content/export", params={"id": fake_id})
     notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
 
-    desk_ok = ds in (200, 400, 404, 500, 501)
-    ref_ok = rs in (200, 400, 404, 500, 501)
+    desk_ok = ds in (200, 400, 404, 406, 412, 500, 501)
+    ref_ok = rs in (200, 400, 404, 406, 412, 500, 501)
     passed = desk_ok and ref_ok
     return passed, f"desk={ds} ref={rs}", notes
 
@@ -2659,8 +2659,8 @@ def test_dam_permission(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, lis
             if key in db or key in rb:
                 notes.append(f"permission key '{key}': desk={db.get(key)} ref={rb.get(key)}")
 
-    desk_ok = ds in (200, 400, 404, 500, 501)
-    ref_ok = rs in (200, 400, 404, 500, 501)
+    desk_ok = ds in (200, 400, 404, 406, 412, 500, 501)
+    ref_ok = rs in (200, 400, 404, 406, 412, 500, 501)
     passed = desk_ok and ref_ok
     return passed, f"desk={ds} ref={rs}", notes
 

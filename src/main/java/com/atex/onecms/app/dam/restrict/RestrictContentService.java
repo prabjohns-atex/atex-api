@@ -126,7 +126,7 @@ public class RestrictContentService {
 
     private Optional<Configuration> getConfigurationFromResult(ContentResult<Object> cr,
             Function<String, Optional<Configuration>> resolver) {
-        InsertionInfoAspectBean insBean = cr.getContent().getAspectData(InsertionInfoAspectBean.ASPECT_NAME);
+        InsertionInfoAspectBean insBean = castOrNull(cr.getContent().getAspectData(InsertionInfoAspectBean.ASPECT_NAME), InsertionInfoAspectBean.class);
         if (insBean == null) return Optional.empty();
         return Stream.of(insBean.getSecurityParentId(), parseContentId(insBean.getInsertParentId()))
             .filter(Objects::nonNull)
@@ -156,9 +156,14 @@ public class RestrictContentService {
         ContentResult<Object> cr = contentManager.get(versionId, Object.class, subject);
         if (!cr.getStatus().isSuccess()) return cr;
 
-        InsertionInfoAspectBean insBean = cr.getContent().getAspectData(InsertionInfoAspectBean.ASPECT_NAME);
-        if (insBean == null) {
+        Object rawIns = cr.getContent().getAspectData(InsertionInfoAspectBean.ASPECT_NAME);
+        if (rawIns == null) {
             LOG.warn("Missing InsertionInfoAspectBean for: {}", IdUtil.toIdString(contentId));
+            return ContentResult.<Object>status(Status.PRECONDITION_FAILED).build();
+        }
+        // The aspect may come back as a LinkedHashMap if not type-resolved
+        if (!(rawIns instanceof InsertionInfoAspectBean)) {
+            LOG.warn("InsertionInfoAspectBean is not typed (is {}) for: {}", rawIns.getClass().getSimpleName(), IdUtil.toIdString(contentId));
             return ContentResult.<Object>status(Status.PRECONDITION_FAILED).build();
         }
         return cr;
