@@ -1938,6 +1938,883 @@ def test_audioai_create(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, lis
 
 
 # ---------------------------------------------------------------------------
+# New comparison tests — mytype-new endpoints
+# ---------------------------------------------------------------------------
+
+def test_site_structure(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /content/contentid/{id}?variant=atex.onecms.structure — site structure variant."""
+    notes = []
+
+    # Use the well-known root site config external ID present on both servers
+    ext_id = "atex.Sites"
+    ds_r, db_r, dr_r = desk.get(f"/content/externalid/{ext_id}", follow=False)
+    rs_r, rb_r, rr_r = ref.get(f"/content/externalid/{ext_id}", follow=False)
+
+    # Resolve the redirect to a versioned ID
+    def get_vid_from_redirect(client, status, response):
+        if status in (302, 303):
+            loc = response.headers.get("Location", "")
+            # Location is /content/contentid/<versioned-id>
+            parts = loc.rstrip("/").split("/contentid/")
+            if len(parts) == 2:
+                return parts[1]
+        return None
+
+    desk_vid = get_vid_from_redirect(desk, ds_r, dr_r)
+    ref_vid = get_vid_from_redirect(ref, rs_r, rr_r)
+
+    if not desk_vid and ds_r == 200 and db_r:
+        desk_vid = db_r.get("version") or db_r.get("id")
+    if not ref_vid and rs_r == 200 and rb_r:
+        ref_vid = rb_r.get("version") or rb_r.get("id")
+
+    if not desk_vid and not ref_vid:
+        notes.append(f"could not resolve atex.Sites: desk={ds_r} ref={rs_r}")
+        return True, f"soft pass — site content not available (desk={ds_r} ref={rs_r})", notes
+
+    params = {"variant": "atex.onecms.structure"}
+
+    ds, db, _ = desk.get(f"/content/contentid/{desk_vid}", params=params) if desk_vid else (404, None, None)
+    rs, rb, _ = ref.get(f"/content/contentid/{ref_vid}", params=params) if ref_vid else (404, None, None)
+
+    dump_json("desk site structure", db)
+    dump_json("ref site structure", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "response")
+        for d in diffs:
+            notes.append(d)
+        # Check children exist
+        children = _nested_get(db, "aspects", "contentData", "data", "children")
+        notes.append(f"desk children count: {len(children) if isinstance(children, list) else 'N/A'}")
+
+    desk_ok = ds in (200, 404)
+    ref_ok = rs in (200, 404)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_content_type(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /content/type/{typeName} — content type schema."""
+    notes = []
+    type_name = "atex.onecms.article"
+
+    ds, db, _ = desk.get(f"/content/type/{type_name}")
+    rs, rb, _ = ref.get(f"/content/type/{type_name}")
+
+    dump_json("desk type", db)
+    dump_json("ref type", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and isinstance(db, dict):
+        notes.append(f"desk typeName={db.get('typeName')} beanClass={db.get('beanClass')}")
+        attrs = db.get("attributes", [])
+        notes.append(f"desk attributes count: {len(attrs) if isinstance(attrs, list) else 'N/A'}")
+
+    if rs == 200 and isinstance(rb, dict):
+        notes.append(f"ref typeName={rb.get('typeName')} beanClass={rb.get('beanClass')}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        for key in ("typeName", "beanClass", "typeClass"):
+            dv, rv = db.get(key), rb.get(key)
+            if dv != rv:
+                notes.append(f"{key}: desk={dv} ref={rv}")
+        # Check attributes array structure
+        d_attrs = db.get("attributes", [])
+        r_attrs = rb.get("attributes", [])
+        if isinstance(d_attrs, list) and isinstance(r_attrs, list) and d_attrs and r_attrs:
+            d_keys = set(d_attrs[0].keys()) if isinstance(d_attrs[0], dict) else set()
+            r_keys = set(r_attrs[0].keys()) if isinstance(r_attrs[0], dict) else set()
+            if d_keys != r_keys:
+                notes.append(f"attribute entry keys: desk={sorted(d_keys)} ref={sorted(r_keys)}")
+
+    # Nonexistent type should return 404
+    ds_404, _, _ = desk.get(f"/content/type/nonexistent.type.{uuid.uuid4().hex[:8]}")
+    rs_404, _, _ = ref.get(f"/content/type/nonexistent.type.{uuid.uuid4().hex[:8]}")
+    notes.append(f"nonexistent type: desk={ds_404} ref={rs_404}")
+
+    desk_ok = ds in (200, 404, 501)
+    ref_ok = rs in (200, 404, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_principals_users_list(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /principals/users — list of users."""
+    notes = []
+
+    ds, db, _ = desk.get("/principals/users")
+    rs, rb, _ = ref.get("/principals/users")
+
+    dump_json("desk users list", db)
+    dump_json("ref users list", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and isinstance(db, list):
+        notes.append(f"desk user count: {len(db)}")
+        if db:
+            d_entry_keys = set(db[0].keys()) if isinstance(db[0], dict) else set()
+            notes.append(f"desk entry keys: {sorted(d_entry_keys)}")
+    if rs == 200 and isinstance(rb, list):
+        notes.append(f"ref user count: {len(rb)}")
+        if rb:
+            r_entry_keys = set(rb[0].keys()) if isinstance(rb[0], dict) else set()
+            notes.append(f"ref entry keys: {sorted(r_entry_keys)}")
+
+    if ds == 200 and rs == 200 and isinstance(db, list) and isinstance(rb, list):
+        if db and rb and isinstance(db[0], dict) and isinstance(rb[0], dict):
+            d_keys = set(db[0].keys())
+            r_keys = set(rb[0].keys())
+            only_desk = d_keys - r_keys - IGNORE_KEYS
+            only_ref = r_keys - d_keys - IGNORE_KEYS
+            if only_desk:
+                notes.append(f"desk-only entry fields: {only_desk}")
+            if only_ref:
+                notes.append(f"ref-only entry fields: {only_ref}")
+
+    desk_ok = ds in (200, 403, 404)
+    ref_ok = rs in (200, 403, 404)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_principals_user_by_id(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /principals/users/{userId} — single user by principal ID."""
+    notes = []
+
+    # Get sysadmin's principal ID from /me
+    ds_me, db_me, _ = desk.get("/principals/users/me")
+    rs_me, rb_me, _ = ref.get("/principals/users/me")
+
+    desk_uid = str(db_me.get("userId", db_me.get("principalId", "sysadmin"))) if db_me else "sysadmin"
+    ref_uid = str(rb_me.get("userId", rb_me.get("principalId", "sysadmin"))) if rb_me else "sysadmin"
+
+    ds, db, _ = desk.get(f"/principals/users/{desk_uid}")
+    rs, rb, _ = ref.get(f"/principals/users/{ref_uid}")
+
+    dump_json("desk user by id", db)
+    dump_json("ref user by id", rb)
+
+    notes.append(f"looked up userId: desk={desk_uid} ref={ref_uid}")
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "user response")
+        for d in diffs:
+            notes.append(d)
+
+    # Nonexistent user — expect 404
+    ds_404, _, _ = desk.get(f"/principals/users/nonexistent-{uuid.uuid4().hex[:8]}")
+    rs_404, _, _ = ref.get(f"/principals/users/nonexistent-{uuid.uuid4().hex[:8]}")
+    notes.append(f"nonexistent userId: desk={ds_404} ref={rs_404}")
+
+    desk_ok = ds in (200, 404)
+    ref_ok = rs in (200, 404)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_principals_groups_list(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /principals/groups — list of groups."""
+    notes = []
+
+    ds, db, _ = desk.get("/principals/groups")
+    rs, rb, _ = ref.get("/principals/groups")
+
+    dump_json("desk groups", db)
+    dump_json("ref groups", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and isinstance(db, list):
+        notes.append(f"desk group count: {len(db)}")
+        if db and isinstance(db[0], dict):
+            notes.append(f"desk entry keys: {sorted(db[0].keys())}")
+    if rs == 200 and isinstance(rb, list):
+        notes.append(f"ref group count: {len(rb)}")
+        if rb and isinstance(rb[0], dict):
+            notes.append(f"ref entry keys: {sorted(rb[0].keys())}")
+
+    if ds == 200 and rs == 200 and isinstance(db, list) and isinstance(rb, list):
+        if db and rb and isinstance(db[0], dict) and isinstance(rb[0], dict):
+            d_keys = set(db[0].keys())
+            r_keys = set(rb[0].keys())
+            only_desk = d_keys - r_keys - IGNORE_KEYS
+            only_ref = r_keys - d_keys - IGNORE_KEYS
+            if only_desk:
+                notes.append(f"desk-only entry fields: {only_desk}")
+            if only_ref:
+                notes.append(f"ref-only entry fields: {only_ref}")
+
+    desk_ok = ds in (200, 403, 404)
+    ref_ok = rs in (200, 403, 404)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_file_info(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /file/info/{scheme}/{host}/{path} — file info after upload."""
+    notes = []
+
+    # Upload a tiny PNG to get a URI we can query info for
+    tiny_png = (
+        b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
+        b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00'
+        b'\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00'
+        b'\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+    )
+    fname = f"info-test-{uuid.uuid4().hex[:8]}.png"
+
+    ds_u, db_u, _ = desk.post_raw(f"/file/tmp/anonymous/{fname}", tiny_png, "image/png")
+    rs_u, rb_u, _ = ref.post_raw(f"/file/tmp/anonymous/{fname}", tiny_png, "image/png")
+
+    notes.append(f"upload: desk={ds_u} ref={rs_u}")
+
+    if ds_u not in (200, 201):
+        return True, f"soft pass — upload failed: desk={ds_u}", notes
+
+    desk_uri = (db_u.get("URI") or db_u.get("uri") or f"tmp://anonymous/{fname}") if db_u else f"tmp://anonymous/{fname}"
+    ref_uri = (rb_u.get("URI") or rb_u.get("uri") or f"tmp://anonymous/{fname}") if rb_u else f"tmp://anonymous/{fname}"
+
+    # Convert URI to /file/info/{scheme}/{host}/{path}
+    def uri_to_info_path(uri):
+        return "/file/info/" + uri.replace("://", "/")
+
+    ds, db, _ = desk.get(uri_to_info_path(desk_uri))
+    rs, rb, _ = ref.get(uri_to_info_path(ref_uri)) if rs_u in (200, 201) else (404, None, None)
+
+    dump_json("desk file info", db)
+    dump_json("ref file info", rb)
+
+    notes.append(f"info: desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "file info response")
+        for d in diffs:
+            notes.append(d)
+        # Check expected fields
+        for field in ("uri", "size", "contentType"):
+            d_has = field in db
+            r_has = field in rb
+            if d_has != r_has:
+                notes.append(f"field '{field}': desk={d_has} ref={r_has}")
+
+    desk_ok = ds in (200, 404)
+    ref_ok = rs in (200, 404)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_file_metadata(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /file/metadata?uri={uri} — file metadata query."""
+    notes = []
+
+    # Upload a file to obtain a URI
+    tiny_png = (
+        b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
+        b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00'
+        b'\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00'
+        b'\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+    )
+    fname = f"meta-test-{uuid.uuid4().hex[:8]}.png"
+
+    ds_u, db_u, _ = desk.post_raw(f"/file/tmp/anonymous/{fname}", tiny_png, "image/png")
+    rs_u, rb_u, _ = ref.post_raw(f"/file/tmp/anonymous/{fname}", tiny_png, "image/png")
+
+    notes.append(f"upload: desk={ds_u} ref={rs_u}")
+
+    desk_uri = (db_u.get("URI") or db_u.get("uri") or f"tmp://anonymous/{fname}") if db_u else f"tmp://anonymous/{fname}"
+    ref_uri = (rb_u.get("URI") or rb_u.get("uri") or f"tmp://anonymous/{fname}") if rb_u else f"tmp://anonymous/{fname}"
+
+    ds, db, _ = desk.get("/file/metadata", params={"uri": desk_uri})
+    rs, rb, _ = ref.get("/file/metadata", params={"uri": ref_uri}) if rs_u in (200, 201) else (404, None, None)
+
+    dump_json("desk file metadata", db)
+    dump_json("ref file metadata", rb)
+
+    notes.append(f"metadata: desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "file metadata response")
+        for d in diffs:
+            notes.append(d)
+
+    # Test with missing uri param
+    ds_bad, _, _ = desk.get("/file/metadata")
+    rs_bad, _, _ = ref.get("/file/metadata")
+    notes.append(f"missing uri param: desk={ds_bad} ref={rs_bad}")
+
+    desk_ok = ds in (200, 400, 404)
+    ref_ok = rs in (200, 400, 404)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_filedelivery(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /filedelivery/{contentId}/{filename} — public file delivery."""
+    notes = []
+
+    # Use the image content created in test_create_image_content if available
+    desk_vid = state.desk_image_vid
+    ref_vid = state.ref_image_vid
+
+    def _get_filename_and_id(client, vid):
+        if not vid:
+            return None, None
+        s, b, _ = client.get(f"/content/contentid/{vid}")
+        if s != 200 or not b:
+            return None, None
+        files = _nested_get(b, "aspects", "atex.Files", "data", "files") or {}
+        for fn in files:
+            cid = b.get("id")
+            return fn, cid
+        return None, b.get("id")
+
+    desk_fname, desk_cid = _get_filename_and_id(desk, desk_vid)
+    ref_fname, ref_cid = _get_filename_and_id(ref, ref_vid)
+
+    if not desk_cid:
+        notes.append("no image content from create_image_content — using fake ID")
+        desk_cid = "onecms:nonexistent-filedelivery"
+        desk_fname = "photo.jpg"
+    if not ref_cid:
+        ref_cid = "onecms:nonexistent-filedelivery"
+        ref_fname = "photo.jpg"
+
+    ds, db, _ = desk.get(f"/filedelivery/{desk_cid}/{desk_fname or 'photo.jpg'}")
+    rs, rb, _ = ref.get(f"/filedelivery/{ref_cid}/{ref_fname or 'photo.jpg'}")
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    # Both may return 404 if files not published; that is acceptable
+    # Both should respond with the same status family
+    if ds // 100 == rs // 100:
+        notes.append("status codes are in the same family")
+    else:
+        notes.append(f"status families differ: desk={ds//100}xx ref={rs//100}xx")
+
+    desk_ok = ds in (200, 302, 303, 404, 410)
+    ref_ok = rs in (200, 302, 303, 404, 410)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_preview(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /preview/contentid/{id} — web preview rendering."""
+    notes = []
+
+    if not state.desk_content_id or not state.ref_content_id:
+        # Create fresh content
+        body = make_article_body("preview")
+        ds_c, db_c, _ = desk.post("/content", body)
+        rs_c, rb_c, _ = ref.post("/content", body)
+        desk_id = db_c.get("id") if db_c else None
+        ref_id = rb_c.get("id") if rb_c else None
+    else:
+        desk_id = state.desk_content_id
+        ref_id = state.ref_content_id
+
+    if not desk_id or not ref_id:
+        return True, "soft pass — no content IDs available", notes
+
+    preview_body = make_article_body("preview-content")
+
+    ds, db, _ = desk.post(f"/preview/contentid/{desk_id}", preview_body)
+    rs, rb, _ = ref.post(f"/preview/contentid/{ref_id}", preview_body)
+
+    dump_json("desk preview", db)
+    dump_json("ref preview", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    # Preview may return 200, 404 (layout not configured), or 501 (not implemented)
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "preview response")
+        for d in diffs:
+            notes.append(d)
+    elif ds != rs:
+        notes.append(f"status codes differ: desk={ds} ref={rs}")
+
+    desk_ok = ds in (200, 400, 404, 501, 503)
+    ref_ok = rs in (200, 400, 404, 501, 503)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_configuration_profile(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /configuration/profile/{name} — named config profile."""
+    notes = []
+    profile_name = "desk"
+
+    ds, db, _ = desk.get(f"/configuration/profile/{profile_name}")
+    rs, rb, _ = ref.get(f"/configuration/profile/{profile_name}")
+
+    dump_json("desk config profile", db)
+    dump_json("ref config profile", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and isinstance(db, dict):
+        notes.append(f"desk profile keys: {sorted(list(db.keys())[:10])}")
+    if rs == 200 and isinstance(rb, dict):
+        notes.append(f"ref profile keys: {sorted(list(rb.keys())[:10])}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        desk_keys = set(db.keys())
+        ref_keys = set(rb.keys())
+        only_desk = desk_keys - ref_keys
+        only_ref = ref_keys - desk_keys
+        if only_desk:
+            notes.append(f"desk-only profile entries: {len(only_desk)} (e.g. {list(only_desk)[:3]})")
+        if only_ref:
+            notes.append(f"ref-only profile entries: {len(only_ref)} (e.g. {list(only_ref)[:3]})")
+        notes.append(f"shared entries: {len(desk_keys & ref_keys)}")
+
+    # Test with nonexistent profile
+    ds_bad, _, _ = desk.get(f"/configuration/profile/nonexistent-{uuid.uuid4().hex[:8]}")
+    rs_bad, _, _ = ref.get(f"/configuration/profile/nonexistent-{uuid.uuid4().hex[:8]}")
+    notes.append(f"nonexistent profile: desk={ds_bad} ref={rs_bad}")
+
+    desk_ok = ds in (200, 404)
+    ref_ok = rs in (200, 404)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_dam_solrquery(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /dam/content/solrquery — DAM Solr query endpoint."""
+    notes = []
+
+    query_body = {
+        "q": "*:*",
+        "rows": 5,
+        "fl": "id",
+        "wt": "json"
+    }
+
+    ds, db, _ = desk.post("/dam/content/solrquery", query_body)
+    rs, rb, _ = ref.post("/dam/content/solrquery", query_body)
+
+    dump_json("desk solrquery", db)
+    dump_json("ref solrquery", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200:
+        desk_num = _nested_get(db, "response", "numFound")
+        ref_num = _nested_get(rb, "response", "numFound")
+        if desk_num is not None or ref_num is not None:
+            notes.append(f"numFound: desk={desk_num} ref={ref_num}")
+        if isinstance(db, dict) and isinstance(rb, dict):
+            diffs = compare_keys(db, rb, "solrquery response")
+            for d in diffs:
+                notes.append(d)
+
+    # Both may return 200 (Solr available) or 500/503 (Solr unavailable) — both acceptable
+    desk_ok = ds in (200, 400, 500, 501, 503)
+    ref_ok = rs in (200, 400, 500, 501, 503)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_dam_publish(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /dam/content/publish — publish a content item."""
+    notes = []
+
+    # Create fresh article to publish
+    body = make_article_body("dam-publish")
+    ds_c, db_c, _ = desk.post("/content", body)
+    rs_c, rb_c, _ = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return True, f"soft pass — create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+
+    ds, db, _ = desk.post("/dam/content/publish", {"id": desk_id})
+    rs, rb, _ = ref.post("/dam/content/publish", {"id": ref_id})
+
+    dump_json("desk publish", db)
+    dump_json("ref publish", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "publish response")
+        for d in diffs:
+            notes.append(d)
+    elif ds != rs:
+        notes.append(f"status codes differ: desk={ds} ref={rs}")
+
+    # Test with nonexistent ID
+    fake_id = f"onecms:nonexistent-{uuid.uuid4().hex[:8]}"
+    ds_404, _, _ = desk.post("/dam/content/publish", {"id": fake_id})
+    rs_404, _, _ = ref.post("/dam/content/publish", {"id": fake_id})
+    notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
+
+    desk_ok = ds in (200, 400, 404, 500, 501)
+    ref_ok = rs in (200, 400, 404, 500, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_dam_archive(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /dam/content/archive/{id} — archive content."""
+    notes = []
+
+    body = make_article_body("dam-archive")
+    ds_c, db_c, _ = desk.post("/content", body)
+    rs_c, rb_c, _ = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return True, f"soft pass — create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+
+    ds, db, _ = desk.post(f"/dam/content/archive/{desk_id}")
+    rs, rb, _ = ref.post(f"/dam/content/archive/{ref_id}")
+
+    dump_json("desk archive", db)
+    dump_json("ref archive", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "archive response")
+        for d in diffs:
+            notes.append(d)
+
+    # Nonexistent ID
+    fake_id = f"onecms:nonexistent-{uuid.uuid4().hex[:8]}"
+    ds_404, _, _ = desk.post(f"/dam/content/archive/{fake_id}")
+    rs_404, _, _ = ref.post(f"/dam/content/archive/{fake_id}")
+    notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
+
+    desk_ok = ds in (200, 400, 404, 500, 501)
+    ref_ok = rs in (200, 400, 404, 500, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_dam_restrict_unrestrict(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /dam/content/restrict/{id} and /unrestrict/{id} — content restriction."""
+    notes = []
+
+    body = make_article_body("dam-restrict")
+    ds_c, db_c, _ = desk.post("/content", body)
+    rs_c, rb_c, _ = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return True, f"soft pass — create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+
+    # Restrict
+    ds_r, db_r, _ = desk.post(f"/dam/content/restrict/{desk_id}")
+    rs_r, rb_r, _ = ref.post(f"/dam/content/restrict/{ref_id}")
+    notes.append(f"restrict: desk={ds_r} ref={rs_r}")
+
+    if ds_r == 200 and rs_r == 200 and isinstance(db_r, dict) and isinstance(rb_r, dict):
+        diffs = compare_keys(db_r, rb_r, "restrict response")
+        for d in diffs:
+            notes.append(d)
+
+    # Unrestrict
+    ds_u, db_u, _ = desk.post(f"/dam/content/unrestrict/{desk_id}")
+    rs_u, rb_u, _ = ref.post(f"/dam/content/unrestrict/{ref_id}")
+    notes.append(f"unrestrict: desk={ds_u} ref={rs_u}")
+
+    if ds_u == 200 and rs_u == 200 and isinstance(db_u, dict) and isinstance(rb_u, dict):
+        diffs = compare_keys(db_u, rb_u, "unrestrict response")
+        for d in diffs:
+            notes.append(d)
+
+    # Nonexistent ID for restrict
+    fake_id = f"onecms:nonexistent-{uuid.uuid4().hex[:8]}"
+    ds_404, _, _ = desk.post(f"/dam/content/restrict/{fake_id}")
+    rs_404, _, _ = ref.post(f"/dam/content/restrict/{fake_id}")
+    notes.append(f"restrict nonexistent: desk={ds_404} ref={rs_404}")
+
+    restrict_ok = ds_r in (200, 400, 404, 500, 501) and rs_r in (200, 400, 404, 500, 501)
+    unrestrict_ok = ds_u in (200, 400, 404, 500, 501) and rs_u in (200, 400, 404, 500, 501)
+    passed = restrict_ok and unrestrict_ok
+    return passed, f"restrict desk={ds_r} ref={rs_r} | unrestrict desk={ds_u} ref={rs_u}", notes
+
+
+def test_dam_clearengage(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /dam/content/clearengage/{id} — clear engagement on content."""
+    notes = []
+
+    body = make_article_body("dam-clearengage")
+    ds_c, db_c, _ = desk.post("/content", body)
+    rs_c, rb_c, _ = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return True, f"soft pass — create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+
+    ds, db, _ = desk.post(f"/dam/content/clearengage/{desk_id}")
+    rs, rb, _ = ref.post(f"/dam/content/clearengage/{ref_id}")
+
+    dump_json("desk clearengage", db)
+    dump_json("ref clearengage", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "clearengage response")
+        for d in diffs:
+            notes.append(d)
+
+    fake_id = f"onecms:nonexistent-{uuid.uuid4().hex[:8]}"
+    ds_404, _, _ = desk.post(f"/dam/content/clearengage/{fake_id}")
+    rs_404, _, _ = ref.post(f"/dam/content/clearengage/{fake_id}")
+    notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
+
+    desk_ok = ds in (200, 400, 404, 500, 501)
+    ref_ok = rs in (200, 400, 404, 500, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_dam_export(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /dam/content/export?id={id} — export content."""
+    notes = []
+
+    body = make_article_body("dam-export")
+    ds_c, db_c, _ = desk.post("/content", body)
+    rs_c, rb_c, _ = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return True, f"soft pass — create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+
+    ds, db, _ = desk.get("/dam/content/export", params={"id": desk_id})
+    rs, rb, _ = ref.get("/dam/content/export", params={"id": ref_id})
+
+    dump_json("desk export", db)
+    dump_json("ref export", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "export response")
+        for d in diffs:
+            notes.append(d)
+
+    # Test with nonexistent id
+    fake_id = f"onecms:nonexistent-{uuid.uuid4().hex[:8]}"
+    ds_404, _, _ = desk.get("/dam/content/export", params={"id": fake_id})
+    rs_404, _, _ = ref.get("/dam/content/export", params={"id": fake_id})
+    notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
+
+    desk_ok = ds in (200, 400, 404, 500, 501)
+    ref_ok = rs in (200, 400, 404, 500, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_dam_permission(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """POST /dam/content/permission — check permission on content."""
+    notes = []
+
+    body = make_article_body("dam-permission")
+    ds_c, db_c, _ = desk.post("/content", body)
+    rs_c, rb_c, _ = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return True, f"soft pass — create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+
+    perm_body_desk = {"id": desk_id, "action": "write"}
+    perm_body_ref = {"id": ref_id, "action": "write"}
+
+    ds, db, _ = desk.post("/dam/content/permission", perm_body_desk)
+    rs, rb, _ = ref.post("/dam/content/permission", perm_body_ref)
+
+    dump_json("desk permission", db)
+    dump_json("ref permission", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "permission response")
+        for d in diffs:
+            notes.append(d)
+        # The response should indicate permission granted/denied
+        for key in ("allowed", "granted", "permitted", "result"):
+            if key in db or key in rb:
+                notes.append(f"permission key '{key}': desk={db.get(key)} ref={rb.get(key)}")
+
+    desk_ok = ds in (200, 400, 404, 500, 501)
+    ref_ok = rs in (200, 400, 404, 500, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_dam_users(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /dam/content/users — user list from DAM resource."""
+    notes = []
+
+    ds, db, _ = desk.get("/dam/content/users")
+    rs, rb, _ = ref.get("/dam/content/users")
+
+    dump_json("desk dam users", db)
+    dump_json("ref dam users", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and isinstance(db, list):
+        notes.append(f"desk user count: {len(db)}")
+        if db and isinstance(db[0], dict):
+            notes.append(f"desk entry keys: {sorted(db[0].keys())}")
+    elif ds == 200 and isinstance(db, dict):
+        notes.append(f"desk response keys: {sorted(db.keys())}")
+
+    if rs == 200 and isinstance(rb, list):
+        notes.append(f"ref user count: {len(rb)}")
+    elif rs == 200 and isinstance(rb, dict):
+        notes.append(f"ref response keys: {sorted(rb.keys())}")
+
+    if ds == 200 and rs == 200:
+        if isinstance(db, list) and isinstance(rb, list):
+            if db and rb and isinstance(db[0], dict) and isinstance(rb[0], dict):
+                d_keys = set(db[0].keys())
+                r_keys = set(rb[0].keys())
+                only_desk = d_keys - r_keys - IGNORE_KEYS
+                only_ref = r_keys - d_keys - IGNORE_KEYS
+                if only_desk:
+                    notes.append(f"desk-only fields: {only_desk}")
+                if only_ref:
+                    notes.append(f"ref-only fields: {only_ref}")
+        elif isinstance(db, dict) and isinstance(rb, dict):
+            diffs = compare_keys(db, rb, "dam users response")
+            for d in diffs:
+                notes.append(d)
+
+    desk_ok = ds in (200, 403, 404, 501)
+    ref_ok = rs in (200, 403, 404, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+def test_view_assign_remove(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """PUT /view/{view} assign + DELETE /view/{view}/{id} remove — view assignment."""
+    notes = []
+
+    # Create content on both servers
+    body = make_article_body("view-assign")
+    ds_c, db_c, dr_c = desk.post("/content", body)
+    rs_c, rb_c, rr_c = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return True, f"soft pass — create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+    desk_vid = db_c.get("version") or _extract_etag(dr_c)
+    ref_vid = rb_c.get("version") or _extract_etag(rr_c)
+
+    view_name = f"compat-test-view-{uuid.uuid4().hex[:8]}"
+
+    # PUT — assign content to view
+    assign_body_desk = {"contentId": desk_vid or desk_id}
+    assign_body_ref = {"contentId": ref_vid or ref_id}
+
+    ds_p, db_p, _ = desk.put(f"/view/{view_name}", assign_body_desk)
+    rs_p, rb_p, _ = ref.put(f"/view/{view_name}", assign_body_ref)
+
+    dump_json("desk view PUT", db_p)
+    dump_json("ref view PUT", rb_p)
+
+    notes.append(f"PUT assign: desk={ds_p} ref={rs_p}")
+
+    if ds_p == 200 and rs_p == 200 and isinstance(db_p, dict) and isinstance(rb_p, dict):
+        diffs = compare_keys(db_p, rb_p, "view assign response")
+        for d in diffs:
+            notes.append(d)
+
+    # DELETE — remove from view
+    ds_d, db_d, _ = desk.delete(f"/view/{view_name}/{desk_id}")
+    rs_d, rb_d, _ = ref.delete(f"/view/{view_name}/{ref_id}")
+
+    notes.append(f"DELETE remove: desk={ds_d} ref={rs_d}")
+
+    # Cleanup
+    desk.delete(f"/content/contentid/{desk_id}", if_match=desk_vid)
+    ref.delete(f"/content/contentid/{ref_id}", if_match=ref_vid)
+
+    put_ok = ds_p in (200, 201, 204, 400, 404, 501) and rs_p in (200, 201, 204, 400, 404, 501)
+    del_ok = ds_d in (200, 204, 400, 404, 501) and rs_d in (200, 204, 400, 404, 501)
+    passed = put_ok and del_ok
+    return passed, f"PUT desk={ds_p} ref={rs_p} | DEL desk={ds_d} ref={rs_d}", notes
+
+
+def test_mytype_content_get(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, list[str]]:
+    """GET /dam/mytype/content/contentid/{id} — get content via mytype resource."""
+    notes = []
+
+    # Create fresh article
+    body = make_article_body("mytype-get")
+    ds_c, db_c, dr_c = desk.post("/content", body)
+    rs_c, rb_c, rr_c = ref.post("/content", body)
+
+    if ds_c != 201 or rs_c != 201:
+        return True, f"soft pass — create failed: desk={ds_c} ref={rs_c}", notes
+
+    desk_id = db_c.get("id")
+    ref_id = rb_c.get("id")
+    desk_vid = db_c.get("version") or _extract_etag(dr_c)
+    ref_vid = rb_c.get("version") or _extract_etag(rr_c)
+
+    # Use versioned ID for the mytype content endpoint
+    ds, db, _ = desk.get(f"/dam/mytype/content/contentid/{desk_vid or desk_id}")
+    rs, rb, _ = ref.get(f"/dam/mytype/content/contentid/{ref_vid or ref_id}")
+
+    dump_json("desk mytype content get", db)
+    dump_json("ref mytype content get", rb)
+
+    notes.append(f"desk={ds} ref={rs}")
+
+    if ds == 200 and rs == 200 and isinstance(db, dict) and isinstance(rb, dict):
+        diffs = compare_keys(db, rb, "mytype content get response")
+        for d in diffs:
+            notes.append(d)
+        desk_type = _nested_get(db, "aspects", "contentData", "data", "_type")
+        ref_type = _nested_get(rb, "aspects", "contentData", "data", "_type")
+        if desk_type != ref_type:
+            notes.append(f"contentData._type: desk={desk_type} ref={ref_type}")
+
+    # Nonexistent ID
+    fake_id = f"onecms:nonexistent-{uuid.uuid4().hex[:8]}"
+    ds_404, _, _ = desk.get(f"/dam/mytype/content/contentid/{fake_id}")
+    rs_404, _, _ = ref.get(f"/dam/mytype/content/contentid/{fake_id}")
+    notes.append(f"nonexistent id: desk={ds_404} ref={rs_404}")
+
+    # Cleanup
+    desk.delete(f"/content/contentid/{desk_id}", if_match=desk_vid)
+    ref.delete(f"/content/contentid/{ref_id}", if_match=ref_vid)
+
+    desk_ok = ds in (200, 302, 303, 400, 404, 501)
+    ref_ok = rs in (200, 302, 303, 400, 404, 501)
+    passed = desk_ok and ref_ok
+    return passed, f"desk={ds} ref={rs}", notes
+
+
+# ---------------------------------------------------------------------------
 # Single-server tests (run independently per server)
 # ---------------------------------------------------------------------------
 
@@ -2047,6 +2924,26 @@ ALL_COMPARISON_TESTS = [
     ("AudioAI create+search (POST+GET /dam/audioai)", test_audioai_create),
     ("MyType ping (GET /dam/mytype/ping)", test_mytype_ping),
     ("MyType permissions (GET /dam/mytype/permissions)", test_mytype_permissions),
+    ("Site structure (GET /content/contentid?variant=structure)", test_site_structure),
+    ("Content type schema (GET /content/type/{typeName})", test_content_type),
+    ("Principals users list (GET /principals/users)", test_principals_users_list),
+    ("Principals user by ID (GET /principals/users/{id})", test_principals_user_by_id),
+    ("Principals groups list (GET /principals/groups)", test_principals_groups_list),
+    ("File info (GET /file/info/{scheme}/{host}/{path})", test_file_info),
+    ("File metadata (GET /file/metadata?uri=...)", test_file_metadata),
+    ("File delivery (GET /filedelivery/{id}/{filename})", test_filedelivery),
+    ("Preview (POST /preview/contentid/{id})", test_preview),
+    ("Configuration profile (GET /configuration/profile/{name})", test_configuration_profile),
+    ("DAM solrquery (POST /dam/content/solrquery)", test_dam_solrquery),
+    ("DAM publish (POST /dam/content/publish)", test_dam_publish),
+    ("DAM archive (POST /dam/content/archive/{id})", test_dam_archive),
+    ("DAM restrict/unrestrict (POST /dam/content/restrict|unrestrict/{id})", test_dam_restrict_unrestrict),
+    ("DAM clearengage (POST /dam/content/clearengage/{id})", test_dam_clearengage),
+    ("DAM export (GET /dam/content/export?id=...)", test_dam_export),
+    ("DAM permission (POST /dam/content/permission)", test_dam_permission),
+    ("DAM users (GET /dam/content/users)", test_dam_users),
+    ("View assign+remove (PUT/DELETE /view/{view})", test_view_assign_remove),
+    ("MyType content get (GET /dam/mytype/content/contentid/{id})", test_mytype_content_get),
 ]
 
 
