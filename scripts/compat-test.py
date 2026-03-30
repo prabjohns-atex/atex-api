@@ -778,8 +778,8 @@ def test_search_permission(desk: ApiClient, ref: ApiClient) -> tuple[bool, str, 
         return passed, f"desk={ds} ref={rs}", notes
 
     # The key check: permission=write must return results (not 0)
-    desk_num = _nested_get(db, "response", "numFound")
-    ref_num = _nested_get(rb, "response", "numFound")
+    desk_num = _safe_int(_nested_get(db, "response", "numFound"))
+    ref_num = _safe_int(_nested_get(rb, "response", "numFound"))
     notes.append(f"numFound: desk={desk_num} ref={ref_num}")
 
     if desk_num is not None and desk_num == 0:
@@ -2884,6 +2884,16 @@ def _nested_get(d, *keys):
         else:
             return None
     return d
+
+
+def _safe_int(val):
+    """Convert to int safely, returning None if not possible."""
+    if val is None:
+        return None
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return None
 
 
 # ---------------------------------------------------------------------------

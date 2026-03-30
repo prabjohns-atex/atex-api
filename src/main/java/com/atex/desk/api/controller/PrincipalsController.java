@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/principals")
@@ -136,7 +137,13 @@ public class PrincipalsController
         UserMeDto cached = cacheService.get(CACHE_USER_ME, userId);
         if (cached != null) return ResponseEntity.ok(cached);
 
-        return userRepository.findByLoginName(userId)
+        // Try loginName first, then fall back to principalId (numeric ID)
+        Optional<AppUser> userOpt = userRepository.findByLoginName(userId);
+        if (userOpt.isEmpty())
+        {
+            userOpt = userRepository.findByPrincipalId(userId);
+        }
+        return userOpt
             .<ResponseEntity<?>>map(user -> {
                 UserMeDto dto = buildUserMeDto(user);
                 cacheService.put(CACHE_USER_ME, userId, dto);
@@ -450,6 +457,9 @@ public class PrincipalsController
     private GroupDto toGroupDto(AppGroup group)
     {
         GroupDto dto = new GroupDto();
+        String gid = "group:" + group.getGroupId();
+        dto.setId(gid);
+        dto.setPrincipalId(gid);
         dto.setGroupId(group.getGroupId().toString());
         dto.setName(group.getName());
         if (group.getCreationTime() > 0)
