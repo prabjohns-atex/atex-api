@@ -1,36 +1,46 @@
 #!/usr/bin/env python3
 """
-Image service performance comparison: desk-image (Rust) vs legacy OneCMS image service.
+Image service performance & quality comparison:
+  desk-image (Rust sidecar) vs legacy OneCMS image service (Java).
 
-Uploads reference images, then benchmarks various image transformations
-(resize, crop, format conversion) on both servers.
+Uploads reference images to both servers, then benchmarks resize operations
+at specific widths and compares output quality using SSIM.
 
 Usage:
-    python scripts/image-perf-test.py                          # Default servers
-    python scripts/image-perf-test.py --desk http://localhost:8081 --ref http://localhost:48084/onecms
-    python scripts/image-perf-test.py -n 5                     # 5 iterations per test
-    python scripts/image-perf-test.py --report                 # Write CSV report
+    python scripts/image-perf-test.py                                    # defaults
+    python scripts/image-perf-test.py --ref http://localhost:48084/onecms
+    python scripts/image-perf-test.py -n 5                               # 5 iterations
+    python scripts/image-perf-test.py --report                           # CSV output
+    python scripts/image-perf-test.py --save-images                      # save outputs to disk
 
 Reference images in scripts/test-images/:
-    small-120kb.jpg  — 120KB JPEG (typical article thumbnail)
-    large-28mb.jpg   — 28MB JPEG (full-resolution press photo)
+    small-120kb.jpg  — 120KB (typical article thumbnail)
+    large-28mb.jpg   — 28MB (full-resolution press photo)
 """
 
 import argparse
 import csv
+import io
 import os
 import statistics
 import sys
 import time
+import uuid
 
 import requests
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = None  # disable decompression bomb check for large test images
+import numpy as np
+from skimage.metrics import structural_similarity as ssim
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
 DESK_API = "http://localhost:8081"
+DESK_IMAGE = "http://localhost:8081"       # desk-api proxies /image/ to desk-image sidecar
 REFERENCE = "http://localhost:48084/onecms"
+REF_IMAGE = "http://localhost:48084"       # legacy image service at /image/
 
 USERNAME = "sysadmin"
 PASSWORD = "sysadmin"
@@ -43,22 +53,10 @@ IMAGES = {
     "large-28mb": os.path.join(IMAGE_DIR, "large-28mb.jpg"),
 }
 
-# Image transformation test cases: (label, query_params)
-# These get appended to the image URL as query string or path matrix params
-TRANSFORMATIONS = [
-    ("original", ""),
-    ("resize-w200", "w=200"),
-    ("resize-w800", "w=800"),
-    ("resize-w1200", "w=1200"),
-    ("resize-w200-h200", "w=200&h=200"),
-    ("resize-w800-h600", "w=800&h=600"),
-    ("crop-200x200", "w=200&h=200&c=1"),
-    ("crop-800x600", "w=800&h=600&c=1"),
-]
-
+WIDTHS = [100, 250, 500, 1024, 2048]
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Console
 # ---------------------------------------------------------------------------
 
 class C:
@@ -70,12 +68,14 @@ class C:
     BOLD  = "\033[1m"
     RESET = "\033[0m"
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-def login(base_url: str) -> str | None:
+def login(base_url):
     try:
         r = requests.post(f"{base_url}/security/token",
-                          json={"username": USERNAME, "password": PASSWORD},
-                          timeout=10)
+                          json={"username": USERNAME, "password": PASSWORD}, timeout=10)
         if r.status_code == 200:
             return r.json().get("token")
     except Exception:
@@ -83,26 +83,22 @@ def login(base_url: str) -> str | None:
     return None
 
 
-def upload_image(base_url: str, token: str, image_path: str, label: str) -> dict | None:
-    """Upload an image file and create content, returning {contentId, fileUri}."""
-    filename = os.path.basename(image_path)
+def upload_and_create(base_url, token, image_path, label):
+    """Upload file + create image content. Returns (content_id, filename) or None."""
+    filename = f"perf-{label}-{uuid.uuid4().hex[:8]}.jpg"
 
-    # Upload file to tmp
     with open(image_path, "rb") as f:
         data = f.read()
 
-    r = requests.post(
-        f"{base_url}/file/tmp/perf-test/{label}-{filename}",
-        headers={"X-Auth-Token": token, "Content-Type": "image/jpeg"},
-        data=data,
-        timeout=60,
-    )
+    # Upload to tmp
+    r = requests.post(f"{base_url}/file/tmp/perf-test/{filename}",
+                      headers={"X-Auth-Token": token, "Content-Type": "image/jpeg"},
+                      data=data, timeout=60)
     if r.status_code not in (200, 201):
-        print(f"  {C.FAIL}Upload failed: {r.status_code}{C.RESET}")
+        print(f"    {C.FAIL}Upload failed: {r.status_code}{C.RESET}")
         return None
 
-    file_info = r.json()
-    file_uri = file_info.get("URI") or file_info.get("uri")
+    file_uri = r.json().get("URI") or r.json().get("uri")
 
     # Create image content
     body = {
@@ -111,87 +107,91 @@ def upload_image(base_url: str, token: str, image_path: str, label: str) -> dict
                 "data": {
                     "_type": "atex.onecms.image",
                     "title": f"perf-test-{label}",
-                    "description": f"Performance test image: {label}",
                 }
             },
             "atex.Files": {
                 "data": {
                     "files": {
-                        filename: {
-                            "filePath": filename,
-                            "fileUri": file_uri,
-                        }
+                        filename: {"filePath": filename, "fileUri": file_uri}
                     }
                 }
             }
         }
     }
-
-    r = requests.post(
-        f"{base_url}/content",
-        headers={"X-Auth-Token": token, "Content-Type": "application/json"},
-        json=body,
-        timeout=30,
-    )
+    r = requests.post(f"{base_url}/content",
+                      headers={"X-Auth-Token": token, "Content-Type": "application/json"},
+                      json=body, timeout=30)
     if r.status_code not in (200, 201):
-        print(f"  {C.WARN}Content creation returned {r.status_code} — using file URI directly{C.RESET}")
-        return {"contentId": None, "fileUri": file_uri, "filename": filename}
+        print(f"    {C.WARN}Content create: {r.status_code}{C.RESET}")
+        return None
 
-    content = r.json()
-    content_id = content.get("id")
-    versioned_id = content.get("version")
-
-    return {
-        "contentId": content_id,
-        "versionedId": versioned_id,
-        "fileUri": file_uri,
-        "filename": filename,
-    }
+    content_id = r.json().get("id")
+    return (content_id, filename)
 
 
-def fetch_image(url: str, token: str, timeout: int = 30) -> tuple[int, int, float]:
-    """Fetch an image URL. Returns (status, body_size_bytes, elapsed_ms)."""
+def fetch_image(url, token, timeout=30):
+    """Returns (status, image_bytes, elapsed_ms)."""
     t0 = time.perf_counter()
     try:
-        r = requests.get(url, headers={"X-Auth-Token": token},
-                         timeout=timeout, stream=True)
-        data = r.content
+        r = requests.get(url, headers={"X-Auth-Token": token}, timeout=timeout)
         elapsed = (time.perf_counter() - t0) * 1000
-        return r.status_code, len(data), elapsed
+        if r.status_code == 200:
+            return r.status_code, r.content, elapsed
+        return r.status_code, None, elapsed
     except Exception as e:
-        elapsed = (time.perf_counter() - t0) * 1000
-        return 0, 0, elapsed
+        return 0, None, (time.perf_counter() - t0) * 1000
 
 
-def build_image_url(base_url: str, content_id: str, filename: str, params: str) -> str:
-    """Build image service URL for a content/filename with optional transform params."""
-    # desk-api: /image/{contentId}/{filename}?w=200&h=200
-    # reference: /onecms-image/img/{contentId}/{filename}?w=200&h=200
-    if "/onecms" in base_url:
-        # Reference server — image service is a separate webapp
-        img_base = base_url.replace("/onecms", "/onecms-image")
-        url = f"{img_base}/img/{content_id}/{filename}"
-    else:
-        url = f"{base_url}/image/{content_id}/{filename}"
+def compute_ssim(img_bytes_a, img_bytes_b):
+    """Compute SSIM between two JPEG byte arrays. Returns (ssim_value, dimensions_match)."""
+    try:
+        a = Image.open(io.BytesIO(img_bytes_a)).convert("RGB")
+        b = Image.open(io.BytesIO(img_bytes_b)).convert("RGB")
 
-    if params:
-        url += "?" + params
-    return url
+        # Resize to common dimensions for comparison if sizes differ
+        if a.size != b.size:
+            # Use the smaller dimensions
+            w = min(a.width, b.width)
+            h = min(a.height, b.height)
+            a = a.resize((w, h), Image.LANCZOS)
+            b = b.resize((w, h), Image.LANCZOS)
+            dims_match = False
+        else:
+            dims_match = True
+
+        arr_a = np.array(a)
+        arr_b = np.array(b)
+
+        # SSIM on each channel, then average
+        val = ssim(arr_a, arr_b, channel_axis=2, data_range=255)
+        return val, dims_match
+    except Exception as e:
+        return None, False
+
+
+def image_dimensions(img_bytes):
+    """Return (width, height) from JPEG bytes."""
+    try:
+        img = Image.open(io.BytesIO(img_bytes))
+        return img.size
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
-def run_perf_tests(desk_url: str, ref_url: str, iterations: int,
-                   report_file: str | None = None):
-    print(f"{C.BOLD}Image Performance Comparison{C.RESET}")
-    print(f"  desk-api:  {desk_url}")
-    print(f"  reference: {ref_url}")
-    print(f"  iterations: {iterations}")
+def run(desk_url, desk_image_url, ref_url, ref_image_url, iterations, report_file, save_images):
+    print(f"{C.BOLD}Image Service Performance & Quality Comparison{C.RESET}")
+    print(f"  desk-api:    {desk_url}")
+    print(f"  desk-image:  {desk_image_url}")
+    print(f"  reference:   {ref_url}")
+    print(f"  ref-image:   {ref_image_url}")
+    print(f"  iterations:  {iterations}")
+    print(f"  widths:      {WIDTHS}")
     print()
 
-    # Login
     desk_token = login(desk_url)
     ref_token = login(ref_url)
 
@@ -199,124 +199,162 @@ def run_perf_tests(desk_url: str, ref_url: str, iterations: int,
         print(f"{C.FAIL}Cannot login to desk-api{C.RESET}")
         return
     if not ref_token:
-        print(f"{C.WARN}Cannot login to reference — running desk-api only{C.RESET}")
+        print(f"{C.WARN}Cannot login to reference — desk-only mode{C.RESET}")
 
-    # Upload images to both servers
-    results = []  # [(image_label, transform_label, server, status, size_bytes, avg_ms, min_ms, max_ms)]
+    results = []
+    save_dir = os.path.join(SCRIPT_DIR, "test-images", "output")
+    if save_images:
+        os.makedirs(save_dir, exist_ok=True)
 
     for img_label, img_path in IMAGES.items():
         if not os.path.exists(img_path):
-            print(f"{C.WARN}Image not found: {img_path}{C.RESET}")
+            print(f"{C.WARN}Skipping {img_label}: file not found{C.RESET}")
             continue
 
         file_size = os.path.getsize(img_path)
-        print(f"{C.INFO}Image: {img_label} ({file_size / 1024 / 1024:.1f} MB){C.RESET}")
+        orig = Image.open(img_path)
+        print(f"{C.INFO}═══ {img_label} ({file_size/1024/1024:.1f} MB, {orig.width}x{orig.height}) ═══{C.RESET}")
 
-        # Upload to desk-api
+        # Upload to both servers
         print(f"  Uploading to desk-api...", end=" ", flush=True)
-        desk_info = upload_image(desk_url, desk_token, img_path, img_label)
-        if desk_info:
-            print(f"{C.PASS}OK{C.RESET} (contentId={desk_info.get('contentId', 'N/A')})")
-        else:
-            print(f"{C.FAIL}FAILED{C.RESET}")
-            continue
+        desk_info = upload_and_create(desk_url, desk_token, img_path, img_label)
+        print(f"{C.PASS}OK{C.RESET}" if desk_info else f"{C.FAIL}FAILED{C.RESET}")
 
-        # Upload to reference
         ref_info = None
         if ref_token:
             print(f"  Uploading to reference...", end=" ", flush=True)
-            ref_info = upload_image(ref_url, ref_token, img_path, img_label)
-            if ref_info:
-                print(f"{C.PASS}OK{C.RESET} (contentId={ref_info.get('contentId', 'N/A')})")
-            else:
-                print(f"{C.WARN}FAILED (will skip reference){C.RESET}")
+            ref_info = upload_and_create(ref_url, ref_token, img_path, img_label)
+            print(f"{C.PASS}OK{C.RESET}" if ref_info else f"{C.WARN}FAILED{C.RESET}")
 
-        # Run transformations
+        if not desk_info:
+            continue
+
         print()
-        print(f"  {'Transform':<25} {'desk-api':>30}   {'reference':>30}")
-        print(f"  {'─' * 25} {'─' * 30}   {'─' * 30}")
+        hdr = f"  {'Width':>6}  {'desk-image':>28}  {'ref-image':>28}  {'Speedup':>10}  {'SSIM':>8}  {'Dims':>16}"
+        print(hdr)
+        print(f"  {'─'*6}  {'─'*28}  {'─'*28}  {'─'*10}  {'─'*8}  {'─'*16}")
 
-        for tx_label, tx_params in TRANSFORMATIONS:
+        for width in WIDTHS:
+            desk_cid, desk_fn = desk_info
+            desk_img_url = f"{desk_image_url}/image/{desk_cid}/{desk_fn}?w={width}"
+
+            ref_img_url = None
+            if ref_info:
+                ref_cid, ref_fn = ref_info
+                ref_img_url = f"{ref_image_url}/image/{ref_cid}/{ref_fn}?w={width}"
+
+            # Warmup (first request may be slower due to caching)
+            fetch_image(desk_img_url, desk_token, timeout=60)
+            if ref_img_url:
+                fetch_image(ref_img_url, ref_token, timeout=60)
+
+            # Benchmark desk-image
             desk_timings = []
+            desk_bytes = None
+            for _ in range(iterations):
+                status, data, elapsed = fetch_image(desk_img_url, desk_token, timeout=60)
+                if status == 200 and data:
+                    desk_timings.append(elapsed)
+                    desk_bytes = data
+
+            # Benchmark ref-image
             ref_timings = []
-
-            # Desk-api
-            if desk_info and desk_info.get("contentId"):
-                url = build_image_url(desk_url, desk_info["contentId"],
-                                       desk_info["filename"], tx_params)
-                for i in range(iterations):
-                    status, size, elapsed = fetch_image(url, desk_token)
-                    if status == 200:
-                        desk_timings.append(elapsed)
-
-            # Reference
-            if ref_info and ref_info.get("contentId") and ref_token:
-                url = build_image_url(ref_url, ref_info["contentId"],
-                                       ref_info["filename"], tx_params)
-                for i in range(iterations):
-                    status, size, elapsed = fetch_image(url, ref_token)
-                    if status == 200:
+            ref_bytes = None
+            if ref_img_url:
+                for _ in range(iterations):
+                    status, data, elapsed = fetch_image(ref_img_url, ref_token, timeout=60)
+                    if status == 200 and data:
                         ref_timings.append(elapsed)
+                        ref_bytes = data
 
-            # Format results
-            def fmt_timing(timings: list[float]) -> str:
+            # Format timing
+            def fmt(timings):
                 if not timings:
-                    return f"{C.DIM}N/A{C.RESET}"
+                    return f"{C.DIM}{'N/A':>28}{C.RESET}"
                 avg = statistics.mean(timings)
                 mn = min(timings)
-                mx = max(timings)
-                return f"{avg:7.0f}ms avg ({mn:.0f}-{mx:.0f}ms)"
+                return f"{avg:6.0f}ms avg ({mn:5.0f}ms min)"
 
-            desk_str = fmt_timing(desk_timings)
-            ref_str = fmt_timing(ref_timings)
-
-            # Speedup indicator
-            speedup = ""
+            # Speedup
+            speedup_str = ""
             if desk_timings and ref_timings:
                 d_avg = statistics.mean(desk_timings)
                 r_avg = statistics.mean(ref_timings)
                 if d_avg > 0:
                     ratio = r_avg / d_avg
                     if ratio > 1.1:
-                        speedup = f" {C.PASS}({ratio:.1f}x faster){C.RESET}"
+                        speedup_str = f"{C.PASS}{ratio:5.1f}x{C.RESET}"
                     elif ratio < 0.9:
-                        speedup = f" {C.FAIL}({1/ratio:.1f}x slower){C.RESET}"
+                        speedup_str = f"{C.FAIL}{ratio:5.1f}x{C.RESET}"
+                    else:
+                        speedup_str = f"{ratio:5.1f}x"
 
-            print(f"  {tx_label:<25} {desk_str:>30}   {ref_str:>30}{speedup}")
+            # SSIM comparison
+            ssim_str = ""
+            dims_str = ""
+            if desk_bytes and ref_bytes:
+                ssim_val, dims_match = compute_ssim(desk_bytes, ref_bytes)
+                d_dims = image_dimensions(desk_bytes)
+                r_dims = image_dimensions(ref_bytes)
+                dims_str = f"{d_dims[0]}x{d_dims[1]} / {r_dims[0]}x{r_dims[1]}" if d_dims and r_dims else ""
+
+                if ssim_val is not None:
+                    if ssim_val >= 0.95:
+                        ssim_str = f"{C.PASS}{ssim_val:.4f}{C.RESET}"
+                    elif ssim_val >= 0.85:
+                        ssim_str = f"{C.WARN}{ssim_val:.4f}{C.RESET}"
+                    else:
+                        ssim_str = f"{C.FAIL}{ssim_val:.4f}{C.RESET}"
+            elif desk_bytes:
+                d_dims = image_dimensions(desk_bytes)
+                dims_str = f"{d_dims[0]}x{d_dims[1]}" if d_dims else ""
+
+            print(f"  {width:>5}px  {fmt(desk_timings)}  {fmt(ref_timings)}  {speedup_str:>10}  {ssim_str:>8}  {dims_str:>16}")
+
+            # Save images
+            if save_images and desk_bytes:
+                with open(os.path.join(save_dir, f"{img_label}-w{width}-desk.jpg"), "wb") as f:
+                    f.write(desk_bytes)
+            if save_images and ref_bytes:
+                with open(os.path.join(save_dir, f"{img_label}-w{width}-ref.jpg"), "wb") as f:
+                    f.write(ref_bytes)
 
             # Collect for CSV
-            if desk_timings:
-                results.append((img_label, tx_label, "desk-api",
-                                200, 0, statistics.mean(desk_timings),
-                                min(desk_timings), max(desk_timings)))
-            if ref_timings:
-                results.append((img_label, tx_label, "reference",
-                                200, 0, statistics.mean(ref_timings),
-                                min(ref_timings), max(ref_timings)))
+            results.append({
+                "image": img_label, "width": width,
+                "desk_avg_ms": f"{statistics.mean(desk_timings):.0f}" if desk_timings else "",
+                "desk_min_ms": f"{min(desk_timings):.0f}" if desk_timings else "",
+                "ref_avg_ms": f"{statistics.mean(ref_timings):.0f}" if ref_timings else "",
+                "ref_min_ms": f"{min(ref_timings):.0f}" if ref_timings else "",
+                "ssim": f"{ssim_val:.4f}" if desk_bytes and ref_bytes and ssim_val else "",
+                "desk_dims": f"{d_dims[0]}x{d_dims[1]}" if desk_bytes and (d_dims := image_dimensions(desk_bytes)) else "",
+                "ref_dims": f"{r_dims[0]}x{r_dims[1]}" if ref_bytes and (r_dims := image_dimensions(ref_bytes)) else "",
+            })
 
         print()
 
-    # Write CSV report
+    # CSV report
     if report_file and results:
         with open(report_file, "w", newline="") as f:
-            w = csv.writer(f)
-            w.writerow(["image", "transform", "server", "status", "size_bytes",
-                         "avg_ms", "min_ms", "max_ms"])
-            for row in results:
-                w.writerow(row)
-        print(f"{C.INFO}Report written to {report_file}{C.RESET}")
+            w = csv.DictWriter(f, fieldnames=results[0].keys())
+            w.writeheader()
+            w.writerows(results)
+        print(f"{C.INFO}Report: {report_file}{C.RESET}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Image service performance comparison")
-    parser.add_argument("--desk", default=DESK_API, help=f"desk-api URL (default: {DESK_API})")
-    parser.add_argument("--ref", default=REFERENCE, help=f"Reference URL (default: {REFERENCE})")
-    parser.add_argument("-n", "--iterations", type=int, default=3, help="Iterations per test (default: 3)")
-    parser.add_argument("--report", nargs="?", const="scripts/image-perf-report.csv",
-                        help="Write CSV report (default: scripts/image-perf-report.csv)")
+    parser = argparse.ArgumentParser(description="Image service performance & quality comparison")
+    parser.add_argument("--desk", default=DESK_API)
+    parser.add_argument("--desk-image", default=DESK_IMAGE)
+    parser.add_argument("--ref", default=REFERENCE)
+    parser.add_argument("--ref-image", default=REF_IMAGE)
+    parser.add_argument("-n", "--iterations", type=int, default=3)
+    parser.add_argument("--report", nargs="?", const="scripts/image-perf-report.csv")
+    parser.add_argument("--save-images", action="store_true", help="Save output images to disk")
     args = parser.parse_args()
 
-    run_perf_tests(args.desk, args.ref, args.iterations, args.report)
+    run(args.desk, args.desk_image, args.ref, args.ref_image,
+        args.iterations, args.report, args.save_images)
 
 
 if __name__ == "__main__":
