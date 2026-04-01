@@ -92,13 +92,24 @@ def upload_and_create(base_url, token, image_path, label):
 
     # Upload to tmp
     r = requests.post(f"{base_url}/file/tmp/perf-test/{filename}",
-                      headers={"X-Auth-Token": token, "Content-Type": "image/jpeg"},
+                      headers={"X-Auth-Token": token, "Content-Type": "image/jpeg",
+                               "Accept": "application/json"},
                       data=data, timeout=60)
     if r.status_code not in (200, 201):
         print(f"    {C.FAIL}Upload failed: {r.status_code}{C.RESET}")
         return None
 
-    file_uri = r.json().get("URI") or r.json().get("uri")
+    # Handle both JSON and XML responses (reference returns XML)
+    file_uri = None
+    try:
+        j = r.json()
+        file_uri = j.get("URI") or j.get("uri")
+    except Exception:
+        # Try XML parsing
+        import re
+        m = re.search(r"<URI>([^<]+)</URI>", r.text)
+        if m:
+            file_uri = m.group(1)
 
     # Create image content
     body = {
@@ -111,8 +122,13 @@ def upload_and_create(base_url, token, image_path, label):
             },
             "atex.Files": {
                 "data": {
+                    "_type": "com.atex.onecms.content.FilesAspectBean",
                     "files": {
-                        filename: {"filePath": filename, "fileUri": file_uri}
+                        filename: {
+                            "_type": "com.atex.onecms.content.ContentFileInfo",
+                            "filePath": filename,
+                            "fileUri": file_uri,
+                        }
                     }
                 }
             }
@@ -130,10 +146,19 @@ def upload_and_create(base_url, token, image_path, label):
 
 
 def fetch_image(url, token, timeout=30):
-    """Returns (status, image_bytes, elapsed_ms)."""
+    """Returns (status, image_bytes, elapsed_ms).
+    Handles desk-api's redirect to desk-image sidecar by rewriting Docker
+    internal hostnames to localhost equivalents."""
     t0 = time.perf_counter()
     try:
-        r = requests.get(url, headers={"X-Auth-Token": token}, timeout=timeout)
+        # Don't follow redirects automatically — we may need to rewrite the Location
+        r = requests.get(url, headers={"X-Auth-Token": token},
+                         timeout=timeout, allow_redirects=False)
+        if r.status_code in (301, 302, 307, 308):
+            location = r.headers.get("Location", "")
+            # Rewrite Docker internal hostname to localhost
+            location = location.replace("desk-image:8090", "localhost:8090")
+            r = requests.get(location, timeout=timeout)
         elapsed = (time.perf_counter() - t0) * 1000
         if r.status_code == 200:
             return r.status_code, r.content, elapsed

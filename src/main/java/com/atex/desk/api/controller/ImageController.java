@@ -167,7 +167,11 @@ public class ImageController {
 
         // Build signed redirect URL to the Rust sidecar
         // Path format: /image/{file_uri}/{filename}
+        // Convert URI scheme (content://host/path) to path (content/host/path)
         String fileUri = info.fileUri;
+        if (fileUri.contains("://")) {
+            fileUri = fileUri.replace("://", "/");
+        }
         String sidecarPath = fileUri + "/" + filename;
 
         // Add image edit info and original dimensions from content aspects
@@ -236,6 +240,22 @@ public class ImageController {
                 }
                 if (imageData.get("height") instanceof Number h) {
                     origHeight = h.intValue();
+                }
+            }
+        }
+
+        // Fallback: resolve from atex.Files if atex.Image doesn't have a filePath
+        if (fileUri == null && aspects != null && aspects.containsKey("atex.Files")) {
+            Map<String, Object> filesData = aspects.get("atex.Files").getData();
+            if (filesData != null && filesData.get("files") instanceof Map<?, ?> filesMap) {
+                for (Object val : filesMap.values()) {
+                    if (val instanceof Map<?, ?> fileEntry) {
+                        Object uri = fileEntry.get("fileUri");
+                        if (uri != null && !uri.toString().isEmpty()) {
+                            fileUri = uri.toString();
+                            break;
+                        }
+                    }
                 }
             }
         }
