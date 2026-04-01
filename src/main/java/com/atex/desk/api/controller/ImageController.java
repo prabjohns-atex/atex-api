@@ -224,36 +224,36 @@ public class ImageController {
         ContentResultDto content = result.get();
         Map<String, AspectDto> aspects = content.getAspects();
 
-        // Extract file URI and dimensions from atex.Image aspect (ImageInfoAspectBean)
-        String fileUri = null;
+        // Extract dimensions from atex.Image aspect
+        String imageFilePath = null;
         Integer origWidth = null;
         Integer origHeight = null;
         if (aspects != null && aspects.containsKey("atex.Image")) {
             Map<String, Object> imageData = aspects.get("atex.Image").getData();
             if (imageData != null) {
-                Object filePath = imageData.get("filePath");
-                if (filePath != null) {
-                    fileUri = filePath.toString();
-                }
-                if (imageData.get("width") instanceof Number w) {
-                    origWidth = w.intValue();
-                }
-                if (imageData.get("height") instanceof Number h) {
-                    origHeight = h.intValue();
-                }
+                Object fp = imageData.get("filePath");
+                if (fp != null) imageFilePath = fp.toString();
+                if (imageData.get("width") instanceof Number w) origWidth = w.intValue();
+                if (imageData.get("height") instanceof Number h) origHeight = h.intValue();
             }
         }
 
-        // Fallback: resolve from atex.Files if atex.Image doesn't have a filePath
-        if (fileUri == null && aspects != null && aspects.containsKey("atex.Files")) {
+        // Resolve actual file storage URI from atex.Files
+        // atex.Image.filePath is a logical filename; atex.Files.fileUri is the storage location
+        String fileUri = null;
+        if (aspects != null && aspects.containsKey("atex.Files")) {
             Map<String, Object> filesData = aspects.get("atex.Files").getData();
             if (filesData != null && filesData.get("files") instanceof Map<?, ?> filesMap) {
-                for (Object val : filesMap.values()) {
-                    if (val instanceof Map<?, ?> fileEntry) {
+                // If atex.Image.filePath is set, find the matching entry; otherwise take first
+                for (Map.Entry<?, ?> entry : filesMap.entrySet()) {
+                    if (entry.getValue() instanceof Map<?, ?> fileEntry) {
                         Object uri = fileEntry.get("fileUri");
                         if (uri != null && !uri.toString().isEmpty()) {
                             fileUri = uri.toString();
-                            break;
+                            // If this matches the atex.Image filePath, prefer it and stop
+                            if (imageFilePath != null && imageFilePath.equals(entry.getKey())) {
+                                break;
+                            }
                         }
                     }
                 }

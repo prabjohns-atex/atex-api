@@ -114,13 +114,28 @@ def upload_and_create(base_url, token, image_path, label):
         print(f"    {C.FAIL}No file URI in upload response{C.RESET}")
         return None
 
-    # Create image content with atex.Files
+    # Get dimensions from the source image
+    img = Image.open(image_path)
+    img_w, img_h = img.size
+
+    # Create image content with atex.Image and atex.Files
     body = {
         "aspects": {
             "contentData": {
                 "data": {
                     "_type": "atex.onecms.image",
                     "title": f"perf-test-{label}",
+                    "width": img_w,
+                    "height": img_h,
+                    "objectType": "image",
+                }
+            },
+            "atex.Image": {
+                "data": {
+                    "_type": "atex.Image",
+                    "filePath": filename,
+                    "width": img_w,
+                    "height": img_h,
                 }
             },
             "atex.Files": {
