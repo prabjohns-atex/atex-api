@@ -105,13 +105,16 @@ def upload_and_create(base_url, token, image_path, label):
         j = r.json()
         file_uri = j.get("URI") or j.get("uri")
     except Exception:
-        # Try XML parsing
         import re
         m = re.search(r"<URI>([^<]+)</URI>", r.text)
         if m:
             file_uri = m.group(1)
 
-    # Create image content
+    if not file_uri:
+        print(f"    {C.FAIL}No file URI in upload response{C.RESET}")
+        return None
+
+    # Create image content with atex.Files
     body = {
         "aspects": {
             "contentData": {
@@ -122,8 +125,9 @@ def upload_and_create(base_url, token, image_path, label):
             },
             "atex.Files": {
                 "data": {
-                    "_type": "com.atex.onecms.content.FilesAspectBean",
+                    "_type": "atex.Files",
                     "files": {
+                        f"{filename}_type": "com.atex.onecms.content.ContentFileInfo",
                         filename: {
                             "_type": "com.atex.onecms.content.ContentFileInfo",
                             "filePath": filename,
