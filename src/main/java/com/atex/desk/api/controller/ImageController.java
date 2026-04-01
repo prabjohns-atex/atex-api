@@ -68,12 +68,31 @@ public class ImageController {
     public ResponseEntity<?> getImage(
             @PathVariable("id") String id,
             @PathVariable("filename") String filename,
-            @RequestParam Map<String, String> queryParams) {
+            @RequestParam Map<String, String> queryParams,
+            jakarta.servlet.http.HttpServletRequest request) {
 
         // File-service scheme path: /image/{scheme}/{host}/...
         // Differentiate by checking if id is a scheme name
         if ("content".equals(id) || "tmp".equals(id) || "s3".equals(id)) {
             return handleFileUri(id, filename, queryParams);
+        }
+
+        // Unversioned content ID → 303 redirect to versioned URL (matches reference behaviour)
+        if (!contentService.isVersionedId(id)) {
+            String[] parts = contentService.parseContentId(id);
+            Optional<String> versionedId = contentService.resolve(parts[0], parts[1]);
+            if (versionedId.isEmpty()) {
+                return notFound("Content not found: " + id);
+            }
+            String qs = queryParams.entrySet().stream()
+                    .map(e -> e.getKey() + "=" + e.getValue())
+                    .collect(java.util.stream.Collectors.joining("&"));
+            String location = "/image/" + versionedId.get() + "/" + filename
+                    + (qs.isEmpty() ? "" : "?" + qs);
+            return ResponseEntity.status(HttpStatus.SEE_OTHER)
+                    .header(HttpHeaders.LOCATION, location)
+                    .header(HttpHeaders.CACHE_CONTROL, "must-revalidate, max-age=0")
+                    .build();
         }
 
         return resolveAndRedirect(id, filename, queryParams);
