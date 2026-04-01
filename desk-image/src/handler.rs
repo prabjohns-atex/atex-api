@@ -93,8 +93,7 @@ pub async fn handle_image(
     let (output_bytes, format, rendered_width, rendered_height) = match processing::process_image(
         &raw_bytes,
         &params,
-        state.config.processing.max_width,
-        state.config.processing.max_height,
+        &state.config.processing,
     ) {
         Ok(result) => result,
         Err(e) => {

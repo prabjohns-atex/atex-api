@@ -99,12 +99,21 @@ impl OutputFormat {
 pub fn process_image(
     input: &[u8],
     params: &ImageParams,
-    max_width: u32,
-    max_height: u32,
+    config: &crate::config::ProcessingConfig,
 ) -> anyhow::Result<(Vec<u8>, OutputFormat, u32, u32)> {
-    let reader = ImageReader::new(Cursor::new(input))
+    let max_width = config.max_width;
+    let max_height = config.max_height;
+
+    let mut reader = ImageReader::new(Cursor::new(input))
         .with_guessed_format()
         .map_err(|e| anyhow::anyhow!("Cannot detect image format: {}", e))?;
+
+    // Configurable decode limits for large images
+    let mut limits = image::io::Limits::default();
+    limits.max_alloc = Some(config.max_decode_alloc.unwrap_or(2 * 1024 * 1024 * 1024));
+    limits.max_image_width = Some(config.max_decode_width.unwrap_or(30000));
+    limits.max_image_height = Some(config.max_decode_height.unwrap_or(30000));
+    reader.limits(limits);
 
     let detected_format = reader.format();
     let mut img = reader

@@ -179,8 +179,9 @@ public class DamIndexComposer {
                 suffix = "_l";
             } else {
                 String strVal = value.getAsString();
-                // Date detection
-                if (strVal.matches("\\d{4}-\\d{2}-\\d{2}T.*")) {
+                // Date detection — require full ISO date format, not just date-like prefix
+                // (avoids false positives on filenames like "2026-03-30T172901Z_photo.JPG")
+                if (strVal.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}.*")) {
                     suffix = "_dt";
                 } else {
                     suffix = "_t";

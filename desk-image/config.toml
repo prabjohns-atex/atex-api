@@ -37,3 +37,8 @@ max_height = 4096
 default_quality = 0.85
 # Strip EXIF metadata from output
 strip_metadata = true
+# Max input image dimensions for decoding (protects against decompression bombs)
+max_decode_width = 30000
+max_decode_height = 30000
+# Max memory allocation for decoding (bytes) — 2GB supports ~500 megapixels
+max_decode_alloc = 2147483648

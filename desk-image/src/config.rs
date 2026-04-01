@@ -52,6 +52,11 @@ pub struct ProcessingConfig {
     pub max_height: u32,
     pub default_quality: f32,
     pub strip_metadata: bool,
+    /// Maximum image dimension (width or height) for decoding. Default 30000.
+    pub max_decode_width: Option<u32>,
+    pub max_decode_height: Option<u32>,
+    /// Maximum memory allocation for image decoding in bytes. Default 2GB.
+    pub max_decode_alloc: Option<u64>,
 }
 
 impl Config {
