@@ -173,11 +173,14 @@ def fetch_image(url, token, timeout=30):
         # Don't follow redirects automatically — we may need to rewrite the Location
         r = requests.get(url, headers={"X-Auth-Token": token},
                          timeout=timeout, allow_redirects=False)
-        if r.status_code in (301, 302, 307, 308):
+        # Follow redirects manually — rewrite Docker hostnames and handle 303
+        max_redirects = 5
+        while r.status_code in (301, 302, 303, 307, 308) and max_redirects > 0:
             location = r.headers.get("Location", "")
-            # Rewrite Docker internal hostname to localhost
             location = location.replace("desk-image:8090", "localhost:8090")
-            r = requests.get(location, timeout=timeout)
+            r = requests.get(location, headers={"X-Auth-Token": token},
+                             timeout=timeout, allow_redirects=False)
+            max_redirects -= 1
         elapsed = (time.perf_counter() - t0) * 1000
         if r.status_code == 200:
             return r.status_code, r.content, elapsed
