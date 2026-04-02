@@ -934,6 +934,7 @@ function renderConfigTable() {
         html += '<td>' + tierBadge(tier) + '</td>';
         html += '<td><div class="btn-group" style="flex-wrap:nowrap">';
         html += '<button class="btn btn-outline btn-sm" onclick="viewConfig(\'' + esc(id) + '\')">View</button>';
+        html += '<button class="btn btn-outline btn-sm" onclick="diffConfig(\'' + esc(id) + '\')">Diff</button>';
         html += '<button class="btn btn-primary btn-sm" onclick="editConfig(\'' + esc(id) + '\')">Edit</button>';
         if (tier === 'live') {
             html += '<button class="btn btn-danger btn-sm" onclick="deleteConfig(\'' + esc(id) + '\')">Revert</button>';
@@ -954,6 +955,127 @@ async function viewConfig(id) {
         html += '<pre class="json">' + esc(JSON.stringify(value, null, 2)) + '</pre>';
     }
     showPanel(html);
+}
+
+async function diffConfig(id) {
+    const data = await authJson('/admin/config/' + encodeURIComponent(id) + '/sources');
+    if (!data) { toast('Config not found', 'error'); return; }
+
+    const tiers = ['product', 'project', 'live'];
+    const available = tiers.filter(t => data[t] != null);
+
+    if (available.length < 2) {
+        toast('Only one tier available — nothing to diff', 'info');
+        return;
+    }
+
+    // Build tier selector
+    let html = '<h3>Diff: ' + esc(id) + '</h3>';
+    html += '<div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center">';
+    html += '<select id="diff-left" style="padding:0.3rem">';
+    for (const t of available) html += '<option value="' + t + '">' + t + '</option>';
+    html += '</select>';
+    html += '<span style="font-weight:bold">vs</span>';
+    html += '<select id="diff-right" style="padding:0.3rem">';
+    for (let i = 0; i < available.length; i++) html += '<option value="' + available[i] + '"' + (i === available.length - 1 ? ' selected' : '') + '>' + available[i] + '</option>';
+    html += '</select>';
+    html += '<button class="btn btn-primary btn-sm" onclick="runDiff()">Compare</button>';
+    html += '</div>';
+    html += '<div id="diff-output"></div>';
+
+    showPanel(html);
+
+    // Store data for diff
+    window._diffData = data;
+    runDiff();
+}
+
+function runDiff() {
+    const left = document.getElementById('diff-left').value;
+    const right = document.getElementById('diff-right').value;
+    const data = window._diffData;
+    const el = document.getElementById('diff-output');
+
+    if (left === right) { el.innerHTML = '<div class="empty-state">Same tier selected</div>'; return; }
+
+    const leftVal = data[left];
+    const rightVal = data[right];
+
+    const leftStr = typeof leftVal === 'object' ? JSON.stringify(leftVal, null, 2) : String(leftVal || '');
+    const rightStr = typeof rightVal === 'object' ? JSON.stringify(rightVal, null, 2) : String(rightVal || '');
+
+    if (leftStr === rightStr) {
+        el.innerHTML = '<div style="padding:1rem;color:var(--up-color);font-weight:bold">Identical — no differences</div>';
+        return;
+    }
+
+    // Line-by-line diff
+    const leftLines = leftStr.split('\n');
+    const rightLines = rightStr.split('\n');
+    const diff = computeDiff(leftLines, rightLines);
+
+    let html = '<div style="font-size:0.75rem;margin-bottom:0.5rem;color:var(--text-dim)">';
+    html += '<span style="color:#e55">— ' + esc(left) + '</span> &nbsp; ';
+    html += '<span style="color:#5b5">+ ' + esc(right) + '</span></div>';
+    html += '<pre class="json" style="font-size:0.8rem;line-height:1.5;max-height:70vh;overflow:auto">';
+
+    for (const line of diff) {
+        if (line.type === 'remove') {
+            html += '<span style="background:#3a1a1a;display:block;margin:0 -1rem;padding:0 1rem">- ' + esc(line.text) + '</span>';
+        } else if (line.type === 'add') {
+            html += '<span style="background:#1a3a1a;display:block;margin:0 -1rem;padding:0 1rem">+ ' + esc(line.text) + '</span>';
+        } else {
+            html += '  ' + esc(line.text) + '\n';
+        }
+    }
+    html += '</pre>';
+    el.innerHTML = html;
+}
+
+// Simple LCS-based line diff
+function computeDiff(a, b) {
+    const n = a.length, m = b.length;
+    // For large files, use a simpler approach
+    if (n + m > 5000) return simpleDiff(a, b);
+
+    // LCS table
+    const dp = Array.from({length: n + 1}, () => new Uint16Array(m + 1));
+    for (let i = 1; i <= n; i++) {
+        for (let j = 1; j <= m; j++) {
+            dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+        }
+    }
+
+    // Backtrack
+    const result = [];
+    let i = n, j = m;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && a[i-1] === b[j-1]) {
+            result.unshift({type: 'same', text: a[i-1]});
+            i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+            result.unshift({type: 'add', text: b[j-1]});
+            j--;
+        } else {
+            result.unshift({type: 'remove', text: a[i-1]});
+            i--;
+        }
+    }
+    return result;
+}
+
+function simpleDiff(a, b) {
+    // For large files, just show removed then added
+    const aSet = new Set(a);
+    const bSet = new Set(b);
+    const result = [];
+    for (const line of a) {
+        result.push({type: bSet.has(line) ? 'same' : 'remove', text: line});
+    }
+    for (const line of b) {
+        if (!aSet.has(line)) result.push({type: 'add', text: line});
+    }
+    return result;
 }
 
 async function editConfig(id) {
