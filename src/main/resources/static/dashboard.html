@@ -934,7 +934,9 @@ function renderConfigTable() {
         html += '<td>' + tierBadge(tier) + '</td>';
         html += '<td><div class="btn-group" style="flex-wrap:nowrap">';
         html += '<button class="btn btn-outline btn-sm" onclick="viewConfig(\'' + esc(id) + '\')">View</button>';
-        html += '<button class="btn btn-outline btn-sm" onclick="diffConfig(\'' + esc(id) + '\')">Diff</button>';
+        if (tier === 'live') {
+            html += '<button class="btn btn-outline btn-sm" onclick="diffConfig(\'' + esc(id) + '\')">Diff</button>';
+        }
         html += '<button class="btn btn-primary btn-sm" onclick="editConfig(\'' + esc(id) + '\')">Edit</button>';
         if (tier === 'live') {
             html += '<button class="btn btn-danger btn-sm" onclick="deleteConfig(\'' + esc(id) + '\')">Revert</button>';
@@ -961,62 +963,41 @@ async function diffConfig(id) {
     const data = await authJson('/admin/config/' + encodeURIComponent(id) + '/sources');
     if (!data) { toast('Config not found', 'error'); return; }
 
-    const tiers = ['product', 'project', 'live'];
-    const available = tiers.filter(t => data[t] != null);
-
-    if (available.length < 2) {
-        toast('Only one tier available — nothing to diff', 'info');
+    if (!data.live) {
+        toast('No live override — nothing to diff', 'info');
         return;
     }
 
-    // Build tier selector
+    // "Base" = what it would be without the live override (project > product)
+    const base = data.project || data.product;
+    const baseTier = data.project ? 'project' : 'product';
+
+    if (!base) {
+        toast('No base tier to compare against (live-only config)', 'info');
+        return;
+    }
+
+    const baseStr = typeof base === 'object' ? JSON.stringify(base, null, 2) : String(base);
+    const liveStr = typeof data.live === 'object' ? JSON.stringify(data.live, null, 2) : String(data.live);
+
     let html = '<h3>Diff: ' + esc(id) + '</h3>';
-    html += '<div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center">';
-    html += '<select id="diff-left" style="padding:0.3rem">';
-    for (const t of available) html += '<option value="' + t + '">' + t + '</option>';
-    html += '</select>';
-    html += '<span style="font-weight:bold">vs</span>';
-    html += '<select id="diff-right" style="padding:0.3rem">';
-    for (let i = 0; i < available.length; i++) html += '<option value="' + available[i] + '"' + (i === available.length - 1 ? ' selected' : '') + '>' + available[i] + '</option>';
-    html += '</select>';
-    html += '<button class="btn btn-primary btn-sm" onclick="runDiff()">Compare</button>';
+    html += '<div style="font-size:0.8rem;margin-bottom:0.8rem;color:var(--text-dim)">';
+    html += 'Comparing <strong>' + esc(baseTier) + ' default</strong> vs <strong>live override</strong>';
     html += '</div>';
-    html += '<div id="diff-output"></div>';
 
-    showPanel(html);
-
-    // Store data for diff
-    window._diffData = data;
-    runDiff();
-}
-
-function runDiff() {
-    const left = document.getElementById('diff-left').value;
-    const right = document.getElementById('diff-right').value;
-    const data = window._diffData;
-    const el = document.getElementById('diff-output');
-
-    if (left === right) { el.innerHTML = '<div class="empty-state">Same tier selected</div>'; return; }
-
-    const leftVal = data[left];
-    const rightVal = data[right];
-
-    const leftStr = typeof leftVal === 'object' ? JSON.stringify(leftVal, null, 2) : String(leftVal || '');
-    const rightStr = typeof rightVal === 'object' ? JSON.stringify(rightVal, null, 2) : String(rightVal || '');
-
-    if (leftStr === rightStr) {
-        el.innerHTML = '<div style="padding:1rem;color:var(--up-color);font-weight:bold">Identical — no differences</div>';
+    if (baseStr === liveStr) {
+        html += '<div style="padding:1rem;color:var(--up-color);font-weight:bold">Identical — live override matches ' + esc(baseTier) + ' default</div>';
+        showPanel(html);
         return;
     }
 
-    // Line-by-line diff
-    const leftLines = leftStr.split('\n');
-    const rightLines = rightStr.split('\n');
-    const diff = computeDiff(leftLines, rightLines);
+    const baseLines = baseStr.split('\n');
+    const liveLines = liveStr.split('\n');
+    const diff = computeDiff(baseLines, liveLines);
 
-    let html = '<div style="font-size:0.75rem;margin-bottom:0.5rem;color:var(--text-dim)">';
-    html += '<span style="color:#e55">— ' + esc(left) + '</span> &nbsp; ';
-    html += '<span style="color:#5b5">+ ' + esc(right) + '</span></div>';
+    html += '<div style="font-size:0.75rem;margin-bottom:0.5rem;color:var(--text-dim)">';
+    html += '<span style="color:#e55">— ' + esc(baseTier) + ' default</span> &nbsp; ';
+    html += '<span style="color:#5b5">+ live override</span></div>';
     html += '<pre class="json" style="font-size:0.8rem;line-height:1.5;max-height:70vh;overflow:auto">';
 
     for (const line of diff) {
@@ -1029,7 +1010,7 @@ function runDiff() {
         }
     }
     html += '</pre>';
-    el.innerHTML = html;
+    showPanel(html);
 }
 
 // Simple LCS-based line diff
