@@ -5,6 +5,7 @@ import com.atex.desk.api.config.ConfigurationService;
 import com.atex.desk.api.dto.AspectDto;
 import com.atex.desk.api.dto.ContentWriteDto;
 import com.atex.desk.api.dto.ErrorResponseDto;
+import com.atex.desk.api.onecms.LocalContentManager;
 import com.atex.desk.api.service.ContentService;
 import com.atex.onecms.app.dam.ws.DamUserContext;
 import com.google.gson.Gson;
@@ -38,12 +39,15 @@ public class ConfigurationController
 
     private final ConfigurationService configurationService;
     private final ContentService contentService;
+    private final LocalContentManager localContentManager;
 
     public ConfigurationController(ConfigurationService configurationService,
-                                    ContentService contentService)
+                                    ContentService contentService,
+                                    LocalContentManager localContentManager)
     {
         this.configurationService = configurationService;
         this.contentService = contentService;
+        this.localContentManager = localContentManager;
     }
 
     /**
@@ -165,9 +169,14 @@ public class ConfigurationController
         }
         else
         {
-            contentService.createContent(writeDto, userId);
-            // The external ID alias needs to be set — for now the content exists in DB
-            // and can be resolved by its content ID
+            // Create content with externalId alias
+            ContentWriteDto.OperationDto aliasOp = new ContentWriteDto.OperationDto();
+            aliasOp.setType("SetAliasOperation");
+            aliasOp.setNamespace("externalId");
+            aliasOp.setValue(externalId);
+            writeDto.setOperations(java.util.List.of(aliasOp));
+
+            localContentManager.createContentFromDto(writeDto, userId);
         }
 
         // Update the config cache

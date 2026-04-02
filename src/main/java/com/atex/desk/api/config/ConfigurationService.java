@@ -63,6 +63,7 @@ public class ConfigurationService
 
     private final ConfigProperties properties;
     private final PluginManager pluginManager;
+    private final com.atex.desk.api.service.ContentService contentService;
 
     /**
      * Effective cache: external ID → config entry (data + meta).
@@ -86,10 +87,13 @@ public class ConfigurationService
      */
     private final ConcurrentHashMap<String, ConfigEntry> projectOverrides = new ConcurrentHashMap<>();
 
-    public ConfigurationService(ConfigProperties properties, @Nullable PluginManager pluginManager)
+    public ConfigurationService(ConfigProperties properties,
+                                @Nullable PluginManager pluginManager,
+                                @org.springframework.context.annotation.Lazy com.atex.desk.api.service.ContentService contentService)
     {
         this.properties = properties;
         this.pluginManager = pluginManager;
+        this.contentService = contentService;
     }
 
     @PostConstruct
@@ -135,10 +139,14 @@ public class ConfigurationService
             }
         }
 
+        // 5. Load live overrides from content database
+        int liveCount = loadLiveOverrides();
+
         long namedCount = cache.values().stream().filter(e -> e.hasName()).count();
         LOG.info("Configuration loaded: " + defaultsCount + " product defaults, "
             + flavorCount + " flavor overrides (" + flavor + "), "
-            + projectCount + " project overrides, " + pluginCount + " plugin overrides ("
+            + projectCount + " project overrides, " + pluginCount + " plugin overrides, "
+            + liveCount + " live overrides ("
             + cache.size() + " total configs, " + namedCount + " with display names)");
     }
 
@@ -360,6 +368,50 @@ public class ConfigurationService
             cache.put(externalId, defaults);
             sourceTier.put(externalId, "product");
         }
+    }
+
+    /**
+     * Load live overrides from the content database on startup.
+     * For each known config ID, checks if content exists with that external ID.
+     * If so, the content data becomes the live override.
+     */
+    @SuppressWarnings("unchecked")
+    private int loadLiveOverrides()
+    {
+        if (contentService == null) return 0;
+
+        int count = 0;
+        for (String externalId : new java.util.ArrayList<>(cache.keySet()))
+        {
+            try
+            {
+                Optional<String> contentId = contentService.resolveExternalId(externalId);
+                if (contentId.isEmpty()) continue;
+
+                String[] parts = contentService.parseContentId(contentId.get());
+                Optional<String> versionedId = contentService.resolve(parts[0], parts[1]);
+                if (versionedId.isEmpty()) continue;
+
+                String[] vParts = contentService.parseContentId(versionedId.get());
+                Optional<com.atex.desk.api.dto.ContentResultDto> result =
+                    contentService.getContent(vParts[0], vParts[1], vParts[2]);
+                if (result.isEmpty()) continue;
+
+                var aspects = result.get().getAspects();
+                if (aspects == null || !aspects.containsKey("contentData")) continue;
+
+                Map<String, Object> data = aspects.get("contentData").getData();
+                if (data == null || data.isEmpty()) continue;
+
+                setLiveOverride(externalId, data);
+                count++;
+            }
+            catch (Exception e)
+            {
+                LOG.log(Level.FINE, "Could not load live override for " + externalId, e);
+            }
+        }
+        return count;
     }
 
     /**
