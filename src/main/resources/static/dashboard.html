@@ -977,8 +977,8 @@ async function diffConfig(id) {
         return;
     }
 
-    const baseStr = typeof base === 'object' ? JSON.stringify(base, null, 2) : String(base);
-    const liveStr = typeof data.live === 'object' ? JSON.stringify(data.live, null, 2) : String(data.live);
+    const baseStr = typeof base === 'object' ? JSON.stringify(sortKeys(base), null, 2) : String(base);
+    const liveStr = typeof data.live === 'object' ? JSON.stringify(sortKeys(data.live), null, 2) : String(data.live);
 
     let html = '<h3>Diff: ' + esc(id) + '</h3>';
     html += '<div style="font-size:0.8rem;margin-bottom:0.8rem;color:var(--text-dim)">';
@@ -1011,6 +1011,19 @@ async function diffConfig(id) {
     }
     html += '</pre>';
     showPanel(html);
+}
+
+// Deep-sort object keys for stable JSON diff
+function sortKeys(obj) {
+    if (Array.isArray(obj)) return obj.map(sortKeys);
+    if (obj !== null && typeof obj === 'object') {
+        const sorted = {};
+        for (const key of Object.keys(obj).sort()) {
+            sorted[key] = sortKeys(obj[key]);
+        }
+        return sorted;
+    }
+    return obj;
 }
 
 // Simple LCS-based line diff
