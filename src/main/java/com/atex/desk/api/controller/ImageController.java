@@ -279,6 +279,12 @@ public class ImageController {
             }
         }
 
+        // Fallback: use atex.Image.filePath directly if atex.Files has no match
+        // (legacy content may only have atex.Image without atex.Files)
+        if (fileUri == null && imageFilePath != null) {
+            fileUri = imageFilePath;
+        }
+
         // Extract edit info from atex.ImageEditInfo aspect
         Map<String, Object> editInfo = null;
         if (aspects != null && aspects.containsKey("atex.ImageEditInfo")) {
