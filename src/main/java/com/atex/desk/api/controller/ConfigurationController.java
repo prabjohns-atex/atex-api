@@ -327,7 +327,13 @@ public class ConfigurationController
             .map(result -> {
                 if (result.getAspects() != null && result.getAspects().containsKey("contentData"))
                 {
-                    return result.getAspects().get("contentData").getData();
+                    Map<String, Object> data = result.getAspects().get("contentData").getData();
+                    if (data != null) {
+                        // Strip pipeline artifact — _type is added during content storage
+                        data = new LinkedHashMap<>(data);
+                        data.remove("_type");
+                    }
+                    return data;
                 }
                 return null;
             });

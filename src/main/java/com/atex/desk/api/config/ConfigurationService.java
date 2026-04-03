@@ -400,8 +400,11 @@ public class ConfigurationService
                 var aspects = result.get().getAspects();
                 if (aspects == null || !aspects.containsKey("contentData")) continue;
 
-                Map<String, Object> data = aspects.get("contentData").getData();
+                Map<String, Object> data = new java.util.LinkedHashMap<>(aspects.get("contentData").getData());
                 if (data == null || data.isEmpty()) continue;
+
+                // Strip pipeline artifacts that aren't part of the config data
+                data.remove("_type");
 
                 setLiveOverride(externalId, data);
                 count++;

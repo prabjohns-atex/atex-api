@@ -977,8 +977,8 @@ async function diffConfig(id) {
         return;
     }
 
-    const baseStr = typeof base === 'object' ? JSON.stringify(sortKeys(base), null, 2) : String(base);
-    const liveStr = typeof data.live === 'object' ? JSON.stringify(sortKeys(data.live), null, 2) : String(data.live);
+    const baseStr = typeof base === 'object' ? JSON.stringify(base, null, 2) : String(base);
+    const liveStr = typeof data.live === 'object' ? JSON.stringify(data.live, null, 2) : String(data.live);
 
     let html = '<h3>Diff: ' + esc(id) + '</h3>';
     html += '<div style="font-size:0.8rem;margin-bottom:0.8rem;color:var(--text-dim)">';
