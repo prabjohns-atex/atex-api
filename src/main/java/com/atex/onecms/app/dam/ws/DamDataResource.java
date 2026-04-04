@@ -1447,13 +1447,13 @@ public class DamDataResource {
         }
     }
 
-    @PostMapping(value = "unpublish/{id}", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(value = "unpublish/{id}", produces = {MediaType.TEXT_PLAIN_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public String unpublishByPath(HttpServletRequest request,
                                   @PathVariable("id") String contentIdString) {
         return unpublish(request, contentIdString);
     }
 
-    @PostMapping(value = "unpublish", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(value = "unpublish", produces = {MediaType.TEXT_PLAIN_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public String unpublish(HttpServletRequest request,
                             @RequestParam("contentId") String contentIdString) {
         try {
