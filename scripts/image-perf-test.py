@@ -174,10 +174,18 @@ def fetch_image(url, token, timeout=30):
         r = requests.get(url, headers={"X-Auth-Token": token},
                          timeout=timeout, allow_redirects=False)
         # Follow redirects manually — rewrite Docker hostnames and handle 303
+        # Resolve the base URL for relative redirects
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        base = f"{parsed.scheme}://{parsed.netloc}"
+
         max_redirects = 5
         while r.status_code in (301, 302, 303, 307, 308) and max_redirects > 0:
             location = r.headers.get("Location", "")
             location = location.replace("desk-image:8090", "localhost:8090")
+            # Handle relative URLs
+            if location.startswith("/"):
+                location = base + location
             r = requests.get(location, headers={"X-Auth-Token": token},
                              timeout=timeout, allow_redirects=False)
             max_redirects -= 1
