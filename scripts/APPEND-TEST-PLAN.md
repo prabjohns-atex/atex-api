@@ -179,17 +179,21 @@ python3 scripts/append-test.py --ref-url http://localhost:38084/onecms --verbose
 4. Click it — verify content is appended to the pinned (anchored) article
 5. Verify success notification
 
-### TC-UI-06: Remove appended content
+### TC-UI-06: Remove appended content via trash icon
 
 **Precondition:** Content that was previously appended (from TC-UI-02)
 
-1. Select articles that have engagement relationships
-2. Verify "Remove Appended Content" button appears
-3. Click it
-4. Open target article — verify appended content and engagements are removed
-5. Open source articles — verify "Appended to" engagements are removed
+1. Open the target article in preview
+2. Verify engagement list shows "Appended from" entries with trash icons
+3. Click the trash icon on one "Appended from" engagement
+4. Verify appended body text for that source is removed from the target
+5. Verify appended name text for that source is removed from the target (plain string fields)
+6. Verify the corresponding "Appended to" engagement is removed from the source article
+7. Repeat for remaining engagements
 
-### TC-UI-07: Sum content — word count
+**Note:** The trash icon in the engagement list is the correct way to remove appended content. It triggers `AppendUtils.processRemove` which strips both the `x-atex-append-content` marked HTML from the body and cleans plain string fields (e.g. name). Standard engagement deletion only removes the engagement record, not the appended text.
+
+### TC-UI-07: Sum content — word count and status bar display
 
 **Precondition:** Test articles selected
 
@@ -197,8 +201,11 @@ python3 scripts/append-test.py --ref-url http://localhost:38084/onecms --verbose
 2. Click "Sum Content" button
 3. Verify modal opens with metric dropdown
 4. Select "Sum Words" metric
-5. Verify sum displays (expected: 45 + 62 + 78 = 185 for 3 source articles, or 197 including target)
-6. Verify units label shows "Words"
+5. Verify sum displays in the modal
+6. Click OK
+7. Verify sum value appears in the selection status bar (e.g. "31 Words" next to "3 Items selected")
+8. Deselect and reselect articles — verify sum recalculates in the status bar
+9. Hard refresh the page — verify the "Sum Words" metric is restored from localStorage and the sum appears automatically on selection
 
 ### TC-UI-08: Sum content — distinct status
 
@@ -286,6 +293,11 @@ Fixes from the CoPilot review applied in the commit:
 | B-06 | `append-content-service.js` | No user feedback when append conditions not met | Added warning notification with locale-translated reasons |
 | B-07 | `AppendUtils` (onecms-widgets) | `doAppendContent` deferred never resolved when `response.processed` is false | Added else branch to resolve deferred |
 | B-08 | Locale files | All append/sum locale keys had English-only values | Translated to de, dk, es, it, nl, no, sv, tr, vi |
+| B-09 | `dam-list.html` | Sum status bar hidden when sum is 0 (falsy check) | Changed `ng-show` to check for `undefined`/`null`/empty instead |
+| B-10 | `dam-list.html` | Sum status bar showed raw `units` instead of `display` label | Changed to use `sumConfig.display` |
+| B-11 | `common-list-controller.js` | Sum config not persisted across browser sessions | `checkSums` now restores saved config from localStorage |
+| B-12 | `AppendUtils` (onecms-widgets) | `processRemove` skipped plain string fields containing appended HTML | Added string field handling for `x-atex-append-content` removal |
+| B-13 | `dam-engagement-list.js` | `removeEngagement` didn't guard against missing `appendContentService` | Added `appendContentService` check |
 
 ---
 
