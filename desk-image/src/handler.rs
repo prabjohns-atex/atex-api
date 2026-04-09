@@ -90,12 +90,12 @@ pub async fn handle_image(
     let orig_height = query.get("oh").and_then(|v| v.parse::<u32>().ok());
 
     // Process image
-    let (output_bytes, format, rendered_width, rendered_height) = match processing::process_image(
+    let result = match processing::process_image(
         &raw_bytes,
         &params,
         &state.config.processing,
     ) {
-        Ok(result) => result,
+        Ok(r) => r,
         Err(e) => {
             tracing::error!("Image processing failed: {}", e);
             return (StatusCode::INTERNAL_SERVER_ERROR, "Processing failed").into_response();
@@ -103,7 +103,7 @@ pub async fn handle_image(
     };
 
     let mut headers = HeaderMap::new();
-    headers.insert(header::CONTENT_TYPE, format.content_type().parse().unwrap());
+    headers.insert(header::CONTENT_TYPE, result.format.content_type().parse().unwrap());
     headers.insert(header::CACHE_CONTROL, "public, max-age=31536000".parse().unwrap());
 
     // Original image dimensions (from desk-api)
@@ -115,10 +115,18 @@ pub async fn handle_image(
     }
 
     // Rendered image dimensions
-    headers.insert("X-Rendered-Image-Width", rendered_width.to_string().parse().unwrap());
-    headers.insert("X-Rendered-Image-Height", rendered_height.to_string().parse().unwrap());
+    headers.insert("X-Rendered-Image-Width", result.rendered_width.to_string().parse().unwrap());
+    headers.insert("X-Rendered-Image-Height", result.rendered_height.to_string().parse().unwrap());
 
-    (StatusCode::OK, headers, output_bytes).into_response()
+    // Crop offset headers (only present when a crop was applied)
+    if let Some(left) = result.crop_left {
+        headers.insert("X-Rendered-Image-Left", left.to_string().parse().unwrap());
+    }
+    if let Some(top) = result.crop_top {
+        headers.insert("X-Rendered-Image-Top", top.to_string().parse().unwrap());
+    }
+
+    (StatusCode::OK, headers, result.bytes).into_response()
 }
 
 /// Parse crop rectangle from "x,y,w,h" format

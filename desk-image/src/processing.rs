@@ -95,12 +95,24 @@ impl OutputFormat {
     }
 }
 
+/// Result of image processing including rendered dimensions and crop offsets.
+pub struct ProcessResult {
+    pub bytes: Vec<u8>,
+    pub format: OutputFormat,
+    pub rendered_width: u32,
+    pub rendered_height: u32,
+    /// Crop offset from the left edge of the (post-rotation/flip) image, if a crop was applied.
+    pub crop_left: Option<u32>,
+    /// Crop offset from the top edge of the (post-rotation/flip) image, if a crop was applied.
+    pub crop_top: Option<u32>,
+}
+
 /// Process an image: crop, rotate, flip, resize.
 pub fn process_image(
     input: &[u8],
     params: &ImageParams,
     config: &crate::config::ProcessingConfig,
-) -> anyhow::Result<(Vec<u8>, OutputFormat, u32, u32)> {
+) -> anyhow::Result<ProcessResult> {
     let max_width = config.max_width;
     let max_height = config.max_height;
 
@@ -138,6 +150,10 @@ pub fn process_image(
         img = img.flipv();
     }
 
+    // Track crop offsets for X-Rendered-Image-Left/Top headers
+    let mut crop_left: Option<u32> = None;
+    let mut crop_top: Option<u32> = None;
+
     // 3. Apply crop
     if let Some(crop) = &params.crop {
         let (iw, ih) = img.dimensions();
@@ -146,6 +162,8 @@ pub fn process_image(
         let w = crop.width.min(iw - x);
         let h = crop.height.min(ih - y);
         if w > 0 && h > 0 {
+            crop_left = Some(x);
+            crop_top = Some(y);
             img = img.crop_imm(x, y, w, h);
         }
     }
@@ -174,6 +192,8 @@ pub fn process_image(
                     ((iw.saturating_sub(cw)) / 2, (ih.saturating_sub(ch)) / 2)
                 };
 
+                crop_left = Some(cx);
+                crop_top = Some(cy);
                 img = img.crop_imm(cx, cy, cw, ch);
             }
         }
@@ -184,7 +204,10 @@ pub fn process_image(
         if let Some(fp) = &params.focal_point {
             if let (Some(tw), Some(th)) = (params.width, params.height) {
                 if params.mode == ResizeMode::Fill {
-                    img = apply_focal_crop(&img, fp, tw, th);
+                    let (cropped, cl, ct) = apply_focal_crop(&img, fp, tw, th);
+                    crop_left = Some(cl);
+                    crop_top = Some(ct);
+                    img = cropped;
                 }
             }
         }
@@ -225,10 +248,18 @@ pub fn process_image(
     }
 
     let (rendered_w, rendered_h) = img.dimensions();
-    Ok((output.into_inner(), format, rendered_w, rendered_h))
+    Ok(ProcessResult {
+        bytes: output.into_inner(),
+        format,
+        rendered_width: rendered_w,
+        rendered_height: rendered_h,
+        crop_left,
+        crop_top,
+    })
 }
 
-fn apply_focal_crop(img: &DynamicImage, fp: &FocalPointParam, tw: u32, th: u32) -> DynamicImage {
+/// Apply focal-point crop and return (cropped image, crop_left, crop_top).
+fn apply_focal_crop(img: &DynamicImage, fp: &FocalPointParam, tw: u32, th: u32) -> (DynamicImage, u32, u32) {
     let (iw, ih) = img.dimensions();
     let target_ratio = tw as f64 / th as f64;
     let img_ratio = iw as f64 / ih as f64;
@@ -264,7 +295,9 @@ fn apply_focal_crop(img: &DynamicImage, fp: &FocalPointParam, tw: u32, th: u32) 
         y = (ih as f64 - zoomed_h).max(0.0);
     }
 
-    img.crop_imm(x as u32, y as u32, zoomed_w as u32, zoomed_h as u32)
+    let cx = x as u32;
+    let cy = y as u32;
+    (img.crop_imm(cx, cy, zoomed_w as u32, zoomed_h as u32), cx, cy)
 }
 
 fn compute_target_size(
