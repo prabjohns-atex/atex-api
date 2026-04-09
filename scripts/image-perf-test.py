@@ -8,7 +8,7 @@ at specific widths and compares output quality using SSIM.
 
 Usage:
     python scripts/image-perf-test.py                                    # defaults
-    python scripts/image-perf-test.py --ref http://localhost:48084/onecms
+    python scripts/image-perf-test.py --ref http://localhost:38084/onecms
     python scripts/image-perf-test.py -n 5                               # 5 iterations
     python scripts/image-perf-test.py --report                           # CSV output
     python scripts/image-perf-test.py --save-images                      # save outputs to disk
@@ -39,8 +39,8 @@ from skimage.metrics import structural_similarity as ssim
 
 DESK_API = "http://localhost:8081"
 DESK_IMAGE = "http://localhost:8081"       # desk-api proxies /image/ to desk-image sidecar
-REFERENCE = "http://localhost:48084/onecms"
-REF_IMAGE = "http://localhost:48084"       # legacy image service at /image/
+REFERENCE = "http://localhost:38084/onecms"
+REF_IMAGE = "http://localhost:38084"       # legacy image service at /image/
 
 USERNAME = "sysadmin"
 PASSWORD = "sysadmin"
