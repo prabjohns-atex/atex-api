@@ -212,17 +212,13 @@ public class MyTypeResource {
             String delegationId = parts[0];
             String key = parts[1];
 
+            // Check edit permission before proceeding
+            checkEditPermission(userId);
+
             ContentWriteDto writeDto = parseContentWriteDto(body);
 
             // Detect and remove status aspect for save-rule processing
             Pair<ContentWriteDto, SaveAction> writePair = removeStatusForSaveRule(writeDto);
-
-            // Check publish permission if action is PUBLISH
-            if (writePair.right() == SaveAction.PUBLISH) {
-                // Simplified permission check -- in full implementation would check
-                // MyTypePermissions against user groups
-                // For now, WRITE scope is sufficient
-            }
 
             Optional<ContentResultDto> updated = contentService.updateContent(
                     delegationId, key, writePair.left(), userId);
@@ -407,6 +403,68 @@ public class MyTypeResource {
     }
 
     // ======== Internal helpers ========
+
+    /**
+     * Check that the current user has edit permission according to the MyType permissions config.
+     * If the permissions config has a "deny" entry for "operation:edit" from a group the user
+     * belongs to (including wildcard "*"), the request is rejected with 403.
+     *
+     * @param loginName the login name from the JWT token
+     * @throws ContentApiException with 403 if editing is forbidden for this user
+     */
+    @SuppressWarnings("unchecked")
+    private void checkEditPermission(String loginName) {
+        Optional<Map<String, Object>> configOpt = configurationService.getConfiguration(PERMISSIONS_EXTERNAL_ID);
+        if (configOpt.isEmpty()) {
+            // No permissions config — allow by default
+            return;
+        }
+
+        Map<String, Object> config = configOpt.get();
+        List<String> userGroups = findGroupNamesForUser(loginName);
+
+        List<Map<String, Object>> groups = (List<Map<String, Object>>) config.get("groups");
+        if (groups == null) {
+            return;
+        }
+
+        for (Map<String, Object> group : groups) {
+            String groupName = stringVal(group.get("name"), "");
+
+            // Check if user belongs to this group
+            boolean belongs = "*".equals(groupName);
+            if (!belongs) {
+                for (String userGroup : userGroups) {
+                    if (groupName.equalsIgnoreCase(userGroup)) {
+                        belongs = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!belongs) continue;
+
+            // Check for deny rules on operation:edit
+            List<Map<String, Object>> denies = (List<Map<String, Object>>) group.get("denies");
+            if (denies != null) {
+                for (Map<String, Object> rule : denies) {
+                    String permissionId = stringVal(rule.get("permissionId"), "");
+                    if ("operation:edit".equals(permissionId)) {
+                        // Check if this deny has conditions — unconditional deny blocks the edit
+                        Map<String, Object> constraints = (Map<String, Object>) rule.get("constraints");
+                        boolean hasConditions = false;
+                        if (constraints != null && constraints.get("conditions") instanceof List<?> conds) {
+                            hasConditions = !conds.isEmpty();
+                        }
+                        if (!hasConditions) {
+                            throw ContentApiException.error("Edit forbidden for group: " + groupName, 40300, 403);
+                        }
+                        // Conditional deny — skip (would need to evaluate against content state)
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Resolve an unversioned content ID and return a 303 redirect to the versioned URL.

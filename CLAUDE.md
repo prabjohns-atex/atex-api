@@ -53,13 +53,14 @@ desk-api (Spring Boot 4)
   ├─ ActivityController (/activities/*)      — Content locking (Inc 16)
   ├─ SearchController (/search/*)           — Solr search (Inc 10)
   ├─ PreviewController (/preview/*)         — Web preview (Inc 17)
+  ├─ ViewController (/view/*)               — View assign/remove (Inc 40)
   ├─ WorkspaceController (/workspace/*)     — Draft workspaces
   ├─ ChangesController (/changes/*)         — Change feed
-  ├─ ConfigurationController (/admin/config) — Config CRUD
+  ├─ ConfigurationController (/admin/config) — Config CRUD with persistent live overrides
   ├─ CacheController (/admin/cache)        — Cache stats & clearing (Inc 35)
   ├─ RequestMetricsController (/admin/requests) — Live request metrics (Inc 35c)
   ├─ ReindexController (/admin/reindex)     — Solr indexing management (Inc 6, 20)
-  └─ dashboard.html                         — Admin UI (Inc 24, 35c)
+  └─ dashboard.html                         — Admin UI with config diff (Inc 24, 35c)
 ```
 
 ### Core Layers
@@ -82,10 +83,13 @@ desk-api (Spring Boot 4)
 - `delegationId` maps to `idtype.name` in DB; `key` maps to `id.id` (VARCHAR 255)
 - Legacy `policy:X.Y` IDs resolve via `policyId` alias fallback
 
-### Auth
+### Auth & Security
 - `X-Auth-Token` header (JWT RS256), claims: `sub`, `scp` (READ,WRITE,OWNER), `aud`, `exp`
-- Filter URL patterns: `/content/*`, `/dam/*`, `/principals/*`, `/admin/*`, `/search/*`, `/changes/*`, `/layout/*`, `/file/*`, `/activities/*`, `/preview/*`
+- Filter URL patterns: `/content/*`, `/dam/*`, `/principals/*`, `/admin/*`, `/search/*`, `/changes/*`, `/layout/*`, `/file/*`, `/activities/*`, `/preview/*`, `/view/*`
 - Permission checking: OWNER → all; strips `"21"` ACL prefix; READ/WRITE scope matching
+- Login rate limiting: 10 req/IP/min on `POST /security/token` (configurable via `desk.security.login.rate-limit`)
+- File upload validation: extension whitelist, MIME check, path traversal guard (Inc 41)
+- Security headers: X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy
 
 ### OneCMS Compatibility
 - Error format: `{"extraInfo":{},"statusCode":40400,"message":"NOT_FOUND"}` (HTTP status × 100)
@@ -182,7 +186,9 @@ JAVA_HOME=C:/Users/peter/.jdks/openjdk-25.0.2 ./gradlew test --tests "*ContentCr
 python scripts/compat-test.py --desk-only
 ```
 
-93 integration tests (Testcontainers MySQL): Security, ContentCrud, ContentVersioning, Alias, FileService, Principals, Workspace, ErrorResponse, SiteStructure, TypeService, MyTypePermissions, AudioAI.
+143 integration tests (Testcontainers MySQL): Security, ContentCrud, ContentVersioning, Alias, FileService, Principals, Workspace, ErrorResponse, SiteStructure, TypeService, MyTypePermissions, AudioAI, View, ContentOps, ImageService, FileDelivery.
+
+53 compatibility tests (`scripts/compat-test.py`): full mytype-new API endpoint coverage comparing desk-api vs reference OneCMS.
 
 ## Remaining Stubs / Not Implemented
 - 501 endpoints: `create-page`, `sendcontent`, `assigncontent`, `mergeMultiplePdf`, `collectionpreview`

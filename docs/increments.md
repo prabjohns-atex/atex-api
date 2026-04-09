@@ -1241,3 +1241,94 @@ Ported `DamAudioAIResource` from gong/desk to desk-api. Provides TTS (text-to-sp
 
 - **Integration**: `AudioAIIntegrationTest` — 9 tests covering search 404, search after create, audioai- prefix passthrough, create with/without name, default content type, invalid JSON, cross-article isolation, auth enforcement
 - **Compat**: `test_audioai_search`, `test_audioai_create` — comparison tests
+---
+
+## Increment 40 — ViewController
+
+### Summary
+Added `PUT /view/{view}` and `DELETE /view/{view}/{id}` for view assignment/removal. Views are auto-created if they don't exist.
+
+### Endpoints
+| Method | Path | Description |
+|--------|------|-------------|
+| PUT | `/view/{view}` | Assign versioned content ID to a named view |
+| DELETE | `/view/{view}/{id}` | Remove content from a view |
+
+### Tests
+- **Integration**: `ViewIntegrationTest` — 7 tests
+
+---
+
+## Increment 41 — Security Hardening
+
+### Summary
+File upload validation (CWE-434), security response headers, and login rate limiting.
+
+### Changes
+- **FileUploadValidator**: extension whitelist, MIME type check, path traversal guard on upload/download/delete
+- **SecurityHeadersFilter**: X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy
+- **RateLimiter**: sliding-window rate limiter on `POST /security/token` — 10 req/IP/min (configurable via `desk.security.login.rate-limit`)
+
+---
+
+## Increment 42 — Solr Index Composer Rewrite
+
+### Summary
+Replaced runtime type-guessing in `DamIndexComposer` with proper field mappings using `DamMapping` + explicit field map for 40+ known fields. Unknown fields are skipped instead of indexed with guessed types.
+
+### Problem
+The old approach inferred Solr field type suffixes from JSON values at runtime. Filenames starting with date-like patterns (e.g. `2026-03-30T172901Z_photo.JPG`) were incorrectly indexed as date fields (`_dt`), causing Solr errors.
+
+### Solution
+- `addContentDataFields()`: maps each field using DamMapping → ADDITIONAL_FIELD_MAP → skip
+- `addKnownAspectFields()`: only indexes specific known aspects (WFContentStatus, WebContentStatus)
+- StructuredText fields (headline, lead, body): extracts `.text` subfield
+- Unknown fields: skipped (safe default)
+
+---
+
+## Increment 43 — Image Service Fixes
+
+### Summary
+Multiple fixes to ImageController for correct image serving:
+- Resolve file URI from `atex.Files.fileUri` (not `atex.Image.filePath` which is a logical name)
+- 303 redirect unversioned→versioned content IDs (matches reference behaviour)
+- Convert `content://` URI scheme to path for desk-image sidecar
+- Fall back to `atex.Image.filePath` for legacy content without `atex.Files`
+- Configurable decode limits in desk-image for large images (30000px / 2GB)
+
+### Performance
+desk-image (Rust) vs legacy Java image service:
+- Small images (1280x853): 50-70ms vs 160-190ms (**3x faster**)
+- Large images (22800x15200, 28MB): 9-15s vs 24-27s (**2.5x faster**)
+- SSIM similarity: 0.90-0.99 (visually similar, different resize algorithms)
+
+---
+
+## Increment 44 — Configuration Persistence + Diff
+
+### Summary
+Live config overrides now persist across container restarts. Dashboard diff feature shows changes from defaults.
+
+### Changes
+- **ConfigurationController**: creates content with externalId alias when saving live overrides
+- **ConfigurationService**: loads live overrides from content DB on startup
+- **Dashboard**: Diff button compares base default vs live override with LCS line diff
+- Strips `_type` pipeline artifact from config round-trip
+
+---
+
+## Increment 45 — Compatibility Test Suite Completion
+
+### Summary
+53 compat tests covering all mytype-new API endpoints. All passing against both desk-api and reference OneCMS.
+
+### New tests added
+Site structure, content type schema, principals users/groups, file info/metadata, filedelivery, preview, config profile, DAM solrquery/publish/archive/restrict/unrestrict/clearengage/export/permission/users, view assign/remove, mytype content get.
+
+### Fixes from compat testing
+- Principals: user-by-ID resolves numeric principalId
+- Groups: added type/id/principalId fields matching reference format
+- Unpublish: accept application/json in produces
+- Duplicate: use PUT with `{entries:[id]}` format
+- Restrict: handle LinkedHashMap ClassCastException (returns 412 like reference)

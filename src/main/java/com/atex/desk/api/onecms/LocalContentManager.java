@@ -602,6 +602,16 @@ public class LocalContentManager implements ContentManager {
     @SuppressWarnings("unchecked")
     public ContentResultDto createContentFromDto(ContentWriteDto writeDto, String userId)
             throws CallbackException {
+        // Log a warning if aspect data is missing _type fields (should be present for OneCMS compat)
+        if (writeDto.getAspects() != null) {
+            for (Map.Entry<String, AspectDto> entry : writeDto.getAspects().entrySet()) {
+                AspectDto a = entry.getValue();
+                if (a.getData() != null && !a.getData().containsKey("_type")) {
+                    LOG.fine(() -> "Aspect '" + entry.getKey() + "' missing _type field on create");
+                }
+            }
+        }
+
         ContentWrite<Object> write = dtoToContentWrite(writeDto);
         Subject subject = new Subject(userId, null);
 
@@ -921,8 +931,16 @@ public class LocalContentManager implements ContentManager {
         for (Aspect aspect : write.getAspects()) {
             AspectDto aspectDto = new AspectDto();
             aspectDto.setName(aspect.getName());
-            if (aspect.getData() instanceof Map) {
-                aspectDto.setData((Map<String, Object>) aspect.getData());
+            if (aspect.getData() instanceof FilesAspectBean fab) {
+                // Convert FilesAspectBean to Map with OneCMS-compatible _type markers
+                aspectDto.setData(filesAspectBeanToMap(fab));
+            } else if (aspect.getData() instanceof Map) {
+                Map<String, Object> dataMap = (Map<String, Object>) aspect.getData();
+                // Enrich atex.Files maps with _type markers if missing
+                if ("atex.Files".equals(aspect.getName()) && !dataMap.containsKey("_type")) {
+                    dataMap = enrichFilesAspectMap(dataMap);
+                }
+                aspectDto.setData(dataMap);
             } else if (aspect.getData() != null) {
                 aspectDto.setData(objectMapper.convertValue(aspect.getData(),
                     new tools.jackson.core.type.TypeReference<Map<String, Object>>() {}));
@@ -1037,12 +1055,26 @@ public class LocalContentManager implements ContentManager {
 
         if (!changed) return write;
 
-        // Rebuild the ContentWrite with updated atex.Files aspect
-        FilesAspectBean updatedBean = new FilesAspectBean();
-        updatedBean.setFiles(updatedFiles);
+        // Rebuild the ContentWrite with updated atex.Files aspect as a Map
+        // that includes _type markers matching the OneCMS wire format:
+        //   { "_type": "atex.Files", "files": { "name_type": "c.a.o.c.ContentFileInfo", "name": { "_type": "...", ... } } }
+        Map<String, Object> filesMap = new LinkedHashMap<>();
+        for (Map.Entry<String, ContentFileInfo> fe : updatedFiles.entrySet()) {
+            String filename = fe.getKey();
+            ContentFileInfo cfi = fe.getValue();
+            filesMap.put(filename + "_type", "com.atex.onecms.content.ContentFileInfo");
+            Map<String, Object> fileEntry = new LinkedHashMap<>();
+            fileEntry.put("_type", "com.atex.onecms.content.ContentFileInfo");
+            fileEntry.put("filePath", cfi.getFilePath());
+            fileEntry.put("fileUri", cfi.getFileUri());
+            filesMap.put(filename, fileEntry);
+        }
+        Map<String, Object> filesAspectMap = new LinkedHashMap<>();
+        filesAspectMap.put("_type", "atex.Files");
+        filesAspectMap.put("files", filesMap);
 
         ContentWriteBuilder<T> builder = ContentWriteBuilder.from(write);
-        builder.aspect("atex.Files", updatedBean);
+        builder.aspect("atex.Files", filesAspectMap);
 
         // Also update atex.Image filePath if it points to a tmp:// URI that was moved
         updateImageAspectFilePath(builder, write, updatedFiles);
@@ -1082,6 +1114,71 @@ public class LocalContentManager implements ContentManager {
                 return;
             }
         }
+    }
+
+    /**
+     * Enrich an existing atex.Files Map with {@code _type} markers if missing.
+     * Adds {@code "_type": "atex.Files"} at the top level and
+     * {@code "_type": "com.atex.onecms.content.ContentFileInfo"} plus
+     * {@code "{filename}_type"} sibling keys for each file entry.
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> enrichFilesAspectMap(Map<String, Object> dataMap) {
+        Map<String, Object> result = new LinkedHashMap<>(dataMap);
+        result.putIfAbsent("_type", "atex.Files");
+        Object filesObj = result.get("files");
+        if (filesObj instanceof Map<?, ?> filesRaw) {
+            Map<String, Object> enrichedFiles = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : filesRaw.entrySet()) {
+                String key = entry.getKey().toString();
+                // Skip existing _type sibling keys
+                if (key.endsWith("_type")) {
+                    enrichedFiles.put(key, entry.getValue());
+                    continue;
+                }
+                if (entry.getValue() instanceof Map<?, ?> fileMap) {
+                    // Add {filename}_type sibling key if not already present
+                    if (!enrichedFiles.containsKey(key + "_type") && !filesRaw.containsKey(key + "_type")) {
+                        enrichedFiles.put(key + "_type", "com.atex.onecms.content.ContentFileInfo");
+                    }
+                    Map<String, Object> enrichedEntry = new LinkedHashMap<>((Map<String, Object>) fileMap);
+                    enrichedEntry.putIfAbsent("_type", "com.atex.onecms.content.ContentFileInfo");
+                    enrichedFiles.put(key, enrichedEntry);
+                } else {
+                    enrichedFiles.put(key, entry.getValue());
+                }
+            }
+            result.put("files", enrichedFiles);
+        }
+        return result;
+    }
+
+    /**
+     * Convert a {@link FilesAspectBean} to a Map with OneCMS-compatible {@code _type} markers.
+     * Produces the format:
+     * <pre>
+     * { "_type": "atex.Files", "files": { "name_type": "com.atex.onecms.content.ContentFileInfo",
+     *   "name": { "_type": "com.atex.onecms.content.ContentFileInfo", "filePath": "...", "fileUri": "..." } } }
+     * </pre>
+     */
+    private Map<String, Object> filesAspectBeanToMap(FilesAspectBean bean) {
+        Map<String, Object> filesMap = new LinkedHashMap<>();
+        if (bean.getFiles() != null) {
+            for (Map.Entry<String, ContentFileInfo> fe : bean.getFiles().entrySet()) {
+                String filename = fe.getKey();
+                ContentFileInfo cfi = fe.getValue();
+                filesMap.put(filename + "_type", "com.atex.onecms.content.ContentFileInfo");
+                Map<String, Object> fileEntry = new LinkedHashMap<>();
+                fileEntry.put("_type", "com.atex.onecms.content.ContentFileInfo");
+                fileEntry.put("filePath", cfi.getFilePath());
+                fileEntry.put("fileUri", cfi.getFileUri());
+                filesMap.put(filename, fileEntry);
+            }
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("_type", "atex.Files");
+        result.put("files", filesMap);
+        return result;
     }
 
     /**
