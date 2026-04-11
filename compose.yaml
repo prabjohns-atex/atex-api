@@ -15,11 +15,15 @@ services:
       - DESK_IMAGE_SERVICE_URL=http://desk-image:8090
       - DESK_IMAGE_METADATA_SERVICE_URL=http://image-metadata:8080
       - DESK_IMAGE_METADATA_SERVICE_ENABLED=true
+      - LOADER_PATH=/app/plugins/desk-custom-test
     volumes:
       - ./build/libs:/app/libs:ro
+      - ./plugins/desk-custom-test/build/libs:/app/plugins/desk-custom-test:ro
       - adm-mpp_file-data:/data/files
     working_dir: /app
-    command: java -jar libs/desk-api-0.0.1-SNAPSHOT.jar
+    command: >
+      java -cp libs/desk-api-0.0.1-SNAPSHOT.jar
+      org.springframework.boot.loader.launch.PropertiesLauncher
     restart: unless-stopped
 
   image-metadata:

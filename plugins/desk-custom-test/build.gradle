@@ -1,0 +1,27 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'com.atex.customer'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // compileOnly — desk-api provides these at runtime via parent classloader
+    compileOnly 'org.springframework.boot:spring-boot-starter-webmvc:4.0.3'
+    compileOnly 'org.springframework:spring-context:7.0.5'
+}
+
+// Plain JAR output — dropped into desk-api's plugin classpath
+tasks.named('jar') {
+    archiveBaseName = 'desk-custom-test'
+}

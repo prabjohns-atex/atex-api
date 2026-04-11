@@ -1,2 +1,4 @@
 rootProject.name = 'desk-api'
 include 'desk-integration'
+include 'plugins:desk-custom-test'
+project(':plugins:desk-custom-test').projectDir = file('plugins/desk-custom-test')
