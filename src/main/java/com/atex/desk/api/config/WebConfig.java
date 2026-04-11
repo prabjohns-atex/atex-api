@@ -1,5 +1,6 @@
 package com.atex.desk.api.config;
 
+import com.atex.desk.api.auth.DamUserContextArgumentResolver;
 import org.apache.tomcat.util.buf.EncodedSolidusHandling;
 import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
@@ -7,8 +8,11 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.List;
 
 /**
  * Web MVC configuration for dashboard and Swagger UI redirects.
@@ -21,6 +25,16 @@ public class WebConfig implements WebMvcConfigurer
     {
         registry.addRedirectViewController("/dashboard", "/dashboard.html");
         registry.addRedirectViewController("/swagger-ui", "/swagger-ui.html");
+    }
+
+    /**
+     * Register the DamUserContext argument resolver so controller methods
+     * can receive an injected user context parameter (Polopoly @AuthUser pattern).
+     */
+    @Override
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers)
+    {
+        resolvers.add(new DamUserContextArgumentResolver());
     }
 
     /**

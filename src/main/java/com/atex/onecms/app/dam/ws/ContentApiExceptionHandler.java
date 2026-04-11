@@ -10,10 +10,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Centralized error handling for DAM endpoints.
- * Converts ContentApiException to JSON error responses matching reference OneCMS format.
+ * Centralized error handling for ContentApiException.
+ * Applies globally so that plugin controllers (com.atex.customer.*) and
+ * built-in controllers (com.atex.desk.api.*, com.atex.onecms.*) all get
+ * consistent error responses matching the reference OneCMS format.
  */
-@RestControllerAdvice(basePackages = "com.atex.onecms.app.dam.ws")
+@RestControllerAdvice
 public class ContentApiExceptionHandler {
 
     private static final Logger LOG = Logger.getLogger(ContentApiExceptionHandler.class.getName());

@@ -32,4 +32,20 @@ public class AuthConfig
         registration.setOrder(1);
         return registration;
     }
+
+    /**
+     * Non-rejecting token decoder that runs on ALL paths, including plugin
+     * endpoints. Decodes tokens into request attributes without enforcing auth.
+     * Handlers that need auth call {@code DamUserContext.assertLoggedIn()}.
+     */
+    @Bean
+    public FilterRegistrationBean<TokenDecodeFilter> tokenDecodeFilterRegistration(
+            TokenService tokenService, TokenProperties properties)
+    {
+        FilterRegistrationBean<TokenDecodeFilter> registration = new FilterRegistrationBean<>();
+        registration.setFilter(new TokenDecodeFilter(tokenService, properties.isEnabled()));
+        registration.addUrlPatterns("/*");
+        registration.setOrder(2); // After AuthFilter — but AuthFilter only covers legacy paths
+        return registration;
+    }
 }

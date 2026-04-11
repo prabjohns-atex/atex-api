@@ -19,6 +19,12 @@ dependencies {
     // compileOnly — desk-api provides these at runtime via parent classloader
     compileOnly 'org.springframework.boot:spring-boot-starter-webmvc:4.0.3'
     compileOnly 'org.springframework:spring-context:7.0.5'
+    compileOnly files("${rootDir}/build/libs/desk-api-0.0.1-SNAPSHOT-plain.jar")
+}
+
+// Ensure desk-api plain jar is built before we try to compile the plugin
+tasks.named('compileJava') {
+    dependsOn ':jar'
 }
 
 // Plain JAR output — dropped into desk-api's plugin classpath
